@@ -27,3 +27,9 @@ npm-debug.log*
 # Cache
 .vite/
 *.tsbuildinfo
+
+# AI
+.codex/
+.claude/
+AGENTS.md
+CLAUDE.md
