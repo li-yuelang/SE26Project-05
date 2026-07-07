@@ -1,5 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Layout,
+  Button,
+  Input,
+  Avatar,
+  Tag,
+  Typography,
+  List,
+  Empty,
+  Flex,
+  Space,
+  Tooltip,
+  theme,
+} from 'antd';
+import {
+  PlusOutlined,
+  SendOutlined,
+  UserOutlined,
+  RobotOutlined,
+  FileTextOutlined,
+  MessageOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from '@ant-design/icons';
+
+const { Sider, Content } = Layout;
+const { TextArea } = Input;
+const { Text, Title } = Typography;
 
 /** 模拟对话列表数据 */
 const MOCK_CONVERSATIONS = [
@@ -39,13 +67,22 @@ const MOCK_MESSAGES = {
   ],
 };
 
+const SUGGESTIONS = [
+  '什么是 Transformer 中的自注意力机制？',
+  'BERT 和 GPT 的主要区别是什么？',
+  'LoRA 微调的原理是什么？',
+];
+
 /** 模拟 API：发送消息 */
-function mockSendMessage(conversationId, content) {
+function mockSendMessage(_conversationId, content) {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
         role: 'assistant',
-        content: '功能尚未完善，API 接口正在开发中。您的提问："' + content + '" 已收到，管理员将尽快上线智能问答服务。',
+        content:
+          '功能尚未完善，API 接口正在开发中。您的提问："' +
+          content +
+          '" 已收到，管理员将尽快上线智能问答服务。',
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
         sources: [],
       });
@@ -71,14 +108,17 @@ export default function Chat() {
   return <ChatRoom />;
 }
 
-/** 共享聊天室组件，ChatConversation 也会复用 */
+/** 共享聊天室组件 */
 export function ChatRoom({ initialConversationId } = {}) {
   const navigate = useNavigate();
+  const { token } = theme.useToken();
+
   const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [activeId, setActiveId] = useState(initialConversationId || null);
+  const [activeId, setActiveId] = useState(initialConversationId ? Number(initialConversationId) : null);
   const [messages, setMessages] = useState({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef(null);
 
   // 初始化消息
@@ -92,7 +132,7 @@ export function ChatRoom({ initialConversationId } = {}) {
     setMessages(initial);
   }, []);
 
-  // 如果传入了 initialConversationId，自动选中
+  // 自动选中指定对话
   useEffect(() => {
     if (initialConversationId) {
       setActiveId(Number(initialConversationId));
@@ -107,13 +147,11 @@ export function ChatRoom({ initialConversationId } = {}) {
   const activeMessages = activeId && messages[activeId] ? messages[activeId] : [];
   const activeConv = conversations.find((c) => c.id === activeId);
 
-  /** 选择对话 */
   const selectConversation = (id) => {
     setActiveId(id);
     navigate(`/chat/${id}`, { replace: true });
   };
 
-  /** 新建对话 */
   const handleNewConversation = async () => {
     const newConv = await mockCreateConversation();
     setConversations((prev) => [newConv, ...prev]);
@@ -122,7 +160,6 @@ export function ChatRoom({ initialConversationId } = {}) {
     navigate(`/chat/${newConv.id}`, { replace: true });
   };
 
-  /** 发送消息 */
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || sending) return;
@@ -152,7 +189,6 @@ export function ChatRoom({ initialConversationId } = {}) {
     }
   };
 
-  /** 自动创建对话 */
   const createAutoConversation = async () => {
     const newConv = await mockCreateConversation();
     setConversations((prev) => [newConv, ...prev]);
@@ -160,127 +196,321 @@ export function ChatRoom({ initialConversationId } = {}) {
     return newConv.id;
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   return (
-    <div className="chat-page">
+    <Layout className="chat-page" hasSider>
       {/* 左侧对话列表 */}
-      <aside className="chat-sidebar">
-        <div className="chat-sidebar-header">
-          <h2>对话列表</h2>
-          <button className="btn-new-chat" onClick={handleNewConversation}>
-            + 新对话
-          </button>
-        </div>
-        <div className="chat-conv-list">
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`chat-conv-item${activeId === conv.id ? ' active' : ''}`}
-              onClick={() => selectConversation(conv.id)}
-            >
-              <div className="chat-conv-title">{conv.title}</div>
-              <div className="chat-conv-preview">{conv.preview || '新对话'}</div>
-              <div className="chat-conv-date">{conv.date}</div>
-            </div>
-          ))}
-        </div>
-      </aside>
+      <Sider
+        width={300}
+        collapsible
+        collapsed={sidebarCollapsed}
+        collapsedWidth={0}
+        onCollapse={setSidebarCollapsed}
+        trigger={null}
+        style={{
+          background: token.colorBgContainer,
+          borderRight: `1px solid ${token.colorBorderSecondary}`,
+          overflow: 'hidden',
+        }}
+      >
+        <Flex
+          vertical
+          style={{ height: '100%' }}
+        >
+          {/* Sider Header */}
+          <Flex
+            align="center"
+            justify="space-between"
+            style={{
+              padding: '12px 16px',
+              borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              flexShrink: 0,
+            }}
+          >
+            <Title level={5} style={{ margin: 0 }}>
+              <MessageOutlined style={{ marginRight: 8 }} />
+              对话列表
+            </Title>
+            <Space size={4}>
+              <Tooltip title="关闭侧栏">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<MenuFoldOutlined />}
+                  onClick={() => setSidebarCollapsed(true)}
+                />
+              </Tooltip>
+              <Tooltip title="新建对话">
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={handleNewConversation}
+                />
+              </Tooltip>
+            </Space>
+          </Flex>
+
+          {/* Conversation List */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <List
+              dataSource={conversations}
+              split={false}
+              renderItem={(conv) => {
+                const isActive = activeId === conv.id;
+                return (
+                  <List.Item
+                    key={conv.id}
+                    onClick={() => selectConversation(conv.id)}
+                    style={{
+                      cursor: 'pointer',
+                      padding: '10px 16px',
+                      background: isActive ? token.colorPrimaryBg : 'transparent',
+                      borderInlineEnd: isActive ? `3px solid ${token.colorPrimary}` : '3px solid transparent',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.background = token.colorBgTextHover;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Flex vertical style={{ width: '100%', overflow: 'hidden' }} gap={2}>
+                      <Flex align="center" justify="space-between">
+                        <Text
+                          strong={isActive}
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: 14,
+                          }}
+                        >
+                          {conv.title}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 11, flexShrink: 0, marginLeft: 8 }}>
+                          {conv.date}
+                        </Text>
+                      </Flex>
+                      <Text
+                        type="secondary"
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: 12,
+                        }}
+                      >
+                        {conv.preview || '新对话'}
+                      </Text>
+                    </Flex>
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
+        </Flex>
+      </Sider>
 
       {/* 右侧聊天区 */}
-      <section className="chat-main">
+      <Content style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {activeConv ? (
           <>
-            <header className="chat-header">
-              <h3>{activeConv.title}</h3>
-              <span className="chat-header-date">{activeConv.date}</span>
-            </header>
+            {/* Chat Header */}
+            <Flex
+              align="center"
+              justify="space-between"
+              style={{
+                padding: '12px 20px',
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                flexShrink: 0,
+              }}
+            >
+              <Flex align="center" gap={8}>
+                {sidebarCollapsed && (
+                  <Button
+                    type="text"
+                    icon={<MenuUnfoldOutlined />}
+                    onClick={() => setSidebarCollapsed(false)}
+                  />
+                )}
+                <Title level={5} style={{ margin: 0 }}>
+                  {activeConv.title}
+                </Title>
+              </Flex>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                {activeConv.date}
+              </Text>
+            </Flex>
 
-            <div className="chat-messages">
+            {/* Messages Area */}
+            <div className="chat-messages" style={{ flex: 1 }}>
               {activeMessages.length === 0 ? (
-                <div className="chat-empty">
-                  <div className="chat-empty-icon">💬</div>
-                  <p>开始新的对话，向 PaperMate 提问论文相关问题</p>
-                  <div className="chat-suggestions">
-                    <span>试试问：</span>
-                    <button onClick={() => setInput('什么是 Transformer 中的自注意力机制？')}>
-                      Transformer 自注意力机制
-                    </button>
-                    <button onClick={() => setInput('BERT 和 GPT 的主要区别是什么？')}>
-                      BERT vs GPT
-                    </button>
-                    <button onClick={() => setInput('LoRA 微调的原理是什么？')}>
-                      LoRA 微调原理
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <Flex vertical align="center" gap={16}>
+                    <Empty
+                      image={<MessageOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />}
+                      description="开始新的对话，向 PaperMate 提问论文相关问题"
+                    />
+                    <Flex align="center" gap={8} wrap="wrap" justify="center">
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        试试问：
+                      </Text>
+                      {SUGGESTIONS.map((s) => (
+                        <Tag
+                          key={s}
+                          color="blue"
+                          style={{ cursor: 'pointer', padding: '2px 10px' }}
+                          onClick={() => setInput(s)}
+                        >
+                          {s.length > 16 ? s.slice(0, 16) + '…' : s}
+                        </Tag>
+                      ))}
+                    </Flex>
+                  </Flex>
                 </div>
               ) : (
                 activeMessages.map((msg, i) => (
-                  <div key={i} className={`chat-msg ${msg.role}`}>
-                    <div className="chat-msg-avatar">
-                      {msg.role === 'user' ? '👤' : '🤖'}
-                    </div>
-                    <div className="chat-msg-body">
-                      <div className="chat-msg-content">
-                        {msg.content.split('\n').map((line, j) => (
-                          <span key={j}>
-                            {line}
-                            {j < msg.content.split('\n').length - 1 && <br />}
-                          </span>
-                        ))}
-                      </div>
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="chat-msg-sources">
-                          <span className="sources-label">参考论文：</span>
-                          {msg.sources.map((s, j) => (
-                            <span key={j} className="source-tag">
-                              {s.title}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <span className="chat-msg-time">{msg.time}</span>
-                    </div>
-                  </div>
+                  <MessageBubble key={i} msg={msg} token={token} />
                 ))
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="chat-input-area">
-              <textarea
-                className="chat-input"
-                placeholder="输入你的问题，按 Enter 发送，Shift+Enter 换行…"
+            {/* Input Area */}
+            <Flex
+              align="flex-end"
+              gap={10}
+              style={{
+                padding: '14px 20px',
+                borderTop: `1px solid ${token.colorBorderSecondary}`,
+                flexShrink: 0,
+                background: token.colorBgContainer,
+              }}
+            >
+              <TextArea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={2}
+                onPressEnter={(e) => {
+                  if (!e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="输入你的问题，Enter 发送，Shift+Enter 换行…"
+                autoSize={{ minRows: 1, maxRows: 5 }}
                 disabled={sending}
+                style={{ flex: 1 }}
               />
-              <button
-                className="btn-send"
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
                 onClick={handleSend}
                 disabled={!input.trim() || sending}
+                loading={sending}
               >
-                {sending ? '发送中…' : '发送'}
-              </button>
-            </div>
+                发送
+              </Button>
+            </Flex>
           </>
         ) : (
-          <div className="chat-empty">
-            <div className="chat-empty-icon">💬</div>
-            <p>选择左侧对话或创建新对话开始提问</p>
-            <button className="btn-new-chat" onClick={handleNewConversation}>
-              + 新建对话
-            </button>
-          </div>
+          <Flex
+            vertical
+            align="center"
+            justify="center"
+            style={{ height: '100%' }}
+            gap={16}
+          >
+            {sidebarCollapsed && (
+              <Button
+                type="text"
+                icon={<MenuUnfoldOutlined />}
+                onClick={() => setSidebarCollapsed(false)}
+                style={{ position: 'absolute', top: 12, left: 12 }}
+              />
+            )}
+            <Empty
+              image={<MessageOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />}
+              description="选择左侧对话或创建新对话开始提问"
+            >
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleNewConversation}>
+                新建对话
+              </Button>
+            </Empty>
+          </Flex>
         )}
-      </section>
-    </div>
+      </Content>
+    </Layout>
+  );
+}
+
+// ---------- 工具组件 ----------
+
+/** 消息气泡 */
+function MessageBubble({ msg, token }) {
+  const isUser = msg.role === 'user';
+
+  return (
+    <Flex
+      gap={10}
+      style={{
+        maxWidth: '80%',
+        alignSelf: isUser ? 'flex-end' : 'flex-start',
+        flexDirection: isUser ? 'row-reverse' : 'row',
+      }}
+    >
+      <Avatar
+        size={34}
+        icon={isUser ? <UserOutlined /> : <RobotOutlined />}
+        style={{
+          background: isUser ? token.colorPrimary : token.colorFillContent,
+          color: isUser ? '#fff' : token.colorTextSecondary,
+          flexShrink: 0,
+        }}
+      />
+      <Flex vertical gap={4} style={{ alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+        <div
+          className={`chat-msg-content-bubble ${isUser ? 'user' : 'assistant'}`}
+          style={{
+            padding: '10px 14px',
+            borderRadius: 12,
+            fontSize: 14,
+            lineHeight: 1.65,
+            wordBreak: 'break-word',
+            background: isUser ? token.colorPrimary : token.colorFillContent,
+            color: isUser ? '#fff' : token.colorText,
+            borderBottomRightRadius: isUser ? 4 : undefined,
+            borderBottomLeftRadius: isUser ? undefined : 4,
+          }}
+        >
+          {msg.content.split('\n').map((line, j, arr) => (
+            <span key={j}>
+              {line}
+              {j < arr.length - 1 && <br />}
+            </span>
+          ))}
+        </div>
+
+        {msg.sources && msg.sources.length > 0 && (
+          <Flex align="center" gap={4} wrap="wrap" style={{ padding: '0 4px' }}>
+            <FileTextOutlined style={{ fontSize: 11, color: token.colorTextQuaternary }} />
+            {msg.sources.map((s, j) => (
+              <Tooltip key={j} title={`arXiv: ${s.paperId}`}>
+                <Tag
+                  color="processing"
+                  style={{ cursor: 'pointer', fontSize: 11, margin: 0 }}
+                >
+                  {s.title}
+                </Tag>
+              </Tooltip>
+            ))}
+          </Flex>
+        )}
+
+        <Text type="secondary" style={{ fontSize: 11, padding: '0 4px' }}>
+          {msg.time}
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
