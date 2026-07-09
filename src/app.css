@@ -432,6 +432,91 @@ body {
   margin-top: 0;
 }
 
+/* ========== Learning ========== */
+.learning-page,
+.compare-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.learning-header h2,
+.compare-header h2 {
+  margin-bottom: 8px;
+}
+
+.learning-header p,
+.compare-header p {
+  max-width: 800px;
+  margin-bottom: 0;
+  color: var(--color-text-light);
+}
+
+.learning-filter-card,
+.learning-view-card,
+.compare-selector-card,
+.compare-view-card {
+  border-radius: var(--radius);
+}
+
+.learning-search,
+.compare-search {
+  width: min(100%, 380px);
+}
+
+.learning-select {
+  width: 150px;
+}
+
+.learning-paper-cell {
+  max-width: 560px;
+}
+
+.learning-paper-title,
+.compare-paper-title {
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.learning-star {
+  color: #faad14;
+}
+
+.learning-note-text {
+  margin-bottom: 0;
+}
+
+.learning-topic-card {
+  height: 100%;
+}
+
+.learning-topic-body,
+.learning-topic-summary,
+.learning-note-modal {
+  width: 100%;
+}
+
+/* ========== Compare ========== */
+.compare-select {
+  min-width: min(100%, 520px);
+  flex: 1;
+}
+
+.compare-column-title {
+  max-width: 260px;
+}
+
+.compare-column-title .ant-typography {
+  white-space: normal;
+}
+
+.compare-inline-link {
+  height: auto;
+  padding: 0;
+}
+
 /* ========== Responsive ========== */
 @media (max-width: 768px) {
   .sidebar {
@@ -479,6 +564,14 @@ body {
 
   .wiki-search {
     width: 100%;
+  }
+
+  .learning-search,
+  .learning-select,
+  .compare-search,
+  .compare-select {
+    width: 100%;
+    min-width: 100%;
   }
 }
 
