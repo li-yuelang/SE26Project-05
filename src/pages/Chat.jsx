@@ -14,6 +14,7 @@ import {
   Tooltip,
   Popconfirm,
   theme,
+  message,
 } from 'antd';
 import {
   PlusOutlined,
@@ -26,85 +27,18 @@ import {
   MenuUnfoldOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import {
+  createConversation,
+  deleteConversation,
+  getChatBootstrap,
+  sendChatMessage,
+} from '../services/chatService';
 
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Text, Title } = Typography;
-
-/** 模拟对话列表数据 */
-const MOCK_CONVERSATIONS = [
-  { id: '1', title: 'Transformer 架构讨论',   date: '2026-07-07', preview: '关于注意力机制的深入探讨…' },
-  { id: '2', title: 'BERT 预训练方法对比',    date: '2026-07-06', preview: 'MLM 与 NSP 任务的区别与应用…' },
-  { id: '3', title: '大模型微调技术',         date: '2026-07-05', preview: 'LoRA 和 P-Tuning 的效率对比…' },
-  { id: '4', title: '图神经网络综述',         date: '2026-07-04', preview: 'GCN、GAT、GraphSAGE 的关系…' },
-  { id: '5', title: '扩散模型原理',           date: '2026-07-03', preview: 'DDPM 与 Score-based 统一视角…' },
-];
-
-/** 模拟消息数据 */
-const MOCK_MESSAGES = {
-  1: [
-    { role: 'user', content: '什么是 Transformer 中的自注意力机制？', time: '10:30' },
-    {
-      role: 'assistant',
-      content:
-        '自注意力机制（Self-Attention）是 Transformer 架构的核心组件。它允许序列中的每个位置关注所有位置，通过 Query、Key、Value 三个矩阵计算注意力权重，从而捕获全局依赖关系。\n\n核心公式：Attention(Q,K,V) = softmax(QK^T/√d_k)V\n\n与 RNN 不同，自注意力完全并行计算，大幅提升了训练效率。',
-      time: '10:30',
-      sources: [
-        { title: 'Attention Is All You Need', paperId: '1706.03762' },
-        { title: 'The Annotated Transformer', paperId: '1706.03762' },
-      ],
-    },
-  ],
-  2: [
-    { role: 'user', content: 'BERT 的 MLM 和 NSP 任务分别是什么？', time: '昨天 14:20' },
-    {
-      role: 'assistant',
-      content:
-        'MLM（Masked Language Model）：随机遮盖输入中 15% 的 token，让模型预测被遮盖的词，迫使模型学习双向上下文。\n\nNSP（Next Sentence Prediction）：判断两个句子是否为连续文本，帮助模型理解句子间关系。\n\n后续研究（如 RoBERTa）表明 NSP 并非必要，仅用 MLM 也能取得更好效果。',
-      time: '昨天 14:20',
-      sources: [
-        { title: 'BERT: Pre-training of Deep Bidirectional Transformers', paperId: '1810.04805' },
-      ],
-    },
-  ],
-};
-
-const SUGGESTIONS = [
-  '什么是 Transformer 中的自注意力机制？',
-  'BERT 和 GPT 的主要区别是什么？',
-  'LoRA 微调的原理是什么？',
-];
-
-/** 模拟 API：发送消息 */
-function mockSendMessage(_conversationId, content) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        role: 'assistant',
-        content:
-          '功能尚未完善，API 接口正在开发中。您的提问："' +
-          content +
-          '" 已收到，管理员将尽快上线智能问答服务。',
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        sources: [],
-      });
-    }, 800);
-  });
-}
-
-/** 模拟 API：创建新对话 */
-function mockCreateConversation() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: String(Date.now()),
-        title: '新对话',
-        date: new Date().toISOString().split('T')[0],
-        preview: '',
-      });
-    }, 200);
-  });
-}
 
 export default function Chat() {
   return <ChatRoom />;
@@ -114,25 +48,22 @@ export default function Chat() {
 export function ChatRoom({ initialConversationId } = {}) {
   const navigate = useNavigate();
   const { token } = theme.useToken();
+  const resource = useAsyncResource(getChatBootstrap, []);
 
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
+  const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(initialConversationId || null);
   const [messages, setMessages] = useState({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef(null);
+  const suggestions = resource.data?.suggestions || [];
 
-  // 初始化消息
   useEffect(() => {
-    const initial = {};
-    MOCK_CONVERSATIONS.forEach((c) => {
-      if (MOCK_MESSAGES[c.id]) {
-        initial[c.id] = [...MOCK_MESSAGES[c.id]];
-      }
-    });
-    setMessages(initial);
-  }, []);
+    if (!resource.data) return;
+    setConversations(resource.data.conversations);
+    setMessages(resource.data.messages);
+  }, [resource.data]);
 
   // 自动选中指定对话
   useEffect(() => {
@@ -155,23 +86,32 @@ export function ChatRoom({ initialConversationId } = {}) {
   };
 
   const handleNewConversation = async () => {
-    const newConv = await mockCreateConversation();
-    setConversations((prev) => [newConv, ...prev]);
-    setMessages((prev) => ({ ...prev, [newConv.id]: [] }));
-    setActiveId(newConv.id);
-    navigate(`/chat/${newConv.id}`, { replace: true });
+    try {
+      const newConv = await createConversation();
+      setConversations((prev) => [newConv, ...prev]);
+      setMessages((prev) => ({ ...prev, [newConv.id]: [] }));
+      setActiveId(newConv.id);
+      navigate(`/chat/${newConv.id}`, { replace: true });
+    } catch (error) {
+      message.error(error.message || '创建对话失败');
+    }
   };
 
-  const handleDeleteConversation = (id) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    setMessages((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    if (activeId === id) {
-      setActiveId(null);
-      navigate('/chat', { replace: true });
+  const handleDeleteConversation = async (id) => {
+    try {
+      await deleteConversation(id);
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      setMessages((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (activeId === id) {
+        setActiveId(null);
+        navigate('/chat', { replace: true });
+      }
+    } catch (error) {
+      message.error(error.message || '删除对话失败');
     }
   };
 
@@ -194,22 +134,36 @@ export function ChatRoom({ initialConversationId } = {}) {
     setSending(true);
 
     try {
-      const reply = await mockSendMessage(targetId, trimmed);
+      const reply = await sendChatMessage(targetId, trimmed);
       setMessages((prev) => ({
         ...prev,
         [targetId]: [...(prev[targetId] || []), reply],
       }));
+    } catch (error) {
+      message.error(error.message || '消息发送失败');
     } finally {
       setSending(false);
     }
   };
 
   const createAutoConversation = async () => {
-    const newConv = await mockCreateConversation();
+    const newConv = await createConversation();
     setConversations((prev) => [newConv, ...prev]);
     setActiveId(newConv.id);
     return newConv.id;
   };
+
+  if (resource.loading || resource.error) {
+    return (
+      <div className="chat-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
 
   return (
     <Layout className="chat-page" hasSider>
@@ -396,7 +350,7 @@ export function ChatRoom({ initialConversationId } = {}) {
                       <Text type="secondary" style={{ fontSize: 13 }}>
                         试试问：
                       </Text>
-                      {SUGGESTIONS.map((s) => (
+                      {suggestions.map((s) => (
                         <Tag
                           key={s}
                           color="blue"

@@ -19,14 +19,30 @@ import {
   FileTextOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
-import { getConceptById, getRelatedConcepts } from '../data/wikiData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import { getConceptDetail } from '../services/wikiService';
 
 const { Paragraph, Text, Title } = Typography;
 
 export default function ConceptDetail() {
   const { conceptId } = useParams();
   const navigate = useNavigate();
-  const concept = getConceptById(conceptId);
+  const resource = useAsyncResource(() => getConceptDetail(conceptId), [conceptId]);
+  const concept = resource.data?.concept;
+  const relatedConcepts = resource.data?.relatedConcepts || [];
+
+  if (resource.loading || resource.error) {
+    return (
+      <div className="page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
 
   if (!concept) {
     return (
@@ -41,8 +57,6 @@ export default function ConceptDetail() {
       </div>
     );
   }
-
-  const relatedConcepts = getRelatedConcepts(concept);
 
   const paperColumns = [
     {

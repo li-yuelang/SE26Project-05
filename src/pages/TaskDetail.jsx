@@ -25,7 +25,9 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { getTaskById, taskStatusMeta, taskTypeMeta } from '../data/taskData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import { getTaskDetail, updateTask } from '../services/taskService';
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -39,7 +41,22 @@ const logColorMap = {
 export default function TaskDetail() {
   const { taskId } = useParams();
   const navigate = useNavigate();
-  const task = getTaskById(taskId);
+  const resource = useAsyncResource(() => getTaskDetail(taskId), [taskId]);
+  const task = resource.data?.task;
+  const taskStatusMeta = resource.data?.statusMeta || {};
+  const taskTypeMeta = resource.data?.typeMeta || {};
+
+  if (resource.loading || resource.error) {
+    return (
+      <div className="page task-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
 
   if (!task) {
     return (
@@ -102,7 +119,16 @@ export default function TaskDetail() {
         <Space>
           <Button
             icon={task.status === 'running' ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-            onClick={() => message.success(task.status === 'running' ? '任务已暂停' : '任务已启动')}
+            onClick={async () => {
+              const status = task.status === 'running' ? 'paused' : 'running';
+              try {
+                await updateTask(task.id, { status });
+                await resource.reload();
+                message.success(status === 'paused' ? '任务已暂停' : '任务已启动');
+              } catch (error) {
+                message.error(error.message || '任务状态更新失败');
+              }
+            }}
           >
             {task.status === 'running' ? '暂停任务' : '启动任务'}
           </Button>

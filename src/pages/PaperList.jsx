@@ -29,6 +29,7 @@ import {
   UserOutlined,
   TagOutlined,
 } from '@ant-design/icons';
+import { listPapers, updatePaper } from '../services/paperService';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -54,140 +55,6 @@ const SORT_OPTIONS = [
   { value: 'title_desc', label: '标题(Z-A)' },
 ];
 
-// 模拟论文数据
-const generateMockPapers = () => [
-  {
-    id: '2401.00001',
-    title: 'Attention Is All You Need: Revisited',
-    authors: ['Wei Zhang', 'Yuki Tanaka', 'Maria Garcia'],
-    abstract: 'We revisit the foundational transformer architecture and propose several improvements to the self-attention mechanism. Our modifications reduce computational complexity from O(n²) to O(n log n) while maintaining model quality. We demonstrate through extensive experiments on language modeling and translation tasks that our approach achieves comparable performance with significantly less computation.',
-    categories: ['cs.CL', 'cs.LG'],
-    publishedDate: '2024-12-15',
-    updatedDate: '2024-12-20',
-    link: 'https://arxiv.org/abs/2401.00001',
-    pdfLink: 'https://arxiv.org/pdf/2401.00001',
-    isFavorite: false,
-    isRead: true,
-  },
-  {
-    id: '2401.00002',
-    title: 'Efficient Fine-Tuning of Large Language Models with Adaptive LoRA',
-    authors: ['Jun Li', 'Sarah Chen', 'Raj Patel'],
-    abstract: 'Large language models have demonstrated remarkable capabilities but are expensive to fine-tune. We propose Adaptive LoRA (AdaLoRA), a parameter-efficient fine-tuning method that dynamically adjusts the rank of low-rank decomposition during training. AdaLoRA allocates higher ranks to important weight matrices and prunes less important ones, achieving better performance than standard LoRA with fewer trainable parameters.',
-    categories: ['cs.CL', 'cs.AI'],
-    publishedDate: '2024-12-10',
-    updatedDate: '2024-12-10',
-    link: 'https://arxiv.org/abs/2401.00002',
-    pdfLink: 'https://arxiv.org/pdf/2401.00002',
-    isFavorite: true,
-    isRead: true,
-  },
-  {
-    id: '2401.00003',
-    title: 'Vision-Language Pre-training at Scale with Contrastive Learning',
-    authors: ['Emily Wang', 'Thomas Müller', 'Priya Sharma', 'David Kim'],
-    abstract: 'We present a comprehensive study on vision-language pre-training at scale. By leveraging a novel contrastive learning objective and a curated dataset of 500 million image-text pairs, we train models that achieve state-of-the-art performance on zero-shot image classification, visual question answering, and image-text retrieval benchmarks.',
-    categories: ['cs.CV', 'cs.CL'],
-    publishedDate: '2024-12-08',
-    updatedDate: '2024-12-12',
-    link: 'https://arxiv.org/abs/2401.00003',
-    pdfLink: 'https://arxiv.org/pdf/2401.00003',
-    isFavorite: false,
-    isRead: false,
-  },
-  {
-    id: '2401.00004',
-    title: 'Graph Neural Networks for Molecular Property Prediction: A Survey',
-    authors: ['Alex Johnson', 'Mei Lin'],
-    abstract: 'Graph neural networks (GNNs) have emerged as powerful tools for molecular property prediction. This survey provides a comprehensive overview of recent advances in GNN-based molecular modeling, covering message-passing frameworks, equivariant architectures, and 3D-aware representations. We categorize existing methods, analyze their strengths and limitations, and identify promising directions for future research.',
-    categories: ['cs.LG', 'cs.AI'],
-    publishedDate: '2024-12-05',
-    updatedDate: '2024-12-05',
-    link: 'https://arxiv.org/abs/2401.00004',
-    pdfLink: 'https://arxiv.org/pdf/2401.00004',
-    isFavorite: true,
-    isRead: false,
-  },
-  {
-    id: '2401.00005',
-    title: 'Retrieval-Augmented Generation with Knowledge Graphs for Fact-Checking',
-    authors: ['Oliver Brown', 'Yuna Park', 'Carlos Rodriguez'],
-    abstract: 'We propose KG-RAG, a retrieval-augmented generation framework that integrates structured knowledge from knowledge graphs with unstructured text retrieval for automated fact-checking. Our system first retrieves relevant claims from both KG triples and text corpora, then uses a large language model to synthesize evidence and produce verifiable judgments.',
-    categories: ['cs.IR', 'cs.AI', 'cs.CL'],
-    publishedDate: '2024-12-01',
-    updatedDate: '2024-12-03',
-    link: 'https://arxiv.org/abs/2401.00005',
-    pdfLink: 'https://arxiv.org/pdf/2401.00005',
-    isFavorite: false,
-    isRead: true,
-  },
-  {
-    id: '2401.00006',
-    title: 'Scalable Distributed Training of Foundation Models with Pipeline Parallelism',
-    authors: ['Hao Chen', 'Lisa Anderson', 'Kenji Yamamoto'],
-    abstract: 'Training foundation models requires efficient distributed computing strategies. We introduce PipeDream-2D, a novel pipeline parallelism approach that combines micro-batch scheduling with 2D mesh communication. Our system achieves near-linear scaling efficiency on clusters with thousands of GPUs, reducing training time by 40% compared to existing approaches.',
-    categories: ['cs.LG', 'cs.SE'],
-    publishedDate: '2024-11-28',
-    updatedDate: '2024-11-28',
-    link: 'https://arxiv.org/abs/2401.00006',
-    pdfLink: 'https://arxiv.org/pdf/2401.00006',
-    isFavorite: false,
-    isRead: false,
-  },
-  {
-    id: '2401.00007',
-    title: 'Self-Supervised Learning for Code Understanding and Generation',
-    authors: ['Rui Xu', 'Anna Kowalski'],
-    abstract: 'We present CodeSSL, a self-supervised learning framework for code understanding that combines masked token prediction with contrastive learning over code semantics. Pre-trained on 100GB of open-source code, CodeSSL achieves strong performance on code completion, bug detection, and code summarization tasks with minimal fine-tuning data.',
-    categories: ['cs.SE', 'cs.CL'],
-    publishedDate: '2024-11-25',
-    updatedDate: '2024-11-30',
-    link: 'https://arxiv.org/abs/2401.00007',
-    pdfLink: 'https://arxiv.org/pdf/2401.00007',
-    isFavorite: false,
-    isRead: false,
-  },
-  {
-    id: '2401.00008',
-    title: 'Robust Optimization for Fair Machine Learning Under Distribution Shift',
-    authors: ['Fatima Al-Hassan', 'James Wilson', 'Sophie Laurent'],
-    abstract: 'Distribution shift poses significant challenges for fair machine learning. We propose a robust optimization framework that simultaneously minimizes worst-case risk across demographic groups while maintaining overall performance. Our theoretical analysis provides convergence guarantees, and experiments on real-world datasets demonstrate substantial improvements in fairness metrics.',
-    categories: ['cs.LG', 'stat.ML'],
-    publishedDate: '2024-11-20',
-    updatedDate: '2024-11-20',
-    link: 'https://arxiv.org/abs/2401.00008',
-    pdfLink: 'https://arxiv.org/pdf/2401.00008',
-    isFavorite: false,
-    isRead: true,
-  },
-  {
-    id: '2401.00009',
-    title: 'Multi-Agent Reinforcement Learning for Autonomous Vehicle Coordination',
-    authors: ['Marco Rossi', 'Xin Huang', 'Rachel Green'],
-    abstract: 'We study the problem of coordinating multiple autonomous vehicles at urban intersections using multi-agent reinforcement learning (MARL). Our proposed method, IntersectionMARL, learns cooperative policies that optimize traffic flow while ensuring safety. Simulations show a 35% reduction in average waiting time and 20% reduction in fuel consumption compared to traffic-light-based control.',
-    categories: ['cs.AI', 'cs.LG'],
-    publishedDate: '2024-11-15',
-    updatedDate: '2024-11-18',
-    link: 'https://arxiv.org/abs/2401.00009',
-    pdfLink: 'https://arxiv.org/pdf/2401.00009',
-    isFavorite: false,
-    isRead: false,
-  },
-  {
-    id: '2401.00010',
-    title: 'Neural Architecture Search with Hardware-Aware Constraints for Edge Deployment',
-    authors: ['Liang Wei', 'Diana Popov', 'Arjun Mehta'],
-    abstract: 'Deploying neural networks on edge devices requires balancing accuracy with hardware constraints. We propose HW-NAS, a hardware-aware neural architecture search method that jointly optimizes model accuracy, latency, and energy consumption. HW-NAS uses a differentiable search strategy with a hardware cost model, producing architectures that run 3x faster on mobile GPUs with less than 1% accuracy drop.',
-    categories: ['cs.CV', 'cs.LG'],
-    publishedDate: '2024-11-10',
-    updatedDate: '2024-11-10',
-    link: 'https://arxiv.org/abs/2401.00010',
-    pdfLink: 'https://arxiv.org/pdf/2401.00010',
-    isFavorite: true,
-    isRead: false,
-  },
-];
-
 export default function PaperList() {
   const navigate = useNavigate();
 
@@ -199,25 +66,39 @@ export default function PaperList() {
   const [sortBy, setSortBy] = useState('date_desc');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
-  // 加载数据（模拟）
-  useEffect(() => {
+  const loadPapers = useCallback(async ({ showSuccess = false } = {}) => {
     setLoading(true);
-    const timer = setTimeout(() => {
-      setPapers(generateMockPapers());
+    try {
+      const result = await listPapers();
+      setPapers(result.items);
+      if (showSuccess) message.success('论文列表已刷新');
+    } catch (error) {
+      message.error(error.message || '论文列表加载失败');
+    } finally {
       setLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
+  useEffect(() => {
+    loadPapers();
+  }, [loadPapers]);
+
   // 切换收藏
-  const toggleFavorite = useCallback((paperId, e) => {
+  const toggleFavorite = useCallback(async (paperId, e) => {
     e.stopPropagation();
-    setPapers((prev) =>
-      prev.map((p) =>
-        p.id === paperId ? { ...p, isFavorite: !p.isFavorite } : p
-      )
-    );
-  }, []);
+    const paper = papers.find((item) => item.id === paperId);
+    if (!paper) return;
+    try {
+      const updatedPaper = await updatePaper(paperId, {
+        isFavorite: !paper.isFavorite,
+      });
+      setPapers((currentPapers) => currentPapers.map((item) => (
+        item.id === paperId ? updatedPaper : item
+      )));
+    } catch (error) {
+      message.error(error.message || '收藏状态更新失败');
+    }
+  }, [papers]);
 
   // 过滤 + 排序
   const filteredPapers = papers
@@ -382,14 +263,7 @@ export default function PaperList() {
         <Button
           type="primary"
           icon={<ReloadOutlined />}
-          onClick={() => {
-            setLoading(true);
-            setTimeout(() => {
-              setPapers(generateMockPapers());
-              setLoading(false);
-              message.success('论文列表已刷新');
-            }, 500);
-          }}
+          onClick={() => loadPapers({ showSuccess: true })}
         >
           刷新
         </Button>

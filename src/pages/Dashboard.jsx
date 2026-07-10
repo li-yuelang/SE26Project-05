@@ -16,75 +16,18 @@ import {
   Tag,
   Typography,
 } from "antd";
+import AsyncPageState from "../components/AsyncPageState";
+import useAsyncResource from "../hooks/useAsyncResource";
+import { getDashboard } from "../services/dashboardService";
 
 const { Paragraph, Text, Title } = Typography;
 const { Search, TextArea } = Input;
 
-const paperList = [
-  {
-    id: "2406.01234",
-    title: "Retrieval-Augmented Agents for Scientific Literature Review",
-    authors: ["Alice Chen", "Bo Wang", "Carol Smith"],
-    category: "cs.AI",
-    publishedAt: "2026-07-01",
-    tags: ["RAG", "Agent", "Literature Review"],
-    summary:
-      "This paper studies how retrieval-augmented agents can help users read, connect, and summarize large collections of scientific papers.",
-    arxivUrl: "https://arxiv.org/abs/2406.01234",
-  },
-  {
-    id: "2406.05678",
-    title: "Concept Graph Construction from Research Papers",
-    authors: ["David Liu", "Emma Brown"],
-    category: "cs.CL",
-    publishedAt: "2026-06-28",
-    tags: ["Concept Graph", "Information Extraction", "NLP"],
-    summary:
-      "This paper proposes a pipeline for extracting concepts, methods, research questions, and experimental conclusions from paper text.",
-    arxivUrl: "https://arxiv.org/abs/2406.05678",
-  },
-  {
-    id: "2406.09123",
-    title: "Automatic Paper Classification with Topic-Aware Embeddings",
-    authors: ["Frank Zhang", "Grace Miller"],
-    category: "cs.IR",
-    publishedAt: "2026-06-20",
-    tags: ["Paper Classification", "Embedding", "Search"],
-    summary:
-      "This work introduces topic-aware embeddings for organizing papers by research area, author, publication time, and concept labels.",
-    arxivUrl: "https://arxiv.org/abs/2406.09123",
-  },
-];
-
-const topicList = [
-  { name: "Large Language Models", count: 42, percent: 86 },
-  { name: "Retrieval-Augmented Generation", count: 31, percent: 64 },
-  { name: "Computer Vision", count: 18, percent: 38 },
-  { name: "Graph Neural Networks", count: 15, percent: 32 },
-];
-
-const recentTasks = [
-  {
-    name: "arXiv paper fetching",
-    status: "Completed",
-    color: "green",
-    description: "Fetched 18 new papers from cs.AI and cs.CL.",
-  },
-  {
-    name: "PDF structure parsing",
-    status: "Running",
-    color: "blue",
-    description: "Generating summary.md, concept.md, and methods.md for 6 papers.",
-  },
-  {
-    name: "Knowledge wiki update",
-    status: "Pending",
-    color: "gold",
-    description: "Waiting for concept extraction results.",
-  },
-];
-
 export default function Dashboard() {
+  const resource = useAsyncResource(getDashboard, []);
+  const paperList = resource.data?.papers || [];
+  const topicList = resource.data?.topics || [];
+  const recentTasks = resource.data?.recentTasks || [];
   const [keyword, setKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -95,7 +38,7 @@ export default function Dashboard() {
         value: category,
       }),
     );
-  }, []);
+  }, [paperList]);
 
   const filteredPapers = useMemo(() => {
     return paperList.filter((paper) => {
@@ -113,14 +56,14 @@ export default function Dashboard() {
 
       return matchesCategory && searchText.includes(keyword.toLowerCase());
     });
-  }, [keyword, selectedCategory]);
+  }, [keyword, paperList, selectedCategory]);
 
   const paperColumns = [
     {
       title: "论文",
       dataIndex: "title",
       render: (_, paper) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <a href={paper.arxivUrl} target="_blank" rel="noreferrer">
             {paper.title}
           </a>
@@ -152,9 +95,21 @@ export default function Dashboard() {
     },
   ];
 
+  if (resource.loading || resource.error) {
+    return (
+      <main className="dashboard-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="dashboard-page">
-      <Card className="dashboard-hero" bordered={false}>
+      <Card className="dashboard-hero" variant="borderless">
         <Row gutter={[24, 24]} align="middle">
           <Col xs={24} lg={14}>
             <Text className="dashboard-eyebrow">Arxiv Paper Mate</Text>
@@ -198,7 +153,7 @@ export default function Dashboard() {
 
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={16}>
-          <Card title="最新论文" bordered={false}>
+          <Card title="最新论文" variant="borderless">
             <Table
               rowKey="id"
               columns={paperColumns}
@@ -210,12 +165,12 @@ export default function Dashboard() {
         </Col>
 
         <Col xs={24} xl={8}>
-          <Card title="热门研究方向" bordered={false}>
+          <Card title="热门研究方向" variant="borderless">
             <List
               dataSource={topicList}
               renderItem={(topic) => (
                 <List.Item>
-                  <Space direction="vertical" className="dashboard-list-item">
+                  <Space orientation="vertical" className="dashboard-list-item">
                     <Flex justify="space-between">
                       <Text strong>{topic.name}</Text>
                       <Text type="secondary">{topic.count} 篇</Text>
@@ -231,7 +186,7 @@ export default function Dashboard() {
 
       <Row gutter={[20, 20]}>
         <Col xs={24} lg={8}>
-          <Card title="论文知识 Wiki" bordered={false}>
+          <Card title="论文知识 Wiki" variant="borderless">
             <Paragraph type="secondary">
               检索论文之间的引用关系、主题关联和概念关联，快速了解一个方向的研究脉络。
             </Paragraph>
@@ -240,11 +195,11 @@ export default function Dashboard() {
         </Col>
 
         <Col xs={24} lg={8}>
-          <Card title="智能问答" bordered={false}>
+          <Card title="智能问答" variant="borderless">
             <Paragraph type="secondary">
               围绕论文内容、概念解释、研究方法或研究脉络进行提问。
             </Paragraph>
-            <Space direction="vertical" className="dashboard-list-item">
+            <Space orientation="vertical" className="dashboard-list-item">
               <TextArea rows={4} placeholder="例如：RAG 在论文阅读中通常怎么使用？" />
               <Button type="primary" block>
                 开始提问
@@ -254,7 +209,7 @@ export default function Dashboard() {
         </Col>
 
         <Col xs={24} lg={8}>
-          <Card title="最近任务" bordered={false}>
+          <Card title="最近任务" variant="borderless">
             <List
               dataSource={recentTasks}
               renderItem={(task) => (

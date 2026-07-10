@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Descriptions, Tag, Tabs, Card, Row, Col, Typography,
@@ -11,65 +11,59 @@ import {
   FileTextOutlined, BranchesOutlined, TagsOutlined,
   DownloadOutlined, ShareAltOutlined,
 } from '@ant-design/icons';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import { getPaperDetail, updatePaper } from '../services/paperService';
 
 const { Title, Text, Paragraph } = Typography;
 
-// =====================================================
-// 模拟数据（TODO: 对接后端 API 后删除）
-// =====================================================
-const MOCK_PAPER = {
-  id: '1234',
-  title: 'Attention Is All You Need',
-  authors: ['Ashish Vaswani', 'Noam Shazeer', 'Niki Parmar', 'Jakob Uszkoreit'],
-  categories: ['cs.CL', 'cs.LG', 'cs.AI'],
-  published: '2017-06-12',
-  updated: '2023-08-02',
-  arxivId: '1706.03762',
-  arxivUrl: 'https://arxiv.org/abs/1706.03762',
-  pdfUrl: 'https://arxiv.org/pdf/1706.03762.pdf',
-  abstract:
-    'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show that these models are superior in quality while being more parallelizable and requiring significantly less time to train.',
-  keywords: ['Transformer', 'attention mechanism', 'sequence transduction', 'machine translation'],
-  relatedPapers: [
-    { id: '5678', title: 'BERT: Pre-training of Deep Bidirectional Transformers' },
-    { id: '9012', title: 'GPT-3: Language Models are Few-Shot Learners' },
-    { id: '3456', title: 'Vision Transformer (ViT)' },
-  ],
-  relatedConcepts: [
-    { id: 'c1', name: 'Transformer', description: '一种基于自注意力机制的神经网络架构' },
-    { id: 'c2', name: 'Self-Attention', description: '自注意力机制，计算序列内部各位置的关联权重' },
-    { id: 'c3', name: 'Multi-Head Attention', description: '多头注意力，并行计算多个注意力表示' },
-  ],
-  isStarred: false,
-  userNote: '',
-};
-
-const MOCK_MARKDOWN = {
-  summary:
-    '该论文提出了一种全新的神经网络架构——Transformer，完全基于注意力机制，摒弃了传统的循环和卷积结构。在机器翻译任务上，Transformer 在训练速度和翻译质量上都达到了当时最优水平。',
-  concept:
-    '### 核心概念\n\n- **Transformer**：一种基于自注意力机制的编码器-解码器架构\n- **Self-Attention**：计算序列中每个位置与其他位置的相关性\n- **Multi-Head Attention**：并行计算多组注意力，捕捉不同子空间的表示\n- **Positional Encoding**：为模型提供序列中 token 的位置信息',
-  methods:
-    '### 方法\n\n1. **Scaled Dot-Product Attention**：\n   $$\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$$\n\n2. **Multi-Head Attention**：并行执行 h 个注意力函数，拼接后线性投影\n\n3. **Position-wise Feed-Forward Network**：每个位置独立的两层线性变换 + ReLU',
-};
-
 export default function PaperDetail() {
   const { paperId } = useParams();
-  const [paper] = useState(MOCK_PAPER);
-  const [starred, setStarred] = useState(paper.isStarred);
+  const resource = useAsyncResource(() => getPaperDetail(paperId), [paperId]);
+  const paper = resource.data;
+  const [starred, setStarred] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
-  const [note, setNote] = useState(paper.userNote || '');
+  const [note, setNote] = useState('');
   const [readingProgress, setReadingProgress] = useState(0);
 
+  useEffect(() => {
+    if (!paper) return;
+    setStarred(paper.isStarred);
+    setNote(paper.userNote || '');
+    setReadingProgress(paper.progress || 0);
+  }, [paper]);
+
+  if (resource.loading || resource.error) {
+    return (
+      <div className="page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
+
   // ===================== 操作回调 =====================
-  const handleToggleStar = () => {
-    setStarred(!starred);
-    message.success(starred ? '已取消收藏' : '已收藏');
+  const handleToggleStar = async () => {
+    try {
+      await updatePaper(paper.id, { isStarred: !starred, isFavorite: !starred });
+      setStarred(!starred);
+      message.success(starred ? '已取消收藏' : '已收藏');
+    } catch (error) {
+      message.error(error.message || '收藏状态更新失败');
+    }
   };
 
-  const handleSaveNote = () => {
-    setNoteVisible(false);
-    message.success('笔记已保存');
+  const handleSaveNote = async () => {
+    try {
+      await updatePaper(paper.id, { userNote: note });
+      setNoteVisible(false);
+      message.success('笔记已保存');
+    } catch (error) {
+      message.error(error.message || '笔记保存失败');
+    }
   };
 
   const handleRate = (value) => {
@@ -86,7 +80,7 @@ export default function PaperDetail() {
       children: (
         <Card>
           <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {MOCK_MARKDOWN.summary}
+            {paper.structuredContent.summary}
           </Paragraph>
         </Card>
       ),
@@ -99,7 +93,7 @@ export default function PaperDetail() {
       children: (
         <Card>
           <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {MOCK_MARKDOWN.concept}
+            {paper.structuredContent.concept}
           </Paragraph>
         </Card>
       ),
@@ -112,7 +106,7 @@ export default function PaperDetail() {
       children: (
         <Card>
           <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {MOCK_MARKDOWN.methods}
+            {paper.structuredContent.methods}
           </Paragraph>
         </Card>
       ),
@@ -269,7 +263,7 @@ export default function PaperDetail() {
 
       {/* ===== 阅读进度 ===== */}
       <Card title="阅读进度" size="small" style={{ marginBottom: 24 }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Text>已读进度：{readingProgress}%</Text>
           {/* Antd v6 Progress 用法 */}
           <div
