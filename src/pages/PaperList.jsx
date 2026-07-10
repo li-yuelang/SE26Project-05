@@ -8,8 +8,6 @@ import {
   Button,
   Space,
   Tooltip,
-  Drawer,
-  Descriptions,
   Empty,
   Spin,
   message,
@@ -34,7 +32,7 @@ import {
 
 const { Search } = Input;
 const { Option } = Select;
-const { Text, Paragraph, Title } = Typography;
+const { Text } = Typography;
 
 // 论文分类列表
 const CATEGORIES = [
@@ -200,8 +198,6 @@ export default function PaperList() {
   const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [sortBy, setSortBy] = useState('date_desc');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [selectedPaper, setSelectedPaper] = useState(null);
 
   // 加载数据（模拟）
   useEffect(() => {
@@ -257,10 +253,10 @@ export default function PaperList() {
       }
     });
 
-  // 打开论文详情抽屉
-  const openDetail = (paper) => {
-    setSelectedPaper(paper);
-    setDrawerVisible(true);
+  // 跳转到论文详情页
+  const goToDetail = (paperId, e) => {
+    if (e) e.stopPropagation();
+    navigate(`/papers/${paperId}`);
   };
 
   // 表格列定义
@@ -292,7 +288,13 @@ export default function PaperList() {
       ellipsis: true,
       render: (_, record) => (
         <div className="paper-cell">
-          <div className="paper-cell-title" onClick={() => openDetail(record)}>
+          <div
+            className="paper-cell-title"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/papers/${record.id}`);
+            }}
+          >
             {record.title}
           </div>
           <div className="paper-cell-meta">
@@ -350,7 +352,7 @@ export default function PaperList() {
               type="link"
               size="small"
               icon={<BookOutlined />}
-              onClick={() => openDetail(record)}
+              onClick={(e) => goToDetail(record.id, e)}
             />
           </Tooltip>
           <Tooltip title="在 arXiv 中打开">
@@ -490,94 +492,11 @@ export default function PaperList() {
           ),
         }}
         onRow={(record) => ({
-          onClick: () => openDetail(record),
+          onClick: () => navigate(`/papers/${record.id}`),
           style: { cursor: 'pointer' },
         })}
       />
 
-      {/* 论文详情抽屉 */}
-      <Drawer
-        title={selectedPaper?.title}
-        open={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        width={640}
-        extra={
-          <Space>
-            <Button
-              icon={
-                selectedPaper?.isFavorite ? (
-                  <StarFilled style={{ color: '#faad14' }} />
-                ) : (
-                  <StarOutlined />
-                )
-              }
-              onClick={() => {
-                if (selectedPaper) {
-                  toggleFavorite(selectedPaper.id, { stopPropagation: () => {} });
-                  setSelectedPaper((prev) =>
-                    prev ? { ...prev, isFavorite: !prev.isFavorite } : prev
-                  );
-                }
-              }}
-            >
-              {selectedPaper?.isFavorite ? '已收藏' : '收藏'}
-            </Button>
-            <Button
-              type="primary"
-              icon={<ExportOutlined />}
-              onClick={() => window.open(selectedPaper?.link, '_blank')}
-            >
-              arXiv
-            </Button>
-          </Space>
-        }
-      >
-        {selectedPaper && (
-          <div className="paper-detail-drawer">
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="arXiv ID">
-                <Text code>{selectedPaper.id}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="作者">
-                <Space wrap>
-                  {selectedPaper.authors.map((author) => (
-                    <Tag key={author} icon={<UserOutlined />}>
-                      {author}
-                    </Tag>
-                  ))}
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="分类">
-                <Space wrap>
-                  {selectedPaper.categories.map((cat) => (
-                    <Tag key={cat} color="blue">
-                      {cat}
-                    </Tag>
-                  ))}
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="发布日期">
-                {selectedPaper.publishedDate}
-              </Descriptions.Item>
-              <Descriptions.Item label="更新日期">
-                {selectedPaper.updatedDate}
-              </Descriptions.Item>
-              <Descriptions.Item label="链接">
-                <a href={selectedPaper.link} target="_blank" rel="noreferrer">
-                  {selectedPaper.link}
-                </a>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div className="paper-detail-abstract">
-              <Title level={5} style={{ marginTop: 24 }}>
-                摘要
-              </Title>
-              <Paragraph>{selectedPaper.abstract}</Paragraph>
-            </div>
-          </div>
-        )}
-      </Drawer>
     </div>
   );
 }

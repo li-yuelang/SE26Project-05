@@ -12,6 +12,7 @@ import {
   Flex,
   Space,
   Tooltip,
+  Popconfirm,
   theme,
 } from 'antd';
 import {
@@ -23,6 +24,7 @@ import {
   MessageOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 
 const { Sider, Content } = Layout;
@@ -114,7 +116,7 @@ export function ChatRoom({ initialConversationId } = {}) {
   const { token } = theme.useToken();
 
   const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [activeId, setActiveId] = useState(initialConversationId ? Number(initialConversationId) : null);
+  const [activeId, setActiveId] = useState(initialConversationId || null);
   const [messages, setMessages] = useState({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -135,7 +137,7 @@ export function ChatRoom({ initialConversationId } = {}) {
   // 自动选中指定对话
   useEffect(() => {
     if (initialConversationId) {
-      setActiveId(Number(initialConversationId));
+      setActiveId(initialConversationId);
     }
   }, [initialConversationId]);
 
@@ -158,6 +160,19 @@ export function ChatRoom({ initialConversationId } = {}) {
     setMessages((prev) => ({ ...prev, [newConv.id]: [] }));
     setActiveId(newConv.id);
     navigate(`/chat/${newConv.id}`, { replace: true });
+  };
+
+  const handleDeleteConversation = (id) => {
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    setMessages((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (activeId === id) {
+      setActiveId(null);
+      navigate('/chat', { replace: true });
+    }
   };
 
   const handleSend = async () => {
@@ -284,13 +299,38 @@ export function ChatRoom({ initialConversationId } = {}) {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             fontSize: 14,
+                            flex: 1,
                           }}
                         >
                           {conv.title}
                         </Text>
-                        <Text type="secondary" style={{ fontSize: 11, flexShrink: 0, marginLeft: 8 }}>
-                          {conv.date}
-                        </Text>
+                        <Flex align="center" gap={4} style={{ flexShrink: 0, marginLeft: 8 }}>
+                          <Text type="secondary" style={{ fontSize: 11 }}>
+                            {conv.date}
+                          </Text>
+                          <Popconfirm
+                            title="确定删除该对话？"
+                            description="删除后无法恢复"
+                            onConfirm={(e) => {
+                              e.stopPropagation();
+                              handleDeleteConversation(conv.id);
+                            }}
+                            onCancel={(e) => e.stopPropagation()}
+                            okText="删除"
+                            cancelText="取消"
+                            placement="right"
+                          >
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ visibility: 'hidden' }}
+                              className="conv-delete-btn"
+                            />
+                          </Popconfirm>
+                        </Flex>
                       </Flex>
                       <Text
                         type="secondary"

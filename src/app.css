@@ -957,6 +957,11 @@ body {
   }
 }
 
+/* Chat conversation delete button - show on row hover */
+.ant-list-item:hover .conv-delete-btn {
+  visibility: visible !important;
+}
+
 /* ========== Subscriptions ========== */
 .subscriptions-page {
   display: flex;
