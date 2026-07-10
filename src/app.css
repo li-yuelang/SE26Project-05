@@ -433,8 +433,6 @@ body {
 }
 
 /* ========== Trends ========== */
-.trend-page,
-.topic-trend-page {
 /* ========== Learning & Compare ========== */
 /* ========== Tasks ========== */
 .task-page {
@@ -683,6 +681,8 @@ body {
 .topic-trend-signal p {
   margin: 8px 0 10px;
   color: var(--color-text-light);
+}
+
 .learning-header h2,
 .compare-header h2 {
   margin-bottom: 8px;
@@ -900,6 +900,8 @@ body {
   .trend-metric-grid,
   .topic-trend-stage-list {
     grid-template-columns: 1fr;
+  }
+
   .learning-search,
   .learning-select,
   .compare-search,
