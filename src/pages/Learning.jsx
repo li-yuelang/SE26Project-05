@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -41,12 +41,12 @@ import {
   TagsOutlined,
 } from '@ant-design/icons';
 import {
-  followedTopics,
-  learningNotes,
-  learningPapers,
-  readingHistory,
-  statusMeta,
-} from '../data/learningData';
+  getLearningCenter,
+  updateFollowedTopic,
+  updateLearningPaper,
+} from '../services/learningService';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
 
 const { Search, TextArea } = Input;
 const { Paragraph, Text, Title } = Typography;
@@ -59,8 +59,9 @@ const priorityColor = {
 
 export default function Learning() {
   const navigate = useNavigate();
-  const [papers, setPapers] = useState(learningPapers);
-  const [topics, setTopics] = useState(followedTopics);
+  const resource = useAsyncResource(getLearningCenter, []);
+  const [papers, setPapers] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [activeView, setActiveView] = useState('queue');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -71,6 +72,15 @@ export default function Learning() {
   const [draftNote, setDraftNote] = useState('');
   const [draftProgress, setDraftProgress] = useState(0);
   const [draftRating, setDraftRating] = useState(0);
+  const learningNotes = resource.data?.notes || [];
+  const readingHistory = resource.data?.readingHistory || [];
+  const statusMeta = resource.data?.statusMeta || {};
+
+  useEffect(() => {
+    if (!resource.data) return;
+    setPapers(resource.data.papers);
+    setTopics(resource.data.topics);
+  }, [resource.data]);
 
   const directions = useMemo(
     () => ['all', ...Array.from(new Set(papers.map((paper) => paper.direction)))],
@@ -139,53 +149,73 @@ export default function Learning() {
     setNoteModalOpen(true);
   };
 
-  const saveNote = () => {
+  const saveNote = async () => {
     if (!activePaper) return;
 
-    setPapers((currentPapers) =>
-      currentPapers.map((paper) => {
-        if (paper.id !== activePaper.id) return paper;
-
-        return {
-          ...paper,
-          userNote: draftNote,
-          progress: draftProgress,
-          rating: draftRating,
-          notesCount: draftNote && !paper.userNote ? paper.notesCount + 1 : paper.notesCount,
-          status: draftProgress >= 100 ? 'done' : draftProgress > 0 ? 'reading' : 'todo',
-          lastReadAt: '刚刚',
-        };
-      }),
-    );
-    setNoteModalOpen(false);
-    message.success('学习记录已更新');
+    try {
+      const updatedPaper = await updateLearningPaper(activePaper.id, {
+        userNote: draftNote,
+        progress: draftProgress,
+        rating: draftRating,
+        notesCount:
+          draftNote && !activePaper.userNote
+            ? activePaper.notesCount + 1
+            : activePaper.notesCount,
+        status: draftProgress >= 100 ? 'done' : draftProgress > 0 ? 'reading' : 'todo',
+        lastReadAt: '刚刚',
+      });
+      setPapers((currentPapers) => currentPapers.map((paper) => (
+        paper.id === updatedPaper.id ? updatedPaper : paper
+      )));
+      setNoteModalOpen(false);
+      message.success('学习记录已更新');
+    } catch (error) {
+      message.error(error.message || '学习记录更新失败');
+    }
   };
 
-  const toggleFavorite = (paperId) => {
-    setPapers((currentPapers) =>
-      currentPapers.map((paper) =>
-        paper.id === paperId ? { ...paper, favorite: !paper.favorite } : paper,
-      ),
-    );
+  const toggleFavorite = async (paperId) => {
+    const paper = papers.find((item) => item.id === paperId);
+    if (!paper) return;
+    try {
+      const updatedPaper = await updateLearningPaper(paperId, {
+        favorite: !paper.favorite,
+      });
+      setPapers((currentPapers) => currentPapers.map((item) => (
+        item.id === paperId ? updatedPaper : item
+      )));
+    } catch (error) {
+      message.error(error.message || '收藏状态更新失败');
+    }
   };
 
-  const markDone = (paperId) => {
-    setPapers((currentPapers) =>
-      currentPapers.map((paper) =>
-        paper.id === paperId
-          ? { ...paper, status: 'done', progress: 100, lastReadAt: '刚刚' }
-          : paper,
-      ),
-    );
-    message.success('已标记为完成阅读');
+  const markDone = async (paperId) => {
+    try {
+      const updatedPaper = await updateLearningPaper(paperId, {
+        status: 'done',
+        progress: 100,
+        lastReadAt: '刚刚',
+      });
+      setPapers((currentPapers) => currentPapers.map((paper) => (
+        paper.id === paperId ? updatedPaper : paper
+      )));
+      message.success('已标记为完成阅读');
+    } catch (error) {
+      message.error(error.message || '阅读状态更新失败');
+    }
   };
 
-  const toggleTopic = (topicId) => {
-    setTopics((currentTopics) =>
-      currentTopics.map((topic) =>
-        topic.id === topicId ? { ...topic, followed: !topic.followed } : topic,
-      ),
-    );
+  const toggleTopic = async (topicId) => {
+    const topic = topics.find((item) => item.id === topicId);
+    if (!topic) return;
+    try {
+      const updatedTopic = await updateFollowedTopic(topicId, !topic.followed);
+      setTopics((currentTopics) => currentTopics.map((item) => (
+        item.id === topicId ? updatedTopic : item
+      )));
+    } catch (error) {
+      message.error(error.message || '主题关注状态更新失败');
+    }
   };
 
   const startCompare = () => {
@@ -202,7 +232,7 @@ export default function Learning() {
       title: '论文',
       dataIndex: 'title',
       render: (_, paper) => (
-        <Space direction="vertical" size={4} className="learning-paper-cell">
+        <Space orientation="vertical" size={4} className="learning-paper-cell">
           <Flex align="center" gap={8} wrap="wrap">
             <Button
               type="link"
@@ -247,7 +277,7 @@ export default function Learning() {
       key: 'activity',
       width: 180,
       render: (_, paper) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Text type="secondary">{paper.lastReadAt}</Text>
           <Text type="secondary">
             {paper.notesCount} 条笔记 · {paper.commentsCount} 条评论
@@ -395,7 +425,7 @@ export default function Learning() {
                   </Space>
                 }
                 description={
-                  <Space direction="vertical" size={8}>
+                  <Space orientation="vertical" size={8}>
                     <Paragraph className="learning-note-text">{note.content}</Paragraph>
                     <Space size={[6, 6]} wrap>
                       {note.tags.map((tag) => (
@@ -422,7 +452,7 @@ export default function Learning() {
           return {
             color: item.action === '完成阅读' ? 'green' : 'blue',
             content: (
-              <Space direction="vertical" size={2}>
+              <Space orientation="vertical" size={2}>
                 <Text strong>{item.action}</Text>
                 <Text>{paper?.title}</Text>
                 <Text type="secondary">{item.detail}</Text>
@@ -454,7 +484,7 @@ export default function Learning() {
               </Button>
             }
           >
-            <Space direction="vertical" size={12} className="learning-topic-body">
+            <Space orientation="vertical" size={12} className="learning-topic-body">
               <Progress percent={topic.matchRate} size="small" />
               <Text type="secondary">
                 已匹配 {topic.paperCount} 篇论文 · {topic.digestTime} 推送
@@ -471,8 +501,20 @@ export default function Learning() {
     </Row>
   );
 
+  if (resource.loading || resource.error) {
+    return (
+      <main className="page-stack learning-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </main>
+    );
+  }
+
   return (
-    <main className="learning-page">
+    <main className="page-stack learning-page">
       <Flex
         className="learning-header"
         align="flex-start"
@@ -496,7 +538,7 @@ export default function Learning() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} className="metric-card-row">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="收藏论文" value={stats.favorites} suffix="篇" />
@@ -607,7 +649,7 @@ export default function Learning() {
               dataSource={topics.filter((topic) => topic.followed)}
               renderItem={(topic) => (
                 <List.Item>
-                  <Space direction="vertical" className="learning-topic-summary" size={4}>
+                  <Space orientation="vertical" className="learning-topic-summary" size={4}>
                     <Flex justify="space-between" gap={12}>
                       <Text strong>{topic.name}</Text>
                       <Text type="secondary">今日 +{topic.newToday}</Text>
@@ -630,7 +672,7 @@ export default function Learning() {
         cancelText="取消"
         width={720}
       >
-        <Space direction="vertical" size={18} className="learning-note-modal">
+        <Space orientation="vertical" size={18} className="learning-note-modal">
           <div>
             <Text strong>阅读进度</Text>
             <Slider

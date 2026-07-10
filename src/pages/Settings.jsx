@@ -23,6 +23,12 @@ import {
   SettingOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import {
+  changePassword,
+  saveNotificationPreferences,
+  saveProfile,
+  saveSystemPreferences,
+} from "../services/settingsService";
 
 const { Text, Title } = Typography;
 
@@ -36,9 +42,6 @@ const THEME_OPTIONS = [
   { label: "深色模式", value: "dark" },
   { label: "跟随系统", value: "system" },
 ];
-
-/** 延迟函数，模拟 API 调用 */
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Settings() {
   const [profileForm] = Form.useForm();
@@ -65,7 +68,7 @@ export default function Settings() {
     try {
       const values = await profileForm.validateFields();
       setSavingProfile(true);
-      await delay(600);
+      await saveProfile({ ...values, avatarColor });
       message.success("个人资料已更新");
       setSavingProfile(false);
     } catch {
@@ -81,7 +84,7 @@ export default function Settings() {
         return;
       }
       setChangingPassword(true);
-      await delay(600);
+      await changePassword(values);
       message.success("密码修改成功");
       passwordForm.resetFields();
       setChangingPassword(false);
@@ -93,7 +96,7 @@ export default function Settings() {
   /* ---------- 各选项卡内容 ---------- */
 
   const profileTab = (
-    <Card bordered={false}>
+    <Card variant="borderless">
       <Flex vertical gap={24}>
         {/* 头像 & 基本资料 */}
         <Flex align="center" gap={24} wrap="wrap">
@@ -159,7 +162,7 @@ export default function Settings() {
   );
 
   const notificationTab = (
-    <Card bordered={false}>
+    <Card variant="borderless">
       <Flex vertical gap={20}>
         <Flex justify="space-between" align="center">
           <Flex vertical gap={4}>
@@ -189,7 +192,17 @@ export default function Settings() {
           <Switch checked={subscriptionAlert} onChange={setSubscriptionAlert} />
         </Flex>
 
-        <Button type="primary" onClick={() => message.success("通知偏好已保存")}>
+        <Button
+          type="primary"
+          onClick={async () => {
+            await saveNotificationPreferences({
+              dailyDigest,
+              paperAlert,
+              subscriptionAlert,
+            });
+            message.success("通知偏好已保存");
+          }}
+        >
           保存偏好
         </Button>
       </Flex>
@@ -197,7 +210,7 @@ export default function Settings() {
   );
 
   const systemTab = (
-    <Card bordered={false}>
+    <Card variant="borderless">
       <Flex vertical gap={20}>
         <Form layout="vertical" style={{ maxWidth: 400 }}>
           <Form.Item label="界面语言">
@@ -213,7 +226,13 @@ export default function Settings() {
           </Form.Item>
         </Form>
 
-        <Button type="primary" onClick={() => message.success("系统设置已保存")}>
+        <Button
+          type="primary"
+          onClick={async () => {
+            await saveSystemPreferences({ language, theme });
+            message.success("系统设置已保存");
+          }}
+        >
           保存设置
         </Button>
       </Flex>
@@ -221,7 +240,7 @@ export default function Settings() {
   );
 
   const securityTab = (
-    <Card bordered={false}>
+    <Card variant="borderless">
       <Form
         form={passwordForm}
         layout="vertical"

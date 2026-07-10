@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -30,27 +30,37 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import TrendLine from '../components/TrendLine';
-import { getRelatedConcepts, wikiCategoryOptions } from '../data/wikiData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
 import {
   getSeriesForRange,
+  getTrendOverview,
   getTrendStats,
   getTrendStatus,
-  trendRangeOptions,
-  trendSignals,
-  trendSortOptions,
-  trendTopics,
-} from '../data/trendData';
+} from '../services/trendService';
 
 const { Paragraph, Text, Title } = Typography;
 const { Search } = Input;
 
 export default function Trends() {
   const navigate = useNavigate();
+  const resource = useAsyncResource(getTrendOverview, []);
+  const trendTopics = resource.data?.topics || [];
+  const trendSignals = resource.data?.signals || [];
+  const trendRangeOptions = resource.data?.rangeOptions || [];
+  const trendSortOptions = resource.data?.sortOptions || [];
+  const wikiCategoryOptions = resource.data?.categoryOptions || [];
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('全部');
   const [sortBy, setSortBy] = useState('momentum');
   const [range, setRange] = useState(6);
-  const [activeTopicId, setActiveTopicId] = useState(trendTopics[0].id);
+  const [activeTopicId, setActiveTopicId] = useState(null);
+
+  useEffect(() => {
+    if (!activeTopicId && trendTopics.length > 0) {
+      setActiveTopicId(trendTopics[0].id);
+    }
+  }, [activeTopicId, trendTopics]);
 
   const filteredTopics = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -85,7 +95,7 @@ export default function Trends() {
             return right.momentum - left.momentum;
         }
       });
-  }, [category, keyword, sortBy]);
+  }, [category, keyword, sortBy, trendTopics]);
 
   const stats = useMemo(() => getTrendStats(filteredTopics), [filteredTopics]);
   const activeTopic =
@@ -93,10 +103,9 @@ export default function Trends() {
     filteredTopics[0] ||
     null;
   const activeStatus = activeTopic ? getTrendStatus(activeTopic) : null;
-  const relatedConcepts = useMemo(
-    () => (activeTopic ? getRelatedConcepts(activeTopic) : []),
-    [activeTopic],
-  );
+  const relatedConcepts = activeTopic
+    ? resource.data?.relatedConceptsByTopicId?.[activeTopic.id] || []
+    : [];
   const activeSignals = activeTopic
     ? trendSignals.filter((signal) => signal.topicIds.includes(activeTopic.id))
     : [];
@@ -106,11 +115,23 @@ export default function Trends() {
     setCategory('全部');
     setSortBy('momentum');
     setRange(6);
-    setActiveTopicId(trendTopics[0].id);
+    setActiveTopicId(trendTopics[0]?.id || null);
   };
 
+  if (resource.loading || resource.error) {
+    return (
+      <main className="page-stack trend-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </main>
+    );
+  }
+
   return (
-    <main className="trend-page">
+    <main className="page-stack trend-page">
       <Flex
         className="trend-page-header"
         align="flex-start"
@@ -124,7 +145,7 @@ export default function Trends() {
             汇总 Wiki 概念、来源论文和关系边，观察主题热度、增长速度和相邻研究方向的变化。
           </Paragraph>
         </div>
-        <Space>
+        <Space wrap>
           <Button icon={<TagsOutlined />} onClick={() => navigate('/wiki')}>
             知识 Wiki
           </Button>
@@ -134,7 +155,7 @@ export default function Trends() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} className="metric-card-row">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="追踪主题" value={stats.topics} suffix="个" />
@@ -279,7 +300,7 @@ export default function Trends() {
             }
           >
             {activeTopic ? (
-              <Space direction="vertical" size={18} className="trend-detail">
+              <Space orientation="vertical" size={18} className="trend-detail">
                 <div className="trend-detail-header">
                   <Flex align="center" gap={10} wrap="wrap">
                     <Title level={3}>{activeTopic.name}</Title>
@@ -331,7 +352,7 @@ export default function Trends() {
         </Col>
 
         <Col xs={24} xl={6}>
-          <Space direction="vertical" size={16} className="trend-side-stack">
+          <Space orientation="vertical" size={16} className="trend-side-stack">
             <Card
               variant="borderless"
               className="trend-panel"
@@ -345,7 +366,7 @@ export default function Trends() {
               {activeTopic ? (
                 <div className="trend-map">
                   <div className="trend-map-center">{activeTopic.name}</div>
-                  <Space direction="vertical" size={10} className="trend-map-list">
+                  <Space orientation="vertical" size={10} className="trend-map-list">
                     {relatedConcepts.map((relation) => (
                       <Tooltip
                         key={relation.id}
@@ -391,7 +412,7 @@ export default function Trends() {
                   (signal) => ({
                     color: signal.color,
                     content: (
-                      <Space direction="vertical" size={2}>
+                      <Space orientation="vertical" size={2}>
                         <Flex align="center" gap={8} wrap="wrap">
                           <Text strong>{signal.title}</Text>
                           <Tag color="geekblue">影响 {signal.impact}</Tag>
@@ -417,7 +438,7 @@ export default function Trends() {
                 </Space>
               }
             >
-              <Space direction="vertical" size={12} className="trend-category-list">
+              <Space orientation="vertical" size={12} className="trend-category-list">
                 {wikiCategoryOptions
                   .filter((item) => item !== '全部')
                   .map((item) => {

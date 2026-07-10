@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -32,7 +32,12 @@ import {
   PartitionOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
-import { learningPapers, statusMeta } from '../data/learningData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import {
+  exportComparison,
+  getLearningCenter,
+} from '../services/learningService';
 
 const { Paragraph, Text, Title } = Typography;
 const { Search } = Input;
@@ -58,7 +63,7 @@ const compareDimensions = [
     key: 'dataset',
     label: '数据与实验',
     render: (paper) => (
-      <Space direction="vertical" size={4}>
+      <Space orientation="vertical" size={4}>
         <Text>{paper.datasets.join('、')}</Text>
         <Text type="secondary">{paper.experiment}</Text>
       </Space>
@@ -84,26 +89,36 @@ const compareDimensions = [
 export default function Compare() {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialPaperIds = location.state?.paperIds?.filter((paperId) =>
-    learningPapers.some((paper) => paper.id === paperId),
-  );
-  const [selectedPaperIds, setSelectedPaperIds] = useState(
-    initialPaperIds?.length >= 2
-      ? initialPaperIds.slice(0, 4)
-      : learningPapers.slice(0, 3).map((paper) => paper.id),
-  );
+  const resource = useAsyncResource(getLearningCenter, []);
+  const selectionInitialized = useRef(false);
+  const papers = resource.data?.papers || [];
+  const statusMeta = resource.data?.statusMeta || {};
+  const [selectedPaperIds, setSelectedPaperIds] = useState([]);
   const [keyword, setKeyword] = useState('');
   const [activeView, setActiveView] = useState('matrix');
 
+  useEffect(() => {
+    if (selectionInitialized.current || papers.length === 0) return;
+    const initialPaperIds = location.state?.paperIds?.filter((paperId) =>
+      papers.some((paper) => paper.id === paperId),
+    );
+    setSelectedPaperIds(
+      initialPaperIds?.length >= 2
+        ? initialPaperIds.slice(0, 4)
+        : papers.slice(0, 3).map((paper) => paper.id),
+    );
+    selectionInitialized.current = true;
+  }, [location.state, papers]);
+
   const selectedPapers = useMemo(
-    () => learningPapers.filter((paper) => selectedPaperIds.includes(paper.id)),
-    [selectedPaperIds],
+    () => papers.filter((paper) => selectedPaperIds.includes(paper.id)),
+    [papers, selectedPaperIds],
   );
 
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    return learningPapers
+    return papers
       .filter((paper) =>
         [
           paper.title,
@@ -120,7 +135,7 @@ export default function Compare() {
         label: `${paper.title} (${paper.id})`,
         value: paper.id,
       }));
-  }, [keyword]);
+  }, [keyword, papers]);
 
   const tagStats = useMemo(() => {
     if (selectedPapers.length === 0) {
@@ -160,7 +175,7 @@ export default function Compare() {
       },
       ...selectedPapers.map((paper) => ({
         title: (
-          <Space direction="vertical" size={2} className="compare-column-title">
+          <Space orientation="vertical" size={2} className="compare-column-title">
             <Text strong>{paper.title}</Text>
             <Text type="secondary">arXiv: {paper.id}</Text>
           </Space>
@@ -194,7 +209,7 @@ export default function Compare() {
       title: '论文',
       dataIndex: 'title',
       render: (_, paper) => (
-        <Space direction="vertical" size={4}>
+        <Space orientation="vertical" size={4}>
           <Button
             type="link"
             className="compare-paper-title"
@@ -273,12 +288,29 @@ export default function Compare() {
     setSelectedPaperIds(paperIds);
   };
 
-  const exportCompare = () => {
-    message.success('已生成对比报告草稿，可在后续接入导出接口');
+  const exportCompare = async () => {
+    try {
+      await exportComparison(selectedPaperIds);
+      message.success('已生成对比报告草稿');
+    } catch (error) {
+      message.error(error.message || '对比报告生成失败');
+    }
   };
 
+  if (resource.loading || resource.error) {
+    return (
+      <main className="page-stack compare-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </main>
+    );
+  }
+
   return (
-    <main className="compare-page">
+    <main className="page-stack compare-page">
       <Flex
         className="compare-header"
         align="flex-start"
@@ -302,7 +334,7 @@ export default function Compare() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} className="metric-card-row">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="已选论文" value={selectedPapers.length} suffix="篇" />
@@ -360,7 +392,7 @@ export default function Compare() {
             optionFilterProp="label"
             maxTagCount="responsive"
           />
-          <Button onClick={() => setSelectedPaperIds(learningPapers.slice(0, 3).map((paper) => paper.id))}>
+          <Button onClick={() => setSelectedPaperIds(papers.slice(0, 3).map((paper) => paper.id))}>
             恢复默认
           </Button>
         </Flex>
@@ -543,7 +575,7 @@ export default function Compare() {
                     dataSource={selectedPapers}
                     renderItem={(paper) => (
                       <List.Item>
-                        <Space direction="vertical" size={6}>
+                        <Space orientation="vertical" size={6}>
                           <Text strong>{paper.title}</Text>
                           <Text type="secondary">{paper.bestFor}</Text>
                           <Space size={[6, 6]} wrap>

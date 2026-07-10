@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -27,23 +27,29 @@ import {
   SearchOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
-import {
-  getRelatedConcepts,
-  getWikiStats,
-  wikiActivity,
-  wikiCategoryOptions,
-  wikiConcepts,
-} from '../data/wikiData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import { getWikiOverview } from '../services/wikiService';
 
 const { Paragraph, Text, Title } = Typography;
 const { Search } = Input;
 
 export default function Wiki() {
   const navigate = useNavigate();
+  const resource = useAsyncResource(getWikiOverview, []);
+  const wikiConcepts = resource.data?.concepts || [];
+  const wikiActivity = resource.data?.activity || [];
+  const wikiCategoryOptions = resource.data?.categoryOptions || [];
+  const stats = resource.data?.stats || {};
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('全部');
-  const [activeConceptId, setActiveConceptId] = useState(wikiConcepts[0].id);
-  const stats = useMemo(() => getWikiStats(), []);
+  const [activeConceptId, setActiveConceptId] = useState(null);
+
+  useEffect(() => {
+    if (!activeConceptId && wikiConcepts.length > 0) {
+      setActiveConceptId(wikiConcepts[0].id);
+    }
+  }, [activeConceptId, wikiConcepts]);
 
   const filteredConcepts = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -64,17 +70,16 @@ export default function Wiki() {
 
       return matchesCategory && searchableText.includes(normalizedKeyword);
     });
-  }, [category, keyword]);
+  }, [category, keyword, wikiConcepts]);
 
   const activeConcept =
     filteredConcepts.find((concept) => concept.id === activeConceptId) ||
     filteredConcepts[0] ||
     null;
 
-  const relatedConcepts = useMemo(
-    () => getRelatedConcepts(activeConcept),
-    [activeConcept],
-  );
+  const relatedConcepts = activeConcept
+    ? resource.data?.relatedConceptsById?.[activeConcept.id] || []
+    : [];
 
   const paperColumns = [
     {
@@ -109,8 +114,20 @@ export default function Wiki() {
   const resetFilters = () => {
     setKeyword('');
     setCategory('全部');
-    setActiveConceptId(wikiConcepts[0].id);
+    setActiveConceptId(wikiConcepts[0]?.id || null);
   };
+
+  if (resource.loading || resource.error) {
+    return (
+      <main className="wiki-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="wiki-page">

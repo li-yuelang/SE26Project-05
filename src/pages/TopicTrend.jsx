@@ -26,23 +26,22 @@ import {
   TagsOutlined,
 } from '@ant-design/icons';
 import TrendLine from '../components/TrendLine';
-import { getRelatedConcepts } from '../data/wikiData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
 import {
   getSeriesForRange,
-  getTrendMilestones,
-  getTrendStages,
+  getTrendDetail,
   getTrendStatus,
-  getTrendTopicById,
-  trendSignals,
-  trendTopics,
-} from '../data/trendData';
+} from '../services/trendService';
 
 const { Paragraph, Text, Title } = Typography;
 
 export default function TopicTrend() {
   const { topicId } = useParams();
   const navigate = useNavigate();
-  const topic = getTrendTopicById(topicId);
+  const resource = useAsyncResource(() => getTrendDetail(topicId), [topicId]);
+  const topic = resource.data?.topic;
+  const trendTopics = resource.data?.topics || [];
 
   const topicRank = useMemo(() => {
     if (!topic) return null;
@@ -52,7 +51,19 @@ export default function TopicTrend() {
         .sort((left, right) => right.trend - left.trend)
         .findIndex((item) => item.id === topic.id) + 1
     );
-  }, [topic]);
+  }, [topic, trendTopics]);
+
+  if (resource.loading || resource.error) {
+    return (
+      <div className="page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
 
   if (!topic) {
     return (
@@ -69,19 +80,17 @@ export default function TopicTrend() {
   }
 
   const status = getTrendStatus(topic);
-  const relatedConcepts = getRelatedConcepts(topic);
-  const milestones = getTrendMilestones(topic);
-  const stages = getTrendStages(topic);
-  const topicSignals = trendSignals.filter((signal) =>
-    signal.topicIds.includes(topic.id),
-  );
+  const relatedConcepts = resource.data.relatedConcepts;
+  const milestones = resource.data.milestones;
+  const stages = resource.data.stages;
+  const topicSignals = resource.data.signals;
 
   const paperColumns = [
     {
       title: '论文',
       dataIndex: 'title',
       render: (_, paper) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Button type="link" onClick={() => navigate(`/papers/${paper.id}`)}>
             {paper.title}
           </Button>
@@ -150,7 +159,7 @@ export default function TopicTrend() {
       <Card variant="borderless" className="topic-trend-hero">
         <Row gutter={[20, 20]} align="middle">
           <Col xs={24} lg={16}>
-            <Space direction="vertical" size={12}>
+            <Space orientation="vertical" size={12}>
               <Space size={[8, 8]} wrap>
                 <Tag color="blue">{topic.category}</Tag>
                 <Tag color={status.color}>{status.label}</Tag>
@@ -264,7 +273,7 @@ export default function TopicTrend() {
               items={milestones.map((milestone) => ({
                 color: milestone.color,
                 content: (
-                  <Space direction="vertical" size={2}>
+                  <Space orientation="vertical" size={2}>
                     <Text strong>
                       {milestone.year} · {milestone.title}
                     </Text>

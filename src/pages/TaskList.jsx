@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -28,17 +28,30 @@ import {
   SearchOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import { mockTasks, taskStatusMeta, taskTypeMeta } from '../data/taskData';
+import AsyncPageState from '../components/AsyncPageState';
+import useAsyncResource from '../hooks/useAsyncResource';
+import {
+  getTaskCatalog,
+  resetTasks,
+  updateTask,
+} from '../services/taskService';
 
 const { Search } = Input;
 const { Text } = Typography;
 
 export default function TaskList() {
   const navigate = useNavigate();
+  const resource = useAsyncResource(getTaskCatalog, []);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [tasks, setTasks] = useState(mockTasks);
+  const [tasks, setTasks] = useState([]);
+  const taskStatusMeta = resource.data?.statusMeta || {};
+  const taskTypeMeta = resource.data?.typeMeta || {};
+
+  useEffect(() => {
+    if (resource.data) setTasks(resource.data.tasks);
+  }, [resource.data]);
 
   const filteredTasks = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -66,13 +79,16 @@ export default function TaskList() {
     [tasks]
   );
 
-  const updateTaskStatus = (taskId, status) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId ? { ...task, status } : task
-      )
-    );
-    message.success(`任务已${status === 'running' ? '启动' : '暂停'}`);
+  const updateTaskStatus = async (taskId, status) => {
+    try {
+      const updatedTask = await updateTask(taskId, { status });
+      setTasks((currentTasks) => currentTasks.map((task) => (
+        task.id === taskId ? updatedTask : task
+      )));
+      message.success(`任务已${status === 'running' ? '启动' : '暂停'}`);
+    } catch (error) {
+      message.error(error.message || '任务状态更新失败');
+    }
   };
 
   const columns = [
@@ -196,6 +212,18 @@ export default function TaskList() {
     },
   ];
 
+  if (resource.loading || resource.error) {
+    return (
+      <div className="page task-page">
+        <AsyncPageState
+          loading={resource.loading}
+          error={resource.error}
+          onRetry={resource.reload}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="page task-page">
       <div className="task-page-header">
@@ -213,9 +241,13 @@ export default function TaskList() {
           </Button>
           <Button
             icon={<ReloadOutlined />}
-            onClick={() => {
-              setTasks(mockTasks);
-              message.success('任务列表已刷新');
+            onClick={async () => {
+              try {
+                setTasks(await resetTasks());
+                message.success('任务列表已刷新');
+              } catch (error) {
+                message.error(error.message || '任务列表刷新失败');
+              }
             }}
           >
             刷新
