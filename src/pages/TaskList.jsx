@@ -23,6 +23,7 @@ import {
   EyeOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   SyncOutlined,
@@ -202,16 +203,24 @@ export default function TaskList() {
           <h2>抓取任务管理</h2>
           <p>管理 ArXiv 自动抓取、去重、解析和入库任务。</p>
         </div>
-        <Button
-          type="primary"
-          icon={<ReloadOutlined />}
-          onClick={() => {
-            setTasks(mockTasks);
-            message.success('任务列表已刷新');
-          }}
-        >
-          刷新
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => message.info('新建任务功能开发中')}
+          >
+            新建抓取任务
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              setTasks(mockTasks);
+              message.success('任务列表已刷新');
+            }}
+          >
+            刷新
+          </Button>
+        </Space>
       </div>
 
       <Row gutter={[16, 16]} className="task-stat-row">
