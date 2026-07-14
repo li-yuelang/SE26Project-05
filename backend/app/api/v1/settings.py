@@ -1,7 +1,7 @@
 """User settings API endpoints – profile, notifications, system preferences, password."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.common import success

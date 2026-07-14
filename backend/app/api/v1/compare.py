@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.common import success
-from app.schemas.compare import ComparisonCreate, ComparisonOut
+from app.schemas.compare import ComparisonCreate
 from app.services.compare import compare_service
 
 router = APIRouter(prefix="/compare", tags=["Compare"])
