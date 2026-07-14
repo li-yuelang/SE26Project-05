@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperMate — 架构视图 &amp; 关键算法</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d2991d;
+    --purple: #a371f7;
+    --red: #f85149;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px;
+    text-align: center;
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  .header p { color: var(--text-dim); margin-top: 6px; font-size: 0.95rem; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 30px 24px 60px; }
+
+  /* Section */
+  .section { margin-bottom: 40px; }
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 18px;
+    padding-left: 14px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Architecture SVG */
+  .arch-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  /* Algorithm Cards */
+  .algo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 18px;
+  }
+  .algo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    transition: border-color 0.2s;
+  }
+  .algo-card:hover { border-color: var(--accent); }
+  .algo-card .tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-right: 8px;
+    vertical-align: 2px;
+  }
+  .tag-search  { background: #1a3a5c; color: var(--accent); }
+  .tag-nlp    { background: #1a2e1a; color: var(--green); }
+  .tag-graph  { background: #2a1a3c; color: var(--purple); }
+  .tag-rank   { background: #3c2a1a; color: var(--orange); }
+  .tag-embed  { background: #1a2e2e; color: var(--cyan); }
+  .tag-ml     { background: #3c1a2a; color: var(--pink); }
+  .tag-parse  { background: #3c1a1a; color: var(--red); }
+
+  .algo-card h4 { font-size: 0.95rem; margin: 8px 0 6px; }
+  .algo-card p  { font-size: 0.82rem; color: var(--text-dim); margin: 0; }
+
+  /* Pipeline Flow */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .pipeline .box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .pipeline .arrow { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PaperMate <span>架构视图</span> &amp; 关键算法</h1>
+  <p>arXiv 论文阅读工具 — 后端架构全景 &amp; 核心算法一览</p>
+</div>
+
+<div class="container">
+
+  <!-- ========== ARCHITECTURE DIAGRAM ========== -->
+  <div class="section">
+    <div class="section-title">系统架构全景图</div>
+    <div class="arch-wrapper">
+      <svg viewBox="0 0 1320 820" width="100%" style="min-width:1000px;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.25"/></filter>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/>
+          </marker>
+          <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#58a6ff"/>
+          </marker>
+          <linearGradient id="grad-client" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1a3a5c"/><stop offset="100%" stop-color="#0d2137"/>
+          </linearGradient>
+          <linearGradient id="grad-gateway" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#2a2410"/><stop offset="100%" stop-color="#1a1608"/>
+          </linearGradient>
+          <linearGradient id="grad-api" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1a2e2e"/><stop offset="100%" stop-color="#0d1f1f"/>
+          </linearGradient>
+          <linearGradient id="grad-worker" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#2a1a3c"/><stop offset="100%" stop-color="#1a0f2a"/>
+          </linearGradient>
+          <linearGradient id="grad-data" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1a2e1a"/><stop offset="100%" stop-color="#0d1f0d"/>
+          </linearGradient>
+          <linearGradient id="grad-llm" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#3c1a2a"/><stop offset="100%" stop-color="#2a0f1a"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Background grid -->
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#21262d" stroke-width="0.5"/>
+        </pattern>
+        <rect width="1320" height="820" fill="url(#grid)" opacity="0.5"/>
+
+        <!-- ===== LAYER 1: Client ===== -->
+        <rect x="40" y="20" width="1240" height="65" rx="8" fill="url(#grad-client)" stroke="#58a6ff" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="60" y="42" fill="#58a6ff" font-size="0.7rem" font-weight="600" opacity="0.7">CLIENT</text>
+        <text x="60" y="64" fill="#c9d1d9" font-size="0.85rem">React 18 + Vite + Ant Design 6</text>
+        <text x="340" y="64" fill="#8b949e" font-size="0.75rem">SPA — 15 页面 — Mock/HTTP 双模式</text>
+
+        <!-- Arrows: Client → API -->
+        <line x1="260" y1="85" x2="260" y2="118" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+        <line x1="960" y1="85" x2="960" y2="118" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+
+        <!-- ===== LAYER 2: FastAPI Service Layer ===== -->
+        <rect x="40" y="120" width="1240" height="200" rx="8" fill="url(#grad-api)" stroke="#39d2c0" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="60" y="142" fill="#39d2c0" font-size="0.7rem" font-weight="600" opacity="0.7">API LAYER — FastAPI + SQLAlchemy 2.0 async + Pydantic v2</text>
+
+        <!-- Service Boxes Row 1 -->
+        <rect x="60" y="155" width="180" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="150" y="174" fill="#58a6ff" font-size="0.75rem" font-weight="600" text-anchor="middle">Paper Service</text>
+        <text x="150" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">论文 CRUD · 搜索 · 去重</text>
+
+        <rect x="260" y="155" width="180" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="350" y="174" fill="#3fb950" font-size="0.75rem" font-weight="600" text-anchor="middle">Wiki Service</text>
+        <text x="350" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">概念 · 关联 · 图谱遍历</text>
+
+        <rect x="460" y="155" width="180" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="550" y="174" fill="#a371f7" font-size="0.75rem" font-weight="600" text-anchor="middle">Chat / QA Service</text>
+        <text x="550" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">RAG · 流式 WS · 引用定位</text>
+
+        <rect x="660" y="155" width="180" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="750" y="174" fill="#d2991d" font-size="0.75rem" font-weight="600" text-anchor="middle">Learning Service</text>
+        <text x="750" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">收藏 · 笔记 · 历史</text>
+
+        <rect x="860" y="155" width="180" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="950" y="174" fill="#f778ba" font-size="0.75rem" font-weight="600" text-anchor="middle">Trend Service</text>
+        <text x="950" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">趋势 · 里程碑 · 时间序列</text>
+
+        <rect x="1060" y="155" width="195" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="1158" y="174" fill="#f85149" font-size="0.75rem" font-weight="600" text-anchor="middle">Subscription Service</text>
+        <text x="1158" y="190" fill="#8b949e" font-size="0.65rem" text-anchor="middle">推荐 · 摘要 · 推送</text>
+
+        <!-- Core Layer Boxes Row 2 -->
+        <rect x="60" y="218" width="290" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="205" y="237" fill="#c9d1d9" font-size="0.75rem" font-weight="600" text-anchor="middle">LLM Gateway（统一 LLM 调用层）</text>
+        <text x="205" y="253" fill="#8b949e" font-size="0.65rem" text-anchor="middle">Prompt 工程 · 结构化输出 · 流式 · 降级</text>
+
+        <rect x="370" y="218" width="290" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="515" y="237" fill="#c9d1d9" font-size="0.75rem" font-weight="600" text-anchor="middle">Hybrid Search Engine（Fallback）</text>
+        <text x="515" y="253" fill="#8b949e" font-size="0.65rem" text-anchor="middle">RRF · pgvector · tsvector · 概念图谱预筛选</text>
+
+        <!-- Security + DI -->
+        <rect x="680" y="218" width="290" height="46" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="825" y="237" fill="#c9d1d9" font-size="0.75rem" font-weight="600" text-anchor="middle">Security &amp; DI</text>
+        <text x="825" y="253" fill="#8b949e" font-size="0.65rem" text-anchor="middle">JWT 鉴权 · 依赖注入 · 限流 · CORS</text>
+
+        <!-- Arrows: API → Worker / DB -->
+        <line x1="150" y1="320" x2="150" y2="355" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+        <line x1="515" y1="320" x2="515" y2="355" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+        <line x1="950" y1="320" x2="950" y2="355" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+
+        <!-- ===== LAYER 3: Celery Worker ===== -->
+        <rect x="40" y="357" width="610" height="105" rx="8" fill="url(#grad-worker)" stroke="#a371f7" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="60" y="379" fill="#a371f7" font-size="0.7rem" font-weight="600" opacity="0.7">CELERY WORKER — Redis Broker</text>
+
+        <rect x="60" y="392" width="175" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="148" y="412" fill="#d2991d" font-size="0.73rem" font-weight="600" text-anchor="middle">ArXiv Fetcher</text>
+        <text x="148" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">定时抓取 · 增量更新 · 去重</text>
+        <text x="148" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：SimHash · 标题模糊匹配</text>
+
+        <rect x="255" y="392" width="175" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="342" y="412" fill="#3fb950" font-size="0.73rem" font-weight="600" text-anchor="middle">PDF Parser</text>
+        <text x="342" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">全文提取 · 章节识别</text>
+        <text x="342" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：Layout 检测 · 公式过滤</text>
+
+        <rect x="450" y="392" width="185" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="542" y="412" fill="#58a6ff" font-size="0.73rem" font-weight="600" text-anchor="middle">Knowledge Extractor</text>
+        <text x="542" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">LLM 结构化抽取 · 分块 · Embedding</text>
+        <text x="542" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：语义分块 · NER · 关系抽取</text>
+
+        <!-- ===== LAYER 3b: Data Layer ===== -->
+        <rect x="680" y="357" width="600" height="105" rx="8" fill="url(#grad-data)" stroke="#3fb950" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="700" y="379" fill="#3fb950" font-size="0.7rem" font-weight="600" opacity="0.7">DATA LAYER</text>
+
+        <rect x="700" y="392" width="165" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="782" y="412" fill="#3fb950" font-size="0.73rem" font-weight="600" text-anchor="middle">PostgreSQL 16</text>
+        <text x="782" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">主库 · ORM · 全文索引</text>
+        <text x="782" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：ts_rank · BTREE/GIN</text>
+
+        <rect x="885" y="392" width="180" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="975" y="412" fill="#58a6ff" font-size="0.73rem" font-weight="600" text-anchor="middle">pgvector</text>
+        <text x="975" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">向量检索 · 余弦/HNSW</text>
+        <text x="975" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：IVFFlat · HNSW 索引</text>
+
+        <rect x="1085" y="392" width="180" height="52" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="1175" y="412" fill="#f85149" font-size="0.73rem" font-weight="600" text-anchor="middle">Redis</text>
+        <text x="1175" y="428" fill="#8b949e" font-size="0.63rem" text-anchor="middle">缓存 · 会话 · Celery Broker</text>
+        <text x="1175" y="440" fill="#8b949e" font-size="0.6rem" text-anchor="middle">算法：LRU 淘汰 · 读写分离</text>
+
+        <!-- Arrows: Worker → Data -->
+        <line x1="640" y1="410" x2="680" y2="410" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+
+        <!-- ===== LAYER 4: LLM ===== -->
+        <rect x="370" y="495" width="560" height="90" rx="8" fill="url(#grad-llm)" stroke="#f778ba" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="390" y="518" fill="#f778ba" font-size="0.7rem" font-weight="600" opacity="0.7">LLM PROVIDERS</text>
+
+        <rect x="390" y="531" width="150" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="465" y="553" fill="#c9d1d9" font-size="0.73rem" font-weight="600" text-anchor="middle">OpenAI API</text>
+
+        <rect x="558" y="531" width="150" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="633" y="553" fill="#c9d1d9" font-size="0.73rem" font-weight="600" text-anchor="middle">Claude API</text>
+
+        <rect x="726" y="531" width="185" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.8"/>
+        <text x="818" y="553" fill="#c9d1d9" font-size="0.73rem" font-weight="600" text-anchor="middle">text-embedding-3-small</text>
+
+        <!-- Arrows: API → LLM -->
+        <line x1="515" y1="465" x2="515" y2="495" stroke="#f778ba" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+
+        <!-- ===== RAG Pipeline Horizontal ===== -->
+        <rect x="40" y="620" width="1240" height="125" rx="8" fill="url(#grad-data)" stroke="#d2991d" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="60" y="643" fill="#d2991d" font-size="0.7rem" font-weight="600" opacity="0.7">RAG PIPELINE — SQL-First Fallback 策略（结构化优先，向量兜底）</text>
+
+        <!-- Row 1: Primary Path -->
+        <rect x="60" y="656" width="195" height="36" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1.5"/>
+        <text x="158" y="677" fill="#3fb950" font-size="0.72rem" font-weight="600" text-anchor="middle">① SQL 结构化检索</text>
+        <text x="158" y="689" fill="#8b949e" font-size="0.6rem" text-anchor="middle">concepts / methods / authors / title</text>
+
+        <text x="262" y="674" fill="#8b949e" font-size="0.85rem">→</text>
+
+        <rect x="278" y="656" width="170" height="36" rx="6" fill="#0d1117" stroke="#d2991d" stroke-width="1"/>
+        <text x="363" y="677" fill="#d2991d" font-size="0.72rem" font-weight="600" text-anchor="middle">② 结果充足?</text>
+        <text x="363" y="689" fill="#8b949e" font-size="0.6rem" text-anchor="middle">count ≥ 3 ?</text>
+
+        <!-- Branch: YES (down) -->
+        <text x="448" y="674" fill="#3fb950" font-size="0.85rem">─ YES ─→</text>
+        <rect x="522" y="656" width="195" height="36" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1"/>
+        <text x="620" y="677" fill="#3fb950" font-size="0.72rem" font-weight="600" text-anchor="middle">③ 结构上下文组装</text>
+        <text x="620" y="689" fill="#8b949e" font-size="0.6rem" text-anchor="middle">summary + concepts + methods</text>
+
+        <!-- Branch: NO (vertical fallback then back) -->
+        <text x="363" y="710" fill="#f85149" font-size="0.65rem" text-anchor="middle">NO ↓</text>
+
+        <rect x="278" y="718" width="400" height="36" rx="6" fill="#0d1117" stroke="#f85149" stroke-width="1.5"/>
+        <text x="478" y="739" fill="#f85149" font-size="0.72rem" font-weight="600" text-anchor="middle">②b Fallback：Hybrid Search — pgvector + FTS + RRF 融合</text>
+        <text x="478" y="751" fill="#8b949e" font-size="0.6rem" text-anchor="middle">向量语义匹配 + 全文关键词 + 概念图谱 BFS 预筛选</text>
+
+        <text x="685" y="739" fill="#8b949e" font-size="0.85rem">→</text>
+
+        <rect x="700" y="656" width="195" height="36" rx="6" fill="#0d1117" stroke="#a371f7" stroke-width="1"/>
+        <text x="798" y="677" fill="#a371f7" font-size="0.72rem" font-weight="600" text-anchor="middle">④ 上下文组装</text>
+        <text x="798" y="689" fill="#8b949e" font-size="0.62rem" text-anchor="middle">Chunk 排序 · Token 裁剪</text>
+
+        <text x="900" y="674" fill="#8b949e" font-size="0.85rem">→</text>
+
+        <rect x="920" y="656" width="195" height="36" rx="6" fill="#0d1117" stroke="#f778ba" stroke-width="1"/>
+        <text x="1018" y="677" fill="#f778ba" font-size="0.72rem" font-weight="600" text-anchor="middle">⑤ LLM 生成 + 引用</text>
+        <text x="1018" y="689" fill="#8b949e" font-size="0.62rem" text-anchor="middle">流式输出 · 出处定位</text>
+
+        <!-- Arrows bottom layer -->
+        <line x1="515" y1="620" x2="515" y2="585" stroke="#d2991d" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+        <text x="525" y="606" fill="#8b949e" font-size="0.6rem">查询触发</text>
+
+        <!-- Legend -->
+        <text x="40" y="780" fill="#8b949e" font-size="0.65rem">图例：</text>
+        <rect x="80" y="768" width="12" height="12" rx="2" fill="#1a3a5c" stroke="#58a6ff" stroke-width="0.8"/>
+        <text x="97" y="779" fill="#8b949e" font-size="0.62rem">客户端</text>
+        <rect x="140" y="768" width="12" height="12" rx="2" fill="#1a2e2e" stroke="#39d2c0" stroke-width="0.8"/>
+        <text x="157" y="779" fill="#8b949e" font-size="0.62rem">API层</text>
+        <rect x="200" y="768" width="12" height="12" rx="2" fill="#2a1a3c" stroke="#a371f7" stroke-width="0.8"/>
+        <text x="217" y="779" fill="#8b949e" font-size="0.62rem">Worker</text>
+        <rect x="270" y="768" width="12" height="12" rx="2" fill="#1a2e1a" stroke="#3fb950" stroke-width="0.8"/>
+        <text x="287" y="779" fill="#8b949e" font-size="0.62rem">数据层</text>
+        <rect x="330" y="768" width="12" height="12" rx="2" fill="#3c1a2a" stroke="#f778ba" stroke-width="0.8"/>
+        <text x="347" y="779" fill="#8b949e" font-size="0.62rem">LLM</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ========== KEY ALGORITHMS ========== -->
+  <div class="section">
+    <div class="section-title">关键算法清单</div>
+    <div class="algo-grid">
+
+      <!-- 1 -->
+      <div class="algo-card">
+        <span class="tag tag-search">检索</span>
+        <h4>RRF — Reciprocal Rank Fusion</h4>
+        <p>融合向量相似度排序（pgvector cosine）与全文搜索排序（ts_rank）的结果。每个文档在各自列表中倒数排名取平均，避免归一化问题，比线性加权更鲁棒。</p>
+        <div class="pipeline">
+          <span class="box">Top-K₁ (vector)</span><span class="arrow">+</span>
+          <span class="box">Top-K₂ (FTS)</span><span class="arrow">→</span>
+          <span class="box">RRF 评分</span><span class="arrow">→</span>
+          <span class="box">Top-K 最终</span>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="algo-card">
+        <span class="tag tag-graph">图谱</span>
+        <h4>Concept Graph BFS 扩展</h4>
+        <p>从用户查询中提取概念实体，在 concept_relations 表中 BFS 1-2 跳扩展关联概念，用扩展概念集过滤 paper_concepts 缩小候选范围，再进入向量检索。</p>
+        <div class="pipeline">
+          <span class="box">NER 抽取实体</span><span class="arrow">→</span>
+          <span class="box">BFS 1-2跳</span><span class="arrow">→</span>
+          <span class="box">候选论文集</span><span class="arrow">→</span>
+          <span class="box">向量检索</span>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="algo-card">
+        <span class="tag tag-nlp">NLP</span>
+        <h4>Semantic Chunking（语义分块）</h4>
+        <p>不是固定 token 数切分，而是基于段落/章节边界 + embedding 相似度断点检测，在语义自然边界处分割，保证每个 chunk 内容完整、上下文自包含。</p>
+        <div class="pipeline">
+          <span class="box">段落分割</span><span class="arrow">→</span>
+          <span class="box">相邻段落相似度</span><span class="arrow">→</span>
+          <span class="box">低相似度处断开</span><span class="arrow">→</span>
+          <span class="box">500±100 tokens</span>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="algo-card">
+        <span class="tag tag-nlp">NLP</span>
+        <h4>LLM 驱动概念关系抽取</h4>
+        <p>用 Few-shot Prompt 驱动 LLM 从论文中抽取 (实体, 关系, 实体) 三元组，建立概念间的 IS_A、USES、IMPROVES、RELATED_TO 等关系类型，构建轻量知识图谱。</p>
+        <div class="pipeline">
+          <span class="box">论文全文</span><span class="arrow">→</span>
+          <span class="box">Few-shot Prompt</span><span class="arrow">→</span>
+          <span class="box">三元组列表</span><span class="arrow">→</span>
+          <span class="box">concept_relations</span>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="algo-card">
+        <span class="tag tag-search">检索</span>
+        <h4>PostgreSQL Full-Text Search</h4>
+        <p>对标题、摘要、作者建立 tsvector 列 + GIN 索引，支持中文分词（zhparser/jieba）和英文，使用 ts_rank 按 TF-IDF 加权排序，支持短语搜索和前缀匹配。</p>
+        <div class="pipeline">
+          <span class="box">to_tsvector(title,abstract)</span><span class="arrow">→</span>
+          <span class="box">plainto_tsquery(keyword)</span><span class="arrow">→</span>
+          <span class="box">ts_rank 排序</span>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="algo-card">
+        <span class="tag tag-embed">向量</span>
+        <h4>HNSW 近似最近邻搜索</h4>
+        <p>pgvector 的 HNSW 索引实现近似最近邻检索，构建多层可导航小世界图，查询时从顶层开始贪心搜索，O(log N) 复杂度，比 IVFFlat 精度更高。</p>
+        <div class="pipeline">
+          <span class="box">Query Embedding</span><span class="arrow">→</span>
+          <span class="box">HNSW 图遍历</span><span class="arrow">→</span>
+          <span class="box">Top-K 近似解</span>
+        </div>
+      </div>
+
+      <!-- 7 -->
+      <div class="algo-card">
+        <span class="tag tag-rank">排序</span>
+        <h4>PageRank 论文影响力评估</h4>
+        <p>在 paper_citations 引用图上运行 PageRank，迭代计算每篇论文的影响力得分，用于"代表性论文"排序和趋势分析中的里程碑论文识别。</p>
+        <div class="pipeline">
+          <span class="box">引用图邻接矩阵</span><span class="arrow">→</span>
+          <span class="box">阻尼 d=0.85 迭代</span><span class="arrow">→</span>
+          <span class="box">PR 值收敛</span><span class="arrow">→</span>
+          <span class="box">排序</span>
+        </div>
+      </div>
+
+      <!-- 8 -->
+      <div class="algo-card">
+        <span class="tag tag-rank">去重</span>
+        <h4>SimHash + 标题模糊匹配</h4>
+        <p>论文去重采用两级策略：先 arxiv_id 精确匹配，再对标题做 SimHash 指纹 + 海明距离 < 3 判定为重复，兼顾精度和召回，避免仅靠 ID 遗漏同一论文的多版本。</p>
+        <div class="pipeline">
+          <span class="box">arxiv_id 精确</span><span class="arrow">→</span>
+          <span class="box">SimHash 指纹</span><span class="arrow">→</span>
+          <span class="box">Hamming < 3</span><span class="arrow">→</span>
+          <span class="box">判重</span>
+        </div>
+      </div>
+
+      <!-- 9 -->
+      <div class="algo-card">
+        <span class="tag tag-ml">推荐</span>
+        <h4>Content-Based + 协同过滤混合推荐</h4>
+        <p>内容侧：基于用户收藏论文的概念向量做余弦相似度推荐；协同侧：基于用户-论文交互矩阵做矩阵分解（SVD），融合两者分数做加权推荐。</p>
+        <div class="pipeline">
+          <span class="box">概念向量余弦</span><span class="arrow">+</span>
+          <span class="box">SVD 矩阵分解</span><span class="arrow">→</span>
+          <span class="box">加权融合</span><span class="arrow">→</span>
+          <span class="box">Top-N 推荐</span>
+        </div>
+      </div>
+
+      <!-- 10 -->
+      <div class="algo-card">
+        <span class="tag tag-ml">趋势</span>
+        <h4>时间序列趋势检测</h4>
+        <p>按月聚合论文发表量 + 概念提及频率，用滑动窗口平滑 + 一阶差分检测拐点，识别"新兴热点"和"成熟衰退"阶段，自动标注里程碑论文。</p>
+        <div class="pipeline">
+          <span class="box">月聚合时序</span><span class="arrow">→</span>
+          <span class="box">滑动均值平滑</span><span class="arrow">→</span>
+          <span class="box">差分拐点检测</span><span class="arrow">→</span>
+          <span class="box">趋势标注</span>
+        </div>
+      </div>
+
+      <!-- 11 -->
+      <div class="algo-card">
+        <span class="tag tag-parse">解析</span>
+        <h4>PDF Layout 检测与章节识别</h4>
+        <p>基于 PyMuPDF 的块级文本提取 + 字体大小/粗体/位置启发式规则，识别论文标题、作者、摘要、章节标题层级，过滤页眉页脚和参考文献。</p>
+        <div class="pipeline">
+          <span class="box">PyMuPDF 块提取</span><span class="arrow">→</span>
+          <span class="box">字体/位置规则</span><span class="arrow">→</span>
+          <span class="box">章节树构建</span><span class="arrow">→</span>
+          <span class="box">结构化输出</span>
+        </div>
+      </div>
+
+      <!-- 12 -->
+      <div class="algo-card">
+        <span class="tag tag-nlp">NLP</span>
+        <h4>Two-Stage Prompt 结构化摘要生成</h4>
+        <p>Stage1: Map 阶段并行对每个 chunk 生成局部摘要；Stage2: Reduce 阶段汇总局部摘要 + 原文元数据，生成 summary / methods / concepts / experiments 四个 markdown 文件。</p>
+        <div class="pipeline">
+          <span class="box">Map: 逐 chunk 摘要</span><span class="arrow">→</span>
+          <span class="box">Reduce: 汇总合并</span><span class="arrow">→</span>
+          <span class="box">{summary,methods,concepts}.md</span>
+        </div>
+      </div>
+
+      <!-- 13 -->
+      <div class="algo-card">
+        <span class="tag tag-embed">向量</span>
+        <h4>Embedding 批量生成与缓存</h4>
+        <p>论文入库后异步调用 text-embedding-3-small（1536维）批量生成 chunk embedding，写入 paper_chunks.embedding 列。已生成的不重复调用，增量更新。</p>
+        <div class="pipeline">
+          <span class="box">新 chunk 入队</span><span class="arrow">→</span>
+          <span class="box">批量 API 调用</span><span class="arrow">→</span>
+          <span class="box">pgvector INSERT</span><span class="arrow">→</span>
+          <span class="box">HNSW reindex</span>
+        </div>
+      </div>
+
+      <!-- 14 -->
+      <div class="algo-card">
+        <span class="tag tag-search">检索</span>
+        <h4>SQL-First Fallback 检索策略</h4>
+        <p>所有查询统一先走 SQL 结构化检索（对 papers / concepts / methods / summaries / authors 等多表联合查询），利用已抽取的结构化数据。若结果数 &ge; 3，直接用结构化摘要作为上下文喂给 LLM；若不足，再 Fallback 到 Hybrid Search（pgvector + FTS + RRF），避免不必要的 embedding 调用和向量计算。</p>
+        <div class="pipeline">
+          <span class="box">任意查询</span><span class="arrow">→</span>
+          <span class="box">SQL 多表联查</span><span class="arrow">→</span>
+          <span class="box">count≥3?</span><span class="arrow">→</span>
+          <span class="box">YES: 结构化上下文</span><span class="arrow">/</span>
+          <span class="box">NO: Hybrid Search</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  PaperMate Architecture View — 14 Key Algorithms — Generated for SE26Project-05
+</div>
+
+</body>
+</html>
