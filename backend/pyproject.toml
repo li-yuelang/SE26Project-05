@@ -9,8 +9,11 @@ dependencies = [
     "celery[redis]>=5.4.0",
     "email-validator>=2.2.0",
     "fastapi>=0.115.0",
+    "httpx>=0.28.0",
     "pgvector>=0.3.6",
     "psycopg[binary]>=3.2.0",
+    "PyMuPDF>=1.24.0",
+    "pdfplumber>=0.11.0",
     "pwdlib[argon2]>=0.2.1",
     "pydantic-settings>=2.6.0",
     "PyJWT>=2.10.0",
@@ -28,7 +31,7 @@ include = ["app*"]
 exclude = ["alembic*", "tests*"]
 
 [dependency-groups]
-dev = ["httpx>=0.28.0", "pytest>=8.3.0", "pytest-asyncio>=0.24.0", "ruff>=0.8.0"]
+dev = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "ruff>=0.8.0"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

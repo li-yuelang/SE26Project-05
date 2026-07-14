@@ -55,3 +55,34 @@ class ConceptRelation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     source_concept: Mapped[Concept] = relationship(foreign_keys=[source_concept_id], back_populates="outgoing_relations")
     target_concept: Mapped[Concept] = relationship(foreign_keys=[target_concept_id], back_populates="incoming_relations")
+    evidence_records: Mapped[list[ConceptRelationEvidence]] = relationship(
+        back_populates="relation", cascade="all, delete-orphan"
+    )
+
+
+class ConceptRelationEvidence(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Paper-level provenance for a concept relation.
+
+    A relation is shared by the graph, while this table keeps the exact paper,
+    excerpt, confidence and analysis version that caused it to be created or
+    confirmed.  This makes re-processing auditable without duplicating graph
+    edges.
+    """
+
+    __tablename__ = "concept_relation_evidence"
+    __table_args__ = (
+        UniqueConstraint(
+            "relation_id", "paper_id", "analysis_version", name="uq_relation_evidence_version"
+        ),
+    )
+
+    relation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("concept_relations.id", ondelete="CASCADE"), index=True
+    )
+    paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+    evidence: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    analysis_version: Mapped[str] = mapped_column(String(128), index=True)
+
+    relation: Mapped[ConceptRelation] = relationship(back_populates="evidence_records")
+    paper: Mapped[Paper] = relationship(back_populates="relation_evidence")
