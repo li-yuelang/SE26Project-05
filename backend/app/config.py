@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
     llm_timeout_seconds: float = 90.0
+    llm_temperature: float = 0.3
+    llm_max_tokens: int = 4096
     embedding_api_key: str | None = None
     embedding_base_url: str | None = None
     embedding_model: str = "text-embedding-3-small"
@@ -37,13 +39,6 @@ class Settings(BaseSettings):
     analysis_max_retries: int = 3
     celery_task_always_eager: bool = False
     celery_task_eager_propagates: bool = True
-    # LLM / OpenAI
-    openai_api_key: str = ""
-    openai_base_url: str = ""           # 留空用官方 API，也可填代理地址
-    openai_model: str = "gpt-4o-mini"
-    openai_embedding_model: str = "text-embedding-3-small"
-    openai_temperature: float = 0.3
-    openai_max_tokens: int = 4096
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

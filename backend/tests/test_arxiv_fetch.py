@@ -1,6 +1,4 @@
 """Tests for arXiv fetch service — no network calls, pure XML parsing."""
-
-import pytest
 from app.services.arxiv_fetch import build_search_query
 
 

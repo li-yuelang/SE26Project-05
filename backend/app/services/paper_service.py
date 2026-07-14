@@ -36,8 +36,8 @@ async def list_papers(
         query = query.where(Paper.primary_category == params.category)
     if params.author:
         query = query.where(Paper.authors.any(params.author))
-    if params.status or params.parsed_status:
-        query = query.where(Paper.parsed_status == (params.status or params.parsed_status))
+    if params.parsed_status:
+        query = query.where(Paper.parsed_status == params.parsed_status)
     if params.date_from:
         try:
             dt_from = datetime.strptime(params.date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
