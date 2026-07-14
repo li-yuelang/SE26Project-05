@@ -1,3 +1,4 @@
-from app.schemas.common import ApiResponse, PageResponse
+from app.schemas.common import ApiResponse, PageResponse, success
 
-__all__ = ["ApiResponse", "PageResponse"]
+# Re-export for convenience
+__all__ = ["ApiResponse", "PageResponse", "success"]
