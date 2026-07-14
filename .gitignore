@@ -9,6 +9,14 @@ dist/
 .env.local
 .env.*.local
 
+# Python backend
+backend/.env
+backend/.venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.ruff_cache/
+
 # IDE
 .vscode/
 .idea/

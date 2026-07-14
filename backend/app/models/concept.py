@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+from sqlalchemy import Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.database import Base
+from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from app.models.paper import Paper
+
+
+class Concept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "concepts"
+
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(String(100), index=True)
+    aliases: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+
+    paper_links: Mapped[list[PaperConcept]] = relationship(back_populates="concept", cascade="all, delete-orphan")
+    outgoing_relations: Mapped[list[ConceptRelation]] = relationship(
+        foreign_keys="ConceptRelation.source_concept_id", back_populates="source_concept", cascade="all, delete-orphan"
+    )
+    incoming_relations: Mapped[list[ConceptRelation]] = relationship(
+        foreign_keys="ConceptRelation.target_concept_id", back_populates="target_concept"
+    )
+
+
+class PaperConcept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "paper_concepts"
+    __table_args__ = (UniqueConstraint("paper_id", "concept_id", name="uq_paper_concept"),)
+
+    paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+    concept_id: Mapped[UUID] = mapped_column(ForeignKey("concepts.id", ondelete="CASCADE"), index=True)
+    relevance: Mapped[float] = mapped_column(Float, default=1.0)
+    evidence: Mapped[str | None] = mapped_column(Text)
+
+    paper: Mapped[Paper] = relationship(back_populates="concepts")
+    concept: Mapped[Concept] = relationship(back_populates="paper_links")
+
+
+class ConceptRelation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "concept_relations"
+    __table_args__ = (UniqueConstraint("source_concept_id", "target_concept_id", "relation_type", name="uq_concept_relation"),)
+
+    source_concept_id: Mapped[UUID] = mapped_column(ForeignKey("concepts.id", ondelete="CASCADE"), index=True)
+    target_concept_id: Mapped[UUID] = mapped_column(ForeignKey("concepts.id", ondelete="CASCADE"), index=True)
+    relation_type: Mapped[str] = mapped_column(String(64))
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+
+    source_concept: Mapped[Concept] = relationship(foreign_keys=[source_concept_id], back_populates="outgoing_relations")
+    target_concept: Mapped[Concept] = relationship(foreign_keys=[target_concept_id], back_populates="incoming_relations")
