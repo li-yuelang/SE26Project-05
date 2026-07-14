@@ -10,6 +10,7 @@ dependencies = [
     "email-validator>=2.2.0",
     "fastapi>=0.115.0",
     "httpx>=0.28.0",
+    "openai>=1.50.0",
     "pgvector>=0.3.6",
     "psycopg[binary]>=3.2.0",
     "PyMuPDF>=1.24.0",
