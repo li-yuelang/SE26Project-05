@@ -34,6 +34,12 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
     ports:
       - "8080:8080"
     depends_on:
@@ -42,6 +48,26 @@ services:
       redis:
         condition: service_healthy
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8080"
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info
 
 volumes:
   postgres_data:

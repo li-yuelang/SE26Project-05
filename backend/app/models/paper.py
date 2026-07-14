@@ -13,7 +13,7 @@ from app.database import Base
 from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
-    from app.models.concept import PaperConcept
+    from app.models.concept import ConceptRelationEvidence, PaperConcept
     from app.models.learning import Bookmark, Comment, Note, ReadingHistory
 
 
@@ -47,6 +47,9 @@ class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     notes: Mapped[list[Note]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     comments: Mapped[list[Comment]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     readers: Mapped[list[ReadingHistory]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    relation_evidence: Mapped[list[ConceptRelationEvidence]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan"
+    )
 
 
 class PaperChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):

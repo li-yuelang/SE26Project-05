@@ -16,6 +16,7 @@ backend/__pycache__/
 backend/**/*.pyc
 backend/.pytest_cache/
 backend/.ruff_cache/
+backend/*.egg-info/
 
 # IDE
 .vscode/
