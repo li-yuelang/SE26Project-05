@@ -33,7 +33,7 @@ import {
   createConversation,
   deleteConversation,
   getChatBootstrap,
-  sendChatMessage,
+  streamChatMessage,
 } from '../services/chatService';
 
 const { Sider, Content } = Layout;
@@ -121,6 +121,7 @@ export function ChatRoom({ initialConversationId } = {}) {
 
     const targetId = activeId || (await createAutoConversation());
     const userMsg = {
+      id: `user-${Date.now()}`,
       role: 'user',
       content: trimmed,
       time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
@@ -133,13 +134,46 @@ export function ChatRoom({ initialConversationId } = {}) {
     setInput('');
     setSending(true);
 
+    const draftId = `assistant-${Date.now()}`;
+    setMessages((prev) => ({
+      ...prev,
+      [targetId]: [
+        ...(prev[targetId] || []),
+        { id: draftId, role: 'assistant', content: '', sources: [], time: '', streaming: true },
+      ],
+    }));
+
     try {
-      const reply = await sendChatMessage(targetId, trimmed);
+      const reply = await streamChatMessage(targetId, trimmed, {
+        onDelta: (delta) => setMessages((prev) => ({
+          ...prev,
+          [targetId]: (prev[targetId] || []).map((item) => (
+            item.id === draftId ? { ...item, content: item.content + delta } : item
+          )),
+        })),
+      });
       setMessages((prev) => ({
         ...prev,
-        [targetId]: [...(prev[targetId] || []), reply],
+        [targetId]: (prev[targetId] || []).map((item) => (
+          item.id === draftId ? { ...reply, id: reply.id || draftId, streaming: false } : item
+        )),
       }));
+      setConversations((prev) => prev.map((conversation) => (
+        conversation.id === targetId
+          ? {
+              ...conversation,
+              title: ['新对话', 'New conversation'].includes(conversation.title)
+                ? trimmed.slice(0, 40)
+                : conversation.title,
+              preview: reply.content.slice(0, 80),
+            }
+          : conversation
+      )));
     } catch (error) {
+      setMessages((prev) => ({
+        ...prev,
+        [targetId]: (prev[targetId] || []).filter((item) => item.id !== draftId),
+      }));
       message.error(error.message || '消息发送失败');
     } finally {
       setSending(false);
@@ -365,7 +399,7 @@ export function ChatRoom({ initialConversationId } = {}) {
                 </div>
               ) : (
                 activeMessages.map((msg, i) => (
-                  <MessageBubble key={i} msg={msg} token={token} />
+                  <MessageBubble key={msg.id || i} msg={msg} token={token} navigate={navigate} />
                 ))
               )}
               <div ref={messagesEndRef} />
@@ -441,7 +475,7 @@ export function ChatRoom({ initialConversationId } = {}) {
 // ---------- 工具组件 ----------
 
 /** 消息气泡 */
-function MessageBubble({ msg, token }) {
+function MessageBubble({ msg, token, navigate }) {
   const isUser = msg.role === 'user';
 
   return (
@@ -489,12 +523,19 @@ function MessageBubble({ msg, token }) {
           <Flex align="center" gap={4} wrap="wrap" style={{ padding: '0 4px' }}>
             <FileTextOutlined style={{ fontSize: 11, color: token.colorTextQuaternary }} />
             {msg.sources.map((s, j) => (
-              <Tooltip key={j} title={`arXiv: ${s.paperId}`}>
+              <Tooltip
+                key={`${s.paperId}-${s.chunkIndex ?? j}`}
+                title={s.excerpt || `arXiv: ${s.arxivId || s.paperId}`}
+              >
                 <Tag
                   color="processing"
                   style={{ cursor: 'pointer', fontSize: 11, margin: 0 }}
+                  onClick={() => navigate(
+                    `/papers/${s.paperId}${s.chunkIndex == null ? '' : `?chunk=${s.chunkIndex}`}`,
+                  )}
                 >
-                  {s.title}
+                  [{j + 1}] {s.title}
+                  {s.chunkIndex == null ? '' : ` · 片段 ${s.chunkIndex}`}
                 </Tag>
               </Tooltip>
             ))}

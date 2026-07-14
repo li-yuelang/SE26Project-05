@@ -7,10 +7,8 @@ from fastapi import APIRouter, Query
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.common import success
 from app.schemas.paper import (
-    PaperDetail,
     PaperFilterParams,
     PaperListResponse,
-    PaperListItem,
     PaperUpdateRequest,
 )
 from app.services import paper_service
@@ -61,6 +59,16 @@ async def get_paper_detail(
 ) -> dict:
     detail = await paper_service.get_paper_detail(db, paper_id)
     return success(detail.model_dump(mode="json"))
+
+
+@router.get("/{paper_id}/chunks/{chunk_index}")
+async def get_paper_chunk(
+    paper_id: UUID,
+    chunk_index: int,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    return success(await paper_service.get_paper_chunk(db, paper_id, chunk_index))
 
 
 @router.patch("/{paper_id}")

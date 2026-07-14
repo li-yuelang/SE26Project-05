@@ -67,7 +67,7 @@ export default function ConceptDetail() {
           <Button type="link" onClick={() => navigate(`/papers/${paper.id}`)}>
             {paper.title}
           </Button>
-          <Text type="secondary">arXiv: {paper.id}</Text>
+          <Text type="secondary">arXiv: {paper.arxivId || paper.id}</Text>
         </Space>
       ),
     },

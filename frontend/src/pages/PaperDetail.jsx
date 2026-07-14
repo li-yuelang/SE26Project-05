@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Descriptions, Tag, Tabs, Card, Row, Col, Typography,
   Divider, Space, Button, Rate, List, Alert, Skeleton, Empty,
@@ -13,13 +13,19 @@ import {
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
-import { getPaperDetail, updatePaper } from '../services/paperService';
+import { getPaperChunk, getPaperDetail, updatePaper } from '../services/paperService';
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function PaperDetail() {
   const { paperId } = useParams();
+  const [searchParams] = useSearchParams();
+  const citedChunkIndex = searchParams.get('chunk');
   const resource = useAsyncResource(() => getPaperDetail(paperId), [paperId]);
+  const citedChunk = useAsyncResource(
+    () => citedChunkIndex == null ? Promise.resolve(null) : getPaperChunk(paperId, citedChunkIndex),
+    [paperId, citedChunkIndex],
+  );
   const paper = resource.data;
   const [starred, setStarred] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
@@ -209,6 +215,22 @@ export default function PaperDetail() {
       </Space>
 
       <Divider />
+
+      {citedChunkIndex != null && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+          message={`问答引用定位 · 片段 ${citedChunkIndex}${citedChunk.data?.sectionTitle ? ` · ${citedChunk.data.sectionTitle}` : ''}`}
+          description={
+            citedChunk.loading
+              ? '正在加载引用原文…'
+              : citedChunk.error
+                ? citedChunk.error.message
+                : citedChunk.data?.content
+          }
+        />
+      )}
 
       {/* ===== 摘要 ===== */}
       <Card title="摘要" size="small" style={{ marginBottom: 24 }}>

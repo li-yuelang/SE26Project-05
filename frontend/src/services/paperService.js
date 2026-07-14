@@ -41,11 +41,48 @@ function toPaperDetail(paper) {
   };
 }
 
+function fromHttpPaper(paper) {
+  return {
+    ...paper,
+    arxivId: paper.arxiv_id,
+    id: paper.id,
+    isFavorite: false,
+    isRead: paper.parsed_status === 'done',
+    link: paper.arxiv_url,
+    pdfLink: paper.pdf_url,
+    pdfUrl: paper.pdf_url,
+    publishedDate: paper.published_at?.slice(0, 10) || '',
+    updatedDate: paper.updated_at_source?.slice(0, 10) || '',
+  };
+}
+
+function fromHttpPaperDetail(paper) {
+  const normalized = fromHttpPaper(paper);
+  const structured = paper.structured_content || {};
+  return {
+    ...normalized,
+    isStarred: false,
+    keywords: paper.metadata_extra?.keywords || paper.categories || [],
+    published: normalized.publishedDate,
+    updated: normalized.updatedDate || paper.updated_at?.slice(0, 10) || '',
+    relatedConcepts: paper.relatedConcepts || [],
+    relatedPapers: paper.relatedPapers || [],
+    structuredContent: {
+      summary: structured.summary || paper.abstract,
+      concept: structured.concept || structured.concepts || '暂无结构化概念内容',
+      methods: structured.methods || '暂无结构化方法内容',
+    },
+  };
+}
+
 let paperStore = cloneMockData(learningPapers.map(toListPaper));
 
 export const listPapers = createEndpoint({
   mock: () => ({ items: paperStore, total: paperStore.length }),
-  http: (query) => request('/papers', { query }),
+  http: async (query) => {
+    const result = await request('/papers', { query });
+    return { ...result, items: result.items.map(fromHttpPaper) };
+  },
 });
 
 export const getPaperDetail = createEndpoint({
@@ -59,7 +96,17 @@ export const getPaperDetail = createEndpoint({
     }
     return toPaperDetail(paper);
   },
-  http: (paperId) => request(`/papers/${paperId}`),
+  http: async (paperId) => fromHttpPaperDetail(await request(`/papers/${paperId}`)),
+});
+
+export const getPaperChunk = createEndpoint({
+  mock: (paperId, chunkIndex) => ({
+    paperId,
+    chunkIndex,
+    sectionTitle: '引用原文',
+    content: '该引用定位到论文解析后的原文片段。切换到真实后端后，此处会展示入库的完整片段内容。',
+  }),
+  http: (paperId, chunkIndex) => request(`/papers/${paperId}/chunks/${chunkIndex}`),
 });
 
 export const updatePaper = createEndpoint({

@@ -12,6 +12,16 @@ export class ApiError extends Error {
   }
 }
 
+export function getAccessToken() {
+  return window.localStorage.getItem('access_token') || '';
+}
+
+export function buildWebSocketUrl(path) {
+  const httpUrl = buildUrl(path);
+  httpUrl.protocol = httpUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  return httpUrl;
+}
+
 function buildUrl(path, query) {
   const normalizedBase = API_BASE_URL.replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -40,6 +50,7 @@ export async function request(path, options = {}) {
     credentials: 'include',
     headers: {
       Accept: 'application/json',
+      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     },

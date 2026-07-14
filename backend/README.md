@@ -11,6 +11,25 @@
 The API root is `http://localhost:8080/api`. The health endpoint is `GET /health`.
 To launch all services in containers, run `docker compose up --build` from this directory.
 
+`OPENAI_API_KEY` is optional. With a key, chat uses vector retrieval and the configured
+OpenAI-compatible model. Without a key (or when the provider is temporarily unavailable),
+it falls back to keyword reranking and a citation-grounded extractive answer.
+
+## Wiki, Chat, and RAG
+
+- `GET /api/wiki` returns concept statistics, category search results, relations, and activity.
+- `/api/wiki/concepts` provides concept CRUD; relation create/delete lives below each concept.
+- `GET /api/chat` returns the current user's conversations and messages.
+- `/api/chat/conversations` provides conversation create/delete and message sending.
+- `WS /api/chat/conversations/{id}/stream?token={access_token}` streams answer deltas and a final
+  message payload.
+- Every answer source includes `paperId` and `chunkIndex`; the corresponding original text is
+  available from `GET /api/papers/{paper_id}/chunks/{chunk_index}`.
+
+The RAG pipeline retrieves paper chunks, reranks them, selects a prompt for concept explanation,
+method comparison, or research-lineage questions, generates a grounded answer, and persists the
+citations with the assistant message.
+
 ## Shared contracts
 
 - Success response: `{ "code": "OK", "message": "success", "data": ... }`
