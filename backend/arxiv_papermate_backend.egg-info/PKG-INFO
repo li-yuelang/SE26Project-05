@@ -8,6 +8,7 @@ Requires-Dist: asyncpg>=0.30.0
 Requires-Dist: celery[redis]>=5.4.0
 Requires-Dist: email-validator>=2.2.0
 Requires-Dist: fastapi>=0.115.0
+Requires-Dist: openai>=1.50.0
 Requires-Dist: pgvector>=0.3.6
 Requires-Dist: psycopg[binary]>=3.2.0
 Requires-Dist: pwdlib[argon2]>=0.2.1

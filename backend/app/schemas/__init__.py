@@ -7,3 +7,7 @@ __all__ = [
     "PaperDetail", "PaperFilterParams", "PaperListItem", "PaperListResponse", "PaperUpdateRequest",
     "FetchTaskResponse", "TaskCatalogResponse", "TaskUpdateRequest",
 ]
+from app.schemas.common import ApiResponse, PageResponse, success
+
+# Re-export for convenience
+__all__ = ["ApiResponse", "PageResponse", "success"]
