@@ -14,7 +14,6 @@ class PaperFilterParams(BaseModel):
     query: str | None = Field(default=None, max_length=500, description="全文搜索关键词")
     category: str | None = Field(default=None, max_length=100, description="按主分类筛选")
     author: str | None = Field(default=None, max_length=200, description="按作者筛选")
-    status: str | None = Field(default=None, max_length=32, description="按解析状态筛选")
     parsed_status: str | None = Field(default=None, max_length=32, description="按解析状态筛选")
     date_from: str | None = Field(default=None, description="发表日期起始 (YYYY-MM-DD)")
     date_to: str | None = Field(default=None, description="发表日期截止 (YYYY-MM-DD)")

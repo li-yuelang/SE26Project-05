@@ -33,8 +33,8 @@ class OpenAICompatibleLLM:
         payload: dict[str, Any] = {
             "model": self.config.llm_model,
             "messages": messages,
-            "temperature": 0,
-            "response_format": {"type": "json_object"},
+            "temperature": self.config.llm_temperature,
+            "max_tokens": self.config.llm_max_tokens,
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         try:
