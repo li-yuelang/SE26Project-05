@@ -6,7 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.learning import Bookmark, ReadingHistory
-from app.models.paper import Paper, PaperConcept
+from app.models.concept import PaperConcept
+from app.models.paper import Paper
 from app.models.user import User
 
 
