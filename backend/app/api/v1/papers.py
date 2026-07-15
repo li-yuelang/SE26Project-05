@@ -212,6 +212,16 @@ async def get_paper_detail(
     return success(detail.model_dump(mode="json"))
 
 
+@router.get("/{paper_id}/chunks/{chunk_index}")
+async def get_paper_chunk(
+    paper_id: UUID,
+    chunk_index: int,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    return success(await paper_service.get_paper_chunk(db, paper_id, chunk_index))
+
+
 @router.patch("/{paper_id}")
 async def update_paper(
     paper_id: UUID,

@@ -1,13 +1,29 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, compare, learning, papers, settings, subscriptions, tasks, trends
+from app.api.v1 import (
+    auth,
+    chat,
+    compare,
+    learning,
+    papers,
+    settings,
+    subscriptions,
+    tasks,
+    trends,
+    wiki,
+)
 
 api_router = APIRouter()
-api_router.include_router(auth.router)
-api_router.include_router(papers.router)
-api_router.include_router(tasks.router)
-api_router.include_router(learning.router)
-api_router.include_router(compare.router)
-api_router.include_router(trends.router)
-api_router.include_router(subscriptions.router)
-api_router.include_router(settings.router)
+for router in (
+    auth.router,
+    papers.router,
+    tasks.router,
+    learning.router,
+    compare.router,
+    trends.router,
+    subscriptions.router,
+    settings.router,
+    wiki.router,
+    chat.router,
+):
+    api_router.include_router(router)

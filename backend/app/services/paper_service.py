@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
-from app.models.paper import Paper
+from app.models.paper import Paper, PaperChunk
 from app.schemas.paper import PaperDetail, PaperFilterParams, PaperListItem, PaperUpdateRequest
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,23 @@ async def get_paper_detail(db: AsyncSession, paper_id: UUID) -> PaperDetail:
     if not paper:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
     return PaperDetail.model_validate(paper)
+
+
+async def get_paper_chunk(db: AsyncSession, paper_id: UUID, chunk_index: int) -> dict:
+    chunk = await db.scalar(
+        select(PaperChunk).where(
+            PaperChunk.paper_id == paper_id,
+            PaperChunk.chunk_index == chunk_index,
+        )
+    )
+    if chunk is None:
+        raise AppError("论文原文片段不存在", code="PAPER_CHUNK_NOT_FOUND", status_code=404)
+    return {
+        "paperId": str(paper_id),
+        "chunkIndex": chunk.chunk_index,
+        "sectionTitle": chunk.section_title,
+        "content": chunk.content,
+    }
 
 
 async def update_paper(

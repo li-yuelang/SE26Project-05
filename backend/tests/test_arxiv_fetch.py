@@ -1,4 +1,5 @@
 """Tests for arXiv fetch service — no network calls, pure XML parsing."""
+
 from app.services.arxiv_fetch import build_search_query
 
 
