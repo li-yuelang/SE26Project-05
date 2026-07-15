@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 import logging
+import re
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import settings
-from app.core.openai_provider import OpenAIEmbeddingProvider, OpenAILLMGateway
+from app.core.embedding import get_embedding_provider
+from app.core.llm_gateway import get_llm_gateway
 from app.models.paper import Paper, PaperChunk
 
 logger = logging.getLogger(__name__)
@@ -83,9 +84,9 @@ async def retrieve(
         statement = statement.where(PaperChunk.paper_id.in_(paper_ids))
 
     vector_distances: dict[UUID, float] = {}
-    if settings.openai_api_key:
+    if settings.embedding_api_key or settings.llm_api_key:
         try:
-            embedding = (await OpenAIEmbeddingProvider().embed([question]))[0]
+            embedding = (await get_embedding_provider().embed([question]))[0]
             distance = PaperChunk.embedding.cosine_distance(embedding)
             vector_statement = (
                 statement.where(PaperChunk.embedding.is_not(None)).order_by(distance).limit(candidate_limit)
@@ -167,10 +168,10 @@ async def answer(
 ) -> tuple[str, list[RetrievedChunk], str]:
     scenario = detect_scenario(question, requested_scenario)
     chunks = await retrieve(db, question, paper_ids=paper_ids)
-    if settings.openai_api_key and chunks:
+    if settings.llm_api_key and chunks:
         system_prompt, prompt = build_prompt(question, chunks, scenario)
         try:
-            content = await OpenAILLMGateway().generate(prompt, system_prompt=system_prompt)
+            content = await get_llm_gateway().generate(prompt, system_prompt=system_prompt)
         except Exception:
             logger.warning("LLM generation unavailable; using grounded extractive answer", exc_info=True)
             content = fallback_answer(question, chunks, scenario)

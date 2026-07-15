@@ -5,5 +5,6 @@ from app.schemas.task import FetchTaskResponse, TaskCatalogResponse, TaskUpdateR
 __all__ = [
     "ApiResponse", "PageResponse",
     "PaperDetail", "PaperFilterParams", "PaperListItem", "PaperListResponse", "PaperUpdateRequest",
-    "FetchTaskResponse", "TaskCatalogResponse", "TaskUpdateRequest", "success",
+    "FetchTaskResponse", "TaskCatalogResponse", "TaskUpdateRequest",
+    "success",
 ]

@@ -136,7 +136,7 @@ async def send_message(
         conversation_id=conversation.id,
         role="assistant",
         content=content,
-        model_name=settings.openai_model if settings.openai_api_key else "extractive-fallback",
+        model_name=settings.llm_model if settings.llm_api_key else "extractive-fallback",
     )
     db.add(assistant)
     await db.flush()
