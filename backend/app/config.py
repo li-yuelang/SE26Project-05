@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     celery_task_always_eager: bool = False
     celery_task_eager_propagates: bool = True
 
+    # arXiv API policy and worker settings.
+    arxiv_user_agent: str = "PaperMate/1.0 (arxiv metadata client)"
+    arxiv_contact_email: str | None = None
+    arxiv_timeout_seconds: float = 60.0
+    arxiv_request_interval_seconds: float = 3.0
+    arxiv_max_retries: int = 3
+    arxiv_redis_lock_timeout_seconds: int = 120
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

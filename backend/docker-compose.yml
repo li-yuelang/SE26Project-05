@@ -46,6 +46,12 @@ services:
       EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-60}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
       EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+      ARXIV_USER_AGENT: ${ARXIV_USER_AGENT:-PaperMate/1.0 (arxiv metadata client)}
+      ARXIV_CONTACT_EMAIL: ${ARXIV_CONTACT_EMAIL:-}
+      ARXIV_TIMEOUT_SECONDS: ${ARXIV_TIMEOUT_SECONDS:-60}
+      ARXIV_REQUEST_INTERVAL_SECONDS: ${ARXIV_REQUEST_INTERVAL_SECONDS:-3}
+      ARXIV_MAX_RETRIES: ${ARXIV_MAX_RETRIES:-3}
+      ARXIV_REDIS_LOCK_TIMEOUT_SECONDS: ${ARXIV_REDIS_LOCK_TIMEOUT_SECONDS:-120}
     ports:
       - "8080:8080"
     depends_on:
@@ -79,7 +85,41 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q default
+
+  arxiv-worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      ARXIV_USER_AGENT: ${ARXIV_USER_AGENT:-PaperMate/1.0 (arxiv metadata client)}
+      ARXIV_CONTACT_EMAIL: ${ARXIV_CONTACT_EMAIL:-}
+      ARXIV_TIMEOUT_SECONDS: ${ARXIV_TIMEOUT_SECONDS:-60}
+      ARXIV_REQUEST_INTERVAL_SECONDS: ${ARXIV_REQUEST_INTERVAL_SECONDS:-3}
+      ARXIV_MAX_RETRIES: ${ARXIV_MAX_RETRIES:-3}
+      ARXIV_REDIS_LOCK_TIMEOUT_SECONDS: ${ARXIV_REDIS_LOCK_TIMEOUT_SECONDS:-120}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q arxiv --concurrency=1
+
+  beat:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
 
 volumes:
   postgres_data:

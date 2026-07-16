@@ -28,8 +28,11 @@ def _time(value) -> str:
     return value.astimezone(timezone.utc).strftime("%H:%M")
 
 
-def _conversation_view(conversation: Conversation) -> dict:
-    messages = list(conversation.messages)
+def _conversation_view(
+    conversation: Conversation,
+    messages: list[ChatMessage] | None = None,
+) -> dict:
+    messages = list(conversation.messages if messages is None else messages)
     preview = messages[-1].content[:80] if messages else ""
     return {
         "id": str(conversation.id),
@@ -106,7 +109,9 @@ async def create_conversation(db: AsyncSession, user: User, payload: Conversatio
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
-    return _conversation_view(conversation)
+    # A newly created conversation cannot have messages. Passing the known empty
+    # collection avoids an async relationship lazy-load while serializing the response.
+    return _conversation_view(conversation, messages=[])
 
 
 async def delete_conversation(db: AsyncSession, user: User, conversation_id: UUID) -> None:

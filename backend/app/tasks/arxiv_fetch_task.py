@@ -1,122 +1,394 @@
-"""arXiv 定时抓取的 Celery 任务。"""
+"""Celery worker and beat-dispatcher tasks for arXiv fetch runs."""
 
+from __future__ import annotations
+
+import asyncio
 import logging
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.config import settings
 from app.database import AsyncSessionLocal
-from app.models.task import FetchTask
-from app.services.arxiv_fetch import ArxivFetchError, build_search_query, fetch_arxiv_papers
-from app.services.paper_service import upsert_arxiv_papers
+from app.models.paper import Paper
+from app.models.task import FetchTask, FetchTaskRun, FetchTaskRunPaper
+from app.services.arxiv_fetch import ArxivFetchError, build_search_query, fetch_arxiv_window
+from app.services.task_service import (
+    calculate_next_run_at,
+    calculate_run_window,
+    task_config_snapshot,
+    utc_now,
+)
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=300, acks_late=True)
-def run_fetch_task(self, task_id: str) -> dict:
-    """执行单个 FetchTask：从 arXiv 拉取论文 → 去重入库。
+def _run_async(coroutine: Any) -> Any:
+    """Run async worker code in normal Celery and eager/test execution."""
 
-    由 Celery Beat 定时调度或手动触发。
-    """
-    import asyncio
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(asyncio.run, coroutine).result()
 
-    return asyncio.run(_async_fetch_and_save(task_id, self))
+
+def _append_log(run: FetchTaskRun, level: str, content: str) -> None:
+    run.execution_log = [
+        *(run.execution_log or []),
+        {"time": utc_now().isoformat(), "level": level, "content": content},
+    ]
 
 
-async def _async_fetch_and_save(task_id: str, celery_task) -> dict:
-    """异步执行抓取逻辑。"""
-    from uuid import UUID
+def _query_from_snapshot(snapshot: dict[str, Any]) -> str:
+    return build_search_query(
+        keywords=snapshot.get("keywords") or [],
+        categories=snapshot.get("categories") or [],
+        keyword_match_mode=snapshot.get("keyword_match_mode", "or"),
+    )
 
-    task_uuid = UUID(task_id)
 
+async def _set_run_retry_pending(run_id: UUID, message: str) -> None:
     async with AsyncSessionLocal() as db:
-        task = await db.scalar(select(FetchTask).where(FetchTask.id == task_uuid))
-        if not task:
-            raise ValueError(f"FetchTask not found: {task_id}")
-
-        if task.status in ("running", "completed"):
-            return {"status": "skipped", "reason": f"Task is already {task.status}"}
-
-        # 标记为运行中
-        task.status = "running"
-        task.started_at = datetime.now(timezone.utc)
-        task.execution_log = task.execution_log or []
-        task.execution_log.append({
-            "time": datetime.now(timezone.utc).strftime("%H:%M"),
-            "level": "info",
-            "content": "任务开始执行。",
-        })
+        run = await db.get(FetchTaskRun, run_id)
+        if run is None:
+            return
+        run.status = "queued"
+        run.error_message = message[:4000]
+        _append_log(run, "warning", message[:4000])
         await db.commit()
 
-        try:
-            query = (
-                build_search_query(keywords=task.keywords, categories=task.categories)
-                or task.keywords[0] if task.keywords else "*"
+
+async def _set_run_failed(run_id: UUID, message: str) -> None:
+    async with AsyncSessionLocal() as db:
+        run = await db.get(FetchTaskRun, run_id)
+        if run is None:
+            return
+        run.status = "failed"
+        run.error_message = message[:4000]
+        run.finished_at = utc_now()
+        _append_log(run, "error", message[:4000])
+        await db.commit()
+
+
+async def _mark_run_running(run_id: UUID) -> tuple[FetchTaskRun, FetchTask] | None:
+    async with AsyncSessionLocal() as db:
+        row = await db.execute(
+            select(FetchTaskRun, FetchTask)
+            .join(FetchTask, FetchTask.id == FetchTaskRun.task_id)
+            .where(FetchTaskRun.id == run_id)
+            .with_for_update()
+        )
+        item = row.one_or_none()
+        if item is None:
+            return None
+        run, task = item
+        if run.status != "queued":
+            return None
+        run.status = "running"
+        run.started_at = utc_now()
+        _append_log(run, "info", "开始执行 arXiv 抓取。")
+        await db.commit()
+        # The objects are detached after the session closes; callers only use
+        # their scalar values and reload the run before persistence.
+        return run, task
+
+
+async def _persist_candidates(
+    run_id: UUID, candidates: list[dict[str, Any]], page_count: int
+) -> tuple[list[UUID], int, int, int]:
+    """Persist papers and run links atomically in one database transaction."""
+
+    async with AsyncSessionLocal() as db:
+        run = await db.get(FetchTaskRun, run_id, with_for_update=True)
+        if run is None:
+            raise ValueError(f"FetchTaskRun not found: {run_id}")
+
+        unique_candidates: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for candidate in candidates:
+            arxiv_id = str(candidate.get("arxiv_id", "")).strip()
+            if not arxiv_id or arxiv_id in seen_ids:
+                continue
+            seen_ids.add(arxiv_id)
+            unique_candidates.append(candidate)
+
+        candidate_ids = [candidate["arxiv_id"] for candidate in unique_candidates]
+        existing_ids: set[str] = set()
+        if candidate_ids:
+            existing_ids = set(
+                (
+                    await db.scalars(
+                        select(Paper.arxiv_id).where(Paper.arxiv_id.in_(candidate_ids))
+                    )
+                ).all()
             )
-            max_results = 80
 
-            raw_papers = await fetch_arxiv_papers(
-                query=query,
-                max_results=max_results,
-                sort_by="submittedDate",
-                sort_order="descending",
-            )
+        to_insert = [candidate for candidate in unique_candidates if candidate["arxiv_id"] not in existing_ids]
+        inserted_ids: set[str] = set()
+        if to_insert:
+            values = [
+                {
+                    "arxiv_id": candidate["arxiv_id"],
+                    "title": candidate.get("title") or candidate["arxiv_id"],
+                    "authors": candidate.get("authors") or [],
+                    "abstract": candidate.get("abstract") or "",
+                    "categories": candidate.get("categories") or [],
+                    "primary_category": candidate.get("primary_category"),
+                    "published_at": candidate.get("published_at"),
+                    "updated_at_source": candidate.get("updated_at_source"),
+                    "pdf_url": candidate.get("pdf_url") or "",
+                    "arxiv_url": candidate.get("arxiv_url") or "",
+                    "parsed_status": "pending",
+                    "metadata_extra": candidate.get("metadata_extra"),
+                }
+                for candidate in to_insert
+            ]
+            dialect_name = db.get_bind().dialect.name
+            if dialect_name == "postgresql":
+                statement = (
+                    pg_insert(Paper)
+                    .values(values)
+                    .on_conflict_do_nothing(index_elements=[Paper.arxiv_id])
+                    .returning(Paper.arxiv_id)
+                )
+                inserted_ids = set((await db.scalars(statement)).all())
+            else:
+                # This branch keeps service-level tests usable with a small
+                # non-Postgres test database; production uses the atomic PG
+                # upsert above.
+                for value in values:
+                    duplicate = await db.scalar(select(Paper).where(Paper.arxiv_id == value["arxiv_id"]))
+                    if duplicate is None:
+                        db.add(Paper(**value))
+                        inserted_ids.add(value["arxiv_id"])
+                await db.flush()
 
-            task.execution_log.append({
-                "time": datetime.now(timezone.utc).strftime("%H:%M"),
-                "level": "info",
-                "content": f"已拉取 {len(raw_papers)} 条候选论文记录。",
-            })
-            await db.commit()
-
-            # 去重入库
-            inserted, skipped = await upsert_arxiv_papers(db, raw_papers)
-
-            task.execution_log.append({
-                "time": datetime.now(timezone.utc).strftime("%H:%M"),
-                "level": "info",
-                "content": f"完成 arXiv 结果去重，过滤重复论文 {skipped} 篇。",
-            })
-            await db.commit()
-
-            task.status = "completed"
-            task.finished_at = datetime.now(timezone.utc)
-            task.execution_log.append({
-                "time": datetime.now(timezone.utc).strftime("%H:%M"),
-                "level": "info",
-                "content": f"结构化摘要生成完成，新增 {inserted} 篇论文。",
-            })
-            await db.commit()
-
-            return {
-                "status": "completed",
-                "total_fetched": len(raw_papers),
-                "inserted": inserted,
-                "skipped": skipped,
+        paper_rows = {}
+        if candidate_ids:
+            paper_rows = {
+                paper.arxiv_id: paper
+                for paper in (
+                    await db.scalars(select(Paper).where(Paper.arxiv_id.in_(candidate_ids)))
+                ).all()
             }
+        for candidate in unique_candidates:
+            paper = paper_rows.get(candidate["arxiv_id"])
+            if paper is None:
+                continue
+            db.add(
+                FetchTaskRunPaper(
+                    run_id=run.id,
+                    paper_id=paper.id,
+                    result_kind="inserted" if candidate["arxiv_id"] in inserted_ids else "duplicate",
+                )
+            )
 
-        except ArxivFetchError as e:
-            task.status = "failed"
-            task.finished_at = datetime.now(timezone.utc)
-            task.error_message = str(e)
-            task.execution_log.append({
-                "time": datetime.now(timezone.utc).strftime("%H:%M"),
-                "level": "error",
-                "content": f"arXiv API 错误: {e}",
-            })
-            await db.commit()
-            raise celery_task.retry(exc=e)
+        inserted_count = len(inserted_ids)
+        duplicate_count = max(0, len(candidates) - inserted_count)
+        run.candidate_count = len(candidates)
+        run.new_count = inserted_count
+        run.duplicate_count = duplicate_count
+        run.page_count = page_count
+        await db.flush()
+        await db.commit()
+        return [paper_rows[arxiv_id].id for arxiv_id in inserted_ids if arxiv_id in paper_rows], inserted_count, duplicate_count, len(candidates)
 
-        except Exception as e:
-            task.status = "failed"
-            task.finished_at = datetime.now(timezone.utc)
-            task.error_message = str(e)
-            task.execution_log.append({
-                "time": datetime.now(timezone.utc).strftime("%H:%M"),
-                "level": "error",
-                "content": f"任务执行异常: {e}",
-            })
+
+async def _enqueue_analysis(paper_ids: list[UUID]) -> tuple[int, int]:
+    if not paper_ids:
+        return 0, 0
+    from app.tasks.paper_tasks import process_paper
+
+    queued = 0
+    failed = 0
+    for paper_id in paper_ids:
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                process_paper.delay(str(paper_id))
+                queued += 1
+                last_error = None
+                break
+            except Exception as exc:  # pragma: no cover - broker-dependent
+                last_error = exc
+                if attempt < 2:
+                    await asyncio.sleep(0.2 * (attempt + 1))
+        if last_error is not None:
+            failed += 1
+            logger.warning("unable to enqueue analysis for %s: %s", paper_id, last_error)
+    return queued, failed
+
+
+async def _execute_run(run_id: UUID) -> dict[str, Any]:
+    marked = await _mark_run_running(run_id)
+    if marked is None:
+        return {"status": "skipped", "run_id": str(run_id), "reason": "run is not queued"}
+    _, task = marked
+
+    async with AsyncSessionLocal() as db:
+        run = await db.get(FetchTaskRun, run_id)
+        if run is None:
+            raise ValueError(f"FetchTaskRun not found: {run_id}")
+        snapshot = dict(run.config_snapshot or {})
+        window_start = run.window_start
+        window_end = run.window_end
+    if window_start is None or window_end is None:
+        window_start, window_end = calculate_run_window(task)
+
+    candidates, page_count = await fetch_arxiv_window(
+        _query_from_snapshot(snapshot),
+        window_start=window_start,
+        window_end=window_end,
+        max_results=int(snapshot.get("max_results", task.max_results)),
+    )
+    paper_ids, inserted_count, duplicate_count, candidate_count = await _persist_candidates(
+        run_id, candidates, page_count
+    )
+
+    if bool(snapshot.get("auto_analyze", task.auto_analyze)):
+        analysis_queued, analysis_failed = await _enqueue_analysis(paper_ids)
+    else:
+        analysis_queued, analysis_failed = 0, 0
+
+    async with AsyncSessionLocal() as db:
+        run = await db.get(FetchTaskRun, run_id, with_for_update=True)
+        task = await db.get(FetchTask, run.task_id) if run else None
+        if run is None or task is None:
+            raise ValueError(f"FetchTaskRun not found: {run_id}")
+        run.analysis_queued_count = analysis_queued
+        run.analysis_enqueue_failed_count = analysis_failed
+        run.status = "succeeded_with_warnings" if analysis_failed else "succeeded"
+        run.finished_at = utc_now()
+        if analysis_failed:
+            _append_log(run, "warning", f"{analysis_failed} 篇新增论文未能加入解析队列。")
+        _append_log(
+            run,
+            "success" if not analysis_failed else "warning",
+            f"抓取完成：候选 {candidate_count}，新增 {inserted_count}，重复 {duplicate_count}。",
+        )
+        task.last_success_at = run.window_end
+        if task.is_enabled and task.schedule_kind != "manual":
+            task.next_run_at = calculate_next_run_at(
+                task.schedule_kind, task.schedule_time, task.schedule_weekday, now=utc_now()
+            )
+        else:
+            task.next_run_at = None if not task.is_enabled else task.next_run_at
+        await db.commit()
+    return {
+        "status": "succeeded_with_warnings" if analysis_failed else "succeeded",
+        "run_id": str(run_id),
+        "candidate_count": candidate_count,
+        "new_count": inserted_count,
+        "duplicate_count": duplicate_count,
+        "analysis_queued_count": analysis_queued,
+        "analysis_enqueue_failed_count": analysis_failed,
+        "page_count": page_count,
+    }
+
+
+@celery_app.task(
+    bind=True,
+    name="app.tasks.run_fetch_task",
+    max_retries=settings.arxiv_max_retries,
+    acks_late=True,
+    track_started=True,
+    queue="arxiv",
+)
+def run_fetch_task(self: Any, run_id: str) -> dict[str, Any]:
+    """Execute one immutable fetch run snapshot."""
+
+    run_uuid = UUID(run_id)
+    try:
+        return _run_async(_execute_run(run_uuid))
+    except ArxivFetchError as exc:
+        retry_number = int(getattr(self.request, "retries", 0)) + 1
+        if exc.retryable and retry_number <= self.max_retries:
+            _run_async(_set_run_retry_pending(run_uuid, str(exc)))
+            raise self.retry(exc=exc, countdown=min(900, 30 * (2 ** (retry_number - 1))))
+        _run_async(_set_run_failed(run_uuid, str(exc)))
+        raise
+    except Exception as exc:
+        _run_async(_set_run_failed(run_uuid, str(exc)))
+        raise
+
+
+async def _dispatch_due_runs() -> int:
+    dispatched = 0
+    now = utc_now()
+    async with AsyncSessionLocal() as db:
+        tasks = (
+            await db.scalars(
+                select(FetchTask)
+                .where(
+                    FetchTask.is_enabled.is_(True),
+                    FetchTask.schedule_kind.in_(("daily", "weekly")),
+                    (FetchTask.next_run_at <= now) | FetchTask.next_run_at.is_(None),
+                )
+                .order_by(FetchTask.next_run_at.asc().nullsfirst())
+                .with_for_update(skip_locked=True)
+            )
+        ).all()
+        for task in tasks:
+            if task.next_run_at is None:
+                task.next_run_at = calculate_next_run_at(
+                    task.schedule_kind, task.schedule_time, task.schedule_weekday, now=now
+                )
+                continue
+            active = await db.scalar(
+                select(FetchTaskRun.id).where(
+                    FetchTaskRun.task_id == task.id,
+                    FetchTaskRun.status.in_(("queued", "running")),
+                )
+            )
+            if active is not None:
+                task.next_run_at = calculate_next_run_at(
+                    task.schedule_kind, task.schedule_time, task.schedule_weekday, now=now
+                )
+                continue
+            start, end = calculate_run_window(task, now=now)
+            run = FetchTaskRun(
+                task_id=task.id,
+                trigger_kind="scheduled",
+                config_snapshot=task_config_snapshot(task),
+                window_start=start,
+                window_end=end,
+                status="queued",
+                execution_log=[
+                    {"time": now.isoformat(), "level": "info", "content": "定时运行已排队。"}
+                ],
+            )
+            db.add(run)
+            task.next_run_at = calculate_next_run_at(
+                task.schedule_kind, task.schedule_time, task.schedule_weekday, now=now
+            )
+            try:
+                await db.flush()
+            except IntegrityError:
+                await db.rollback()
+                logger.info("skipped duplicate scheduled run for task %s", task.id)
+                continue
             await db.commit()
-            raise
+            try:
+                result = run_fetch_task.delay(str(run.id))
+                run.celery_task_id = getattr(result, "id", None)
+                await db.commit()
+            except Exception as exc:  # pragma: no cover - broker-dependent
+                await db.rollback()
+                await _set_run_failed(run.id, f"无法将定时运行加入队列: {exc}")
+            dispatched += 1
+    return dispatched
+
+
+@celery_app.task(name="app.tasks.dispatch_due_fetch_runs", queue="default")
+def dispatch_due_fetch_runs() -> int:
+    return _run_async(_dispatch_due_runs())
+
+
+__all__ = ["dispatch_due_fetch_runs", "run_fetch_task"]

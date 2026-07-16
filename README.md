@@ -17,13 +17,31 @@ SE26Project-05/
 
 ### 1. 启动后端依赖
 
+**本地**运行 SSH 端口转发，将云端 PostgreSQL 和 Redis 映射到本地：
+
+```bash
+# PostgreSQL 端口映射（映射到本地 15432）
+ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37
+
+# Redis 端口映射（映射到本地 6379）
+ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37
+```
+
+> 以上两条 SSH 隧道会保持前台运行，请分别在独立终端中执行，或加 `-f` 参数后台运行。
+
+**云端**执行以下步骤启动后端服务：
+
 ```bash
 cd backend
 cp .env.example .env
 uv sync
-docker compose up -d postgres redis
+docker compose up -d postgres
 uv run alembic upgrade head
 ```
+
+> 确保 `backend/.env` 中配置了正确的连接地址：
+> - `REDIS_URL=redis://localhost:6379/0`
+> - PostgreSQL 连接地址需指向 `localhost:15432`
 
 如需论文分析和智能问答，在 `backend/.env` 中配置大模型及嵌入模型：
 
@@ -50,7 +68,7 @@ uv run uvicorn app.main:app --reload --port 8080
 
 ```bash
 cd backend
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo
 ```
 
 后端启动后可访问：
@@ -81,6 +99,28 @@ VITE_BACKEND_TARGET=http://远程服务器地址:8080
 ```
 
 修改环境变量后需要重启 Vite。
+
+### 一键启动脚本
+
+项目根目录下提供了跨平台启动脚本，可自动打开多个终端窗口并行启动所有服务（SSH 隧道、后端、Celery、前端）：
+
+| 平台 | 脚本 | 执行方式 |
+|------|------|----------|
+| Windows | `start.ps1` | 在项目目录下右键 "Open in Terminal"，执行 `.\start.ps1` |
+| macOS | `start-mac.sh` | `chmod +x start-mac.sh && ./start-mac.sh` |
+| Linux | `start-linux.sh` | `chmod +x start-linux.sh && ./start-linux.sh` |
+
+> **Windows 注意**：如提示执行策略限制，先运行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`。
+>
+> **Linux 注意**：脚本会自动检测 gnome-terminal / konsole / xfce4-terminal / lxterminal / xterm，未安装则需先安装其一。
+
+脚本会自动启动以下 5 个窗口：
+
+1. **PostgreSQL SSH 隧道** — `ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37`
+2. **Redis SSH 隧道** — `ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37`
+3. **FastAPI 后端** — `uv run uvicorn app.main:app --reload --port 8080`
+4. **Celery Worker** — `uv run celery ... worker --loglevel=info --pool=solo`
+5. **前端 Vite** — `npm run dev`
 
 ## 前端
 
@@ -171,7 +211,7 @@ HTTP 响应可以直接返回业务数据，也可以包在 `data` 字段中。�
 ```bash
 cd backend
 uv sync
-docker compose up -d postgres redis
+docker compose up -d postgres
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8080
 ```

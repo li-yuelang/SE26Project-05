@@ -90,3 +90,23 @@
 .task-detail-empty {
   margin-top: 96px;
 }
+
+.task-form-alert {
+  margin-bottom: 20px;
+}
+
+.task-form-inline {
+  width: 100%;
+}
+
+.task-form-inline .ant-form-item {
+  flex: 0 0 auto;
+}
+
+.task-form-drawer .ant-drawer-body {
+  padding-bottom: 96px;
+}
+
+.task-detail-hero .ant-typography-copy {
+  max-width: 100%;
+}
