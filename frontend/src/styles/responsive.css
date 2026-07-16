@@ -25,6 +25,19 @@
     margin: 0;
   }
 
+  .sidebar-user-copy,
+  .sidebar-account .ant-btn span:not(.anticon) {
+    display: none;
+  }
+
+  .sidebar-account {
+    padding: 12px 8px;
+  }
+
+  .sidebar-user {
+    justify-content: center;
+  }
+
   .main-content {
     margin-left: 60px;
     padding: 20px;

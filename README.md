@@ -11,6 +11,77 @@ SE26Project-05/
 └── .github/           CI/CD 工作流
 ```
 
+## 本地启动
+
+需要提前安装 Node.js、Python 3.11+、`uv` 和 Docker（或 OrbStack）。
+
+### 1. 启动后端依赖
+
+```bash
+cd backend
+cp .env.example .env
+uv sync
+docker compose up -d postgres redis
+uv run alembic upgrade head
+```
+
+如需论文分析和智能问答，在 `backend/.env` 中配置大模型及嵌入模型：
+
+```env
+LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSION=1536
+```
+
+`EMBEDDING_API_KEY` 和 `EMBEDDING_BASE_URL` 留空时会复用大模型的密钥和接口地址。
+
+### 2. 启动 API 和后台任务
+
+在第一个终端运行 FastAPI：
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload --port 8080
+```
+
+论文异步分析需要在第二个终端启动 Celery worker：
+
+```bash
+cd backend
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info
+```
+
+后端启动后可访问：
+
+- 健康检查：<http://localhost:8080/health>
+- API 文档：<http://localhost:8080/docs>
+
+### 3. 启动前端
+
+在第三个终端运行：
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+访问 <http://localhost:3000>，首次使用可在登录页面创建账户。开发环境会将浏览器的
+`/api` 请求代理到 `http://127.0.0.1:8080`。
+
+连接远程后端时，修改 `frontend/.env.local`：
+
+```env
+VITE_API_MODE=http
+VITE_API_BASE_URL=/api
+VITE_BACKEND_TARGET=http://远程服务器地址:8080
+```
+
+修改环境变量后需要重启 Vite。
+
 ## 前端
 
 ```bash
@@ -47,17 +118,18 @@ pages → components / hooks / layouts
 
 ### Mock 与真实后端切换
 
-复制 `frontend/.env.example` 为 `frontend/.env.local`。默认配置使用 Mock API：
-
-```env
-VITE_API_MODE=mock
-```
-
-接入后端时改为：
+复制 `frontend/.env.example` 为 `frontend/.env.local`。当前默认配置使用真实后端：
 
 ```env
 VITE_API_MODE=http
-VITE_API_BASE_URL=http://localhost:8080/api
+VITE_API_BASE_URL=/api
+VITE_BACKEND_TARGET=http://127.0.0.1:8080
+```
+
+需要独立调试页面、暂时不连接后端时可切回 Mock：
+
+```env
+VITE_API_MODE=mock
 ```
 
 页面调用方式不会变化。真实后端路径、请求参数或响应字段发生变化时，只修改 `frontend/src/services` 中对应领域文件。
@@ -98,7 +170,10 @@ HTTP 响应可以直接返回业务数据，也可以包在 `data` 字段中。�
 
 ```bash
 cd backend
-# 使用 uv 管理依赖
 uv sync
-uv run uvicorn app.main:app --reload
+docker compose up -d postgres redis
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload --port 8080
 ```
+
+完整启动流程和 Celery worker 命令见上方“本地启动”。
