@@ -22,7 +22,14 @@ class UserPublic(BaseModel):
     username: str
     email: EmailStr
     display_name: str | None
+    bio: str | None
     avatar_url: str | None
+
+
+class UpdateProfileRequest(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_]+$")
+    email: EmailStr | None = None
+    bio: str | None = Field(default=None, max_length=200)
 
 
 class TokenResponse(BaseModel):
