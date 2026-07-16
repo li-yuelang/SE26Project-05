@@ -7,7 +7,7 @@ import 'antd/dist/reset.css';
 import './styles/index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  
     <BrowserRouter
       future={{
         v7_relativeSplatPath: true,
@@ -18,5 +18,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <App />
       </AuthProvider>
     </BrowserRouter>
-  </React.StrictMode>
+ 
 );
