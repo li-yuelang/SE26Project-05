@@ -209,6 +209,7 @@ export function ChatRoom({ initialConversationId } = {}) {
         collapsedWidth={0}
         onCollapse={setSidebarCollapsed}
         trigger={null}
+        zeroWidthTriggerStyle={{ display: 'none' }}
         style={{
           background: token.colorBgContainer,
           borderRight: `1px solid ${token.colorBorderSecondary}`,
@@ -341,7 +342,22 @@ export function ChatRoom({ initialConversationId } = {}) {
       </Sider>
 
       {/* 右侧聊天区 */}
-      <Content style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <Content style={{ display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+        {/* 侧栏折叠时的展开按钮：始终显示 */}
+        {sidebarCollapsed && (
+          <Button
+            type="text"
+            icon={<MenuUnfoldOutlined />}
+            onClick={() => setSidebarCollapsed(false)}
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 10,
+            }}
+          />
+        )}
+
         {activeConv ? (
           <>
             {/* Chat Header */}
@@ -352,16 +368,10 @@ export function ChatRoom({ initialConversationId } = {}) {
                 padding: '12px 20px',
                 borderBottom: `1px solid ${token.colorBorderSecondary}`,
                 flexShrink: 0,
+                paddingLeft: sidebarCollapsed ? 52 : 20,
               }}
             >
               <Flex align="center" gap={8}>
-                {sidebarCollapsed && (
-                  <Button
-                    type="text"
-                    icon={<MenuUnfoldOutlined />}
-                    onClick={() => setSidebarCollapsed(false)}
-                  />
-                )}
                 <Title level={5} style={{ margin: 0 }}>
                   {activeConv.title}
                 </Title>
@@ -449,14 +459,6 @@ export function ChatRoom({ initialConversationId } = {}) {
             style={{ height: '100%' }}
             gap={16}
           >
-            {sidebarCollapsed && (
-              <Button
-                type="text"
-                icon={<MenuUnfoldOutlined />}
-                onClick={() => setSidebarCollapsed(false)}
-                style={{ position: 'absolute', top: 12, left: 12 }}
-              />
-            )}
             <Empty
               image={<MessageOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />}
               description="选择左侧对话或创建新对话开始提问"
