@@ -17,15 +17,15 @@ class Settings(BaseSettings):
 
     # Paper analysis pipeline.  The provider settings intentionally use the
     # OpenAI-compatible API shape so they also work with local gateways.
-    llm_api_key: str | None = None
-    llm_base_url: str = "https://api.openai.com/v1"
-    llm_model: str = "gpt-4o-mini"
+    llm_api_key: str | None = "sk-ylc1YcFze754-ZMvX4Dskg"
+    llm_base_url: str = "https://models.sjtu.edu.cn/api/v1"
+    llm_model: str = "deepseek-chat"
     llm_timeout_seconds: float = 90.0
     llm_temperature: float = 0.3
     llm_max_tokens: int = 4096
     embedding_api_key: str | None = None
-    embedding_base_url: str | None = None
-    embedding_model: str = "text-embedding-3-small"
+    embedding_base_url: str | None = "https://ws-0dva9v1afcn929i8.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+    embedding_model: str = "qwen3.7-text-embedding"
     embedding_timeout_seconds: float = 60.0
     embedding_batch_size: int = 64
     embedding_dimension: int = 1536
