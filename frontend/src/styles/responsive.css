@@ -91,6 +91,30 @@
   .task-detail-toolbar {
     flex-direction: column;
   }
+
+  .task-filter-card .ant-row > .ant-col {
+    width: 100%;
+  }
+
+  .task-filter-card .ant-select,
+  .task-filter-card .ant-input-search {
+    width: 100% !important;
+  }
+
+  .task-form-inline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-form-inline .ant-form-item,
+  .task-form-inline .ant-picker,
+  .task-form-inline .ant-select {
+    width: 100% !important;
+  }
+
+  .task-detail-hero .ant-progress {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 480px) {

@@ -7,16 +7,14 @@ import 'antd/dist/reset.css';
 import './styles/index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  
-    <BrowserRouter
-      future={{
-        v7_relativeSplatPath: true,
-        v7_startTransition: true,
-      }}
-    >
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
- 
+  <BrowserRouter
+    future={{
+      v7_relativeSplatPath: true,
+      v7_startTransition: true,
+    }}
+  >
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>
 );
