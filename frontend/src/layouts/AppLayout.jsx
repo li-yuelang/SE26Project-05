@@ -1,4 +1,9 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Typography } from 'antd';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+const { Text } = Typography;
 
 const navItems = [
   { to: '/dashboard', label: '首页', icon: '📊' },
@@ -14,6 +19,14 @@ const navItems = [
 ];
 
 export default function AppLayout() {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -35,6 +48,18 @@ export default function AppLayout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-account">
+          <div className="sidebar-user">
+            <UserOutlined />
+            <div className="sidebar-user-copy">
+              <Text>{user?.display_name || user?.username}</Text>
+              <Text>{user?.email}</Text>
+            </div>
+          </div>
+          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
+            退出登录
+          </Button>
+        </div>
       </aside>
       <main className="main-content">
         <Outlet />

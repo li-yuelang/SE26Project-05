@@ -70,3 +70,45 @@
 .nav-label {
   white-space: nowrap;
 }
+
+.sidebar-account {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.sidebar-user-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-user-copy .ant-typography {
+  color: rgba(255, 255, 255, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user-copy .ant-typography:last-child {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.72rem;
+}
+
+.sidebar-account .ant-btn {
+  width: 100%;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: left;
+}
+
+.sidebar-account .ant-btn:hover {
+  color: #ffffff !important;
+  background: var(--color-sidebar-hover) !important;
+}
