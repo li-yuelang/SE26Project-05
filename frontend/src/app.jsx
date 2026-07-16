@@ -8,7 +8,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PaperList = lazy(() => import('./pages/PaperList'));
 const PaperDetail = lazy(() => import('./pages/PaperDetail'));
 const Chat = lazy(() => import('./pages/Chat'));
-const ChatConversation = lazy(() => import('./pages/ChatConversation'));
 const Wiki = lazy(() => import('./pages/Wiki'));
 const ConceptDetail = lazy(() => import('./pages/ConceptDetail'));
 const Learning = lazy(() => import('./pages/Learning'));
@@ -47,8 +46,7 @@ export default function App() {
             <Route path="papers/:paperId" element={<PaperDetail />} />
 
             {/* 智能问答 */}
-            <Route path="chat" element={<Chat />} />
-            <Route path="chat/:conversationId" element={<ChatConversation />} />
+            <Route path="chat/:conversationId?" element={<Chat />} />
 
             {/* 知识 Wiki */}
             <Route path="wiki" element={<Wiki />} />

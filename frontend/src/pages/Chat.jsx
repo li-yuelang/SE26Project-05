@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Layout,
   Button,
@@ -41,7 +41,9 @@ const { TextArea } = Input;
 const { Text, Title } = Typography;
 
 export default function Chat() {
-  return <ChatRoom />;
+  const { conversationId } = useParams();
+
+  return <ChatRoom initialConversationId={conversationId} />;
 }
 
 /** 共享聊天室组件 */
@@ -65,11 +67,9 @@ export function ChatRoom({ initialConversationId } = {}) {
     setMessages(resource.data.messages);
   }, [resource.data]);
 
-  // 自动选中指定对话
+  // URL 是当前对话的持久化来源，前进、后退或回到 /chat 时同步选中状态。
   useEffect(() => {
-    if (initialConversationId) {
-      setActiveId(initialConversationId);
-    }
+    setActiveId(initialConversationId || null);
   }, [initialConversationId]);
 
   // 滚动到底部
@@ -183,7 +183,9 @@ export function ChatRoom({ initialConversationId } = {}) {
   const createAutoConversation = async () => {
     const newConv = await createConversation();
     setConversations((prev) => [newConv, ...prev]);
+    setMessages((prev) => ({ ...prev, [newConv.id]: [] }));
     setActiveId(newConv.id);
+    navigate(`/chat/${newConv.id}`, { replace: true });
     return newConv.id;
   };
 
