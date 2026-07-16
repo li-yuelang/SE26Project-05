@@ -55,25 +55,30 @@ open_terminal() {
     esac
 }
 
-# ---- 1. PostgreSQL SSH 隧道 ----
-echo "[1/5] Starting PostgreSQL SSH tunnel..."
-open_terminal "PostgreSQL SSH Tunnel" "echo 'PostgreSQL Tunnel'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
+# ============================================================
+# 阶段 1：启动 SSH 隧道
+# ============================================================
 
-# ---- 2. Redis SSH 隧道 ----
-echo "[2/5] Starting Redis SSH tunnel..."
-open_terminal "Redis SSH Tunnel" "echo 'Redis Tunnel'; ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
+echo "[1/2] Starting SSH tunnels..."
+echo "  Please enter SSH passwords in the popup windows."
+echo ""
 
-# ---- 3. FastAPI 后端 ----
-echo "[3/5] Starting FastAPI (port 8080)..."
-open_terminal "FastAPI Backend" "echo 'FastAPI'; cd \"$PROJECT_DIR/backend\" && uv run uvicorn app.main:app --reload --port 8080"
+open_terminal "PostgreSQL SSH Tunnel" "echo 'PostgreSQL Tunnel (port 15432)'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
+open_terminal "Redis SSH Tunnel" "echo 'Redis Tunnel (port 6379)'; ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
 
-# ---- 4. Celery Worker ----
-echo "[4/5] Starting Celery Worker..."
+echo "  Waiting 30s for SSH tunnels to be established..."
+sleep 30
+echo ""
+
+# ============================================================
+# 阶段 2：启动应用服务
+# ============================================================
+
+echo "[2/2] Starting application services..."
+
+open_terminal "FastAPI Backend" "echo 'FastAPI (port 8080)'; cd \"$PROJECT_DIR/backend\" && uv run uvicorn app.main:app --reload --port 8080"
 open_terminal "Celery Worker" "echo 'Celery Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo"
-
-# ---- 5. 前端 Vite ----
-echo "[5/5] Starting Frontend (port 3000)..."
-open_terminal "Frontend Vite" "echo 'Vite Frontend'; cd \"$PROJECT_DIR/frontend\" && npm run dev"
+open_terminal "Frontend Vite" "echo 'Vite Frontend (port 3000)'; cd \"$PROJECT_DIR/frontend\" && npm run dev"
 
 echo ""
 echo "============================================"
