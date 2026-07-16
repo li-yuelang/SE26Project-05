@@ -3,15 +3,25 @@
 ## Start locally
 
 1. Install Python 3.11+ and uv.
-2. In this directory, run `uv sync`, then copy `.env.example` to `.env`.
-3. Start PostgreSQL and Redis with `docker compose up -d postgres redis`.
-4. Apply the schema with `uv run alembic upgrade head`.
-5. Start the API with `uv run uvicorn app.main:app --reload --port 8080`.
+2. **Local machine**: Start SSH tunnels to forward cloud PostgreSQL and Redis ports:
+
+   ```bash
+   # PostgreSQL (mapped to local 15432)
+   ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37
+
+   # Redis (mapped to local 6379)
+   ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37
+   ```
+
+3. **Cloud server**: In this directory, run `uv sync`, then copy `.env.example` to `.env`.
+4. Start PostgreSQL with `docker compose up -d postgres`. Ensure `REDIS_URL=redis://localhost:6379/0` and the PostgreSQL URL points to `localhost:15432` in `.env`.
+5. Apply the schema with `uv run alembic upgrade head`.
+6. Start the API with `uv run uvicorn app.main:app --reload --port 8080`.
 
 For asynchronous paper analysis, start the worker in a second terminal:
 
 ```bash
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo
 ```
 
 Fetch runs use a dedicated single-concurrency queue and a minute-level beat
