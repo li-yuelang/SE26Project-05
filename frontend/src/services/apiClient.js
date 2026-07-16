@@ -1,6 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+export const AUTH_UNAUTHORIZED_EVENT = 'papermate:unauthorized';
 
-export const apiMode = import.meta.env.VITE_API_MODE === 'http' ? 'http' : 'mock';
+export const apiMode = import.meta.env.VITE_API_MODE === 'mock' ? 'mock' : 'http';
 
 export class ApiError extends Error {
   constructor(message, { status = 0, code = 'UNKNOWN_ERROR', details = null } = {}) {
@@ -14,6 +15,14 @@ export class ApiError extends Error {
 
 export function getAccessToken() {
   return window.localStorage.getItem('access_token') || '';
+}
+
+export function setAccessToken(token) {
+  window.localStorage.setItem('access_token', token);
+}
+
+export function clearAccessToken() {
+  window.localStorage.removeItem('access_token');
 }
 
 export function buildWebSocketUrl(path) {
@@ -65,8 +74,12 @@ export async function request(path, options = {}) {
       : await response.text();
 
   if (!response.ok) {
+    if (response.status === 401 && getAccessToken()) {
+      clearAccessToken();
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    }
     throw new ApiError(
-      payload?.message || `请求失败（${response.status}）`,
+      payload?.message || payload?.detail || `请求失败（${response.status}）`,
       {
         status: response.status,
         code: payload?.code || 'HTTP_ERROR',

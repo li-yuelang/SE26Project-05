@@ -28,6 +28,7 @@ export default function Dashboard() {
   const paperList = resource.data?.papers || [];
   const topicList = resource.data?.topics || [];
   const recentTasks = resource.data?.recentTasks || [];
+  const stats = resource.data?.stats || {};
   const [keyword, setKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -135,16 +136,16 @@ export default function Dashboard() {
           <Col xs={24} lg={10}>
             <Row gutter={[16, 16]}>
               <Col span={12}>
-                <Statistic title="入库论文" value={128} suffix="篇" />
+                <Statistic title="入库论文" value={stats.papers || 0} suffix="篇" />
               </Col>
               <Col span={12}>
-                <Statistic title="本周新增" value={18} suffix="篇" />
+                <Statistic title="研究主题" value={stats.topics || 0} />
               </Col>
               <Col span={12}>
-                <Statistic title="知识概念" value={356} />
+                <Statistic title="知识概念" value={stats.concepts || 0} />
               </Col>
               <Col span={12}>
-                <Statistic title="运行任务" value={6} />
+                <Statistic title="运行任务" value={stats.runningTasks || 0} />
               </Col>
             </Row>
           </Col>
