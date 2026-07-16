@@ -14,6 +14,14 @@ For asynchronous paper analysis, start the worker in a second terminal:
 uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info
 ```
 
+Fetch runs use a dedicated single-concurrency queue and a minute-level beat
+dispatcher:
+
+```bash
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q arxiv --concurrency=1
+uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info
+```
+
 Configure `LLM_API_KEY` and the optional `LLM_BASE_URL`, `LLM_MODEL`,
 `EMBEDDING_BASE_URL`, and `EMBEDDING_MODEL` settings in `.env`. The analysis pipeline writes its durable state to
 `papers.metadata_extra.analysis`; it does not create Markdown files on disk.
@@ -50,6 +58,9 @@ citations with the assistant message.
 - Paper analysis endpoints are `GET /papers/{paper_id}`, `GET /papers/{paper_id}/analysis`,
   and authenticated `POST /papers/{paper_id}/analysis?force=true`.
 - Semantic chunk search is `GET /papers/search/semantic?q=...&paper_id=...&limit=10`.
+- Fetch task management is available under `/tasks`: task configuration is
+  private to its creator, while papers discovered by a run are written to the
+  shared paper library.  Run history is available at `/tasks/{task_id}/runs`.
 
 ## Ownership
 

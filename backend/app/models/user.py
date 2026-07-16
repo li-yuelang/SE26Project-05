@@ -34,7 +34,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reading_history: Mapped[list[ReadingHistory]] = relationship(back_populates="user", cascade="all, delete-orphan")
     followed_topics: Mapped[list[FollowedTopic]] = relationship(back_populates="user", cascade="all, delete-orphan")
     comparisons: Mapped[list[PaperComparison]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    fetch_tasks: Mapped[list[FetchTask]] = relationship(back_populates="creator")
+    fetch_tasks: Mapped[list[FetchTask]] = relationship(
+        back_populates="creator", cascade="all, delete-orphan"
+    )
     subscriptions: Mapped[list[Subscription]] = relationship(back_populates="user", cascade="all, delete-orphan")
     preferences: Mapped[UserPreference | None] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
