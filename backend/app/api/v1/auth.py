@@ -1,6 +1,6 @@
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
-from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.security import create_access_token, hash_password, verify_password
