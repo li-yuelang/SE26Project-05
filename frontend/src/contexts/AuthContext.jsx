@@ -46,6 +46,10 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  const updateUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
@@ -79,8 +83,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ loading, login, logout, register, user }),
-    [loading, login, logout, register, user],
+    () => ({ loading, login, logout, register, updateUser, user }),
+    [loading, login, logout, register, updateUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

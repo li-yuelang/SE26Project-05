@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Avatar,
   Button,
@@ -29,6 +29,7 @@ import {
   saveProfile,
   saveSystemPreferences,
 } from "../services/settingsService";
+import { useAuth } from "../contexts/AuthContext";
 
 const { Text, Title } = Typography;
 
@@ -44,6 +45,7 @@ const THEME_OPTIONS = [
 ];
 
 export default function Settings() {
+  const { updateUser, user } = useAuth();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
 
@@ -63,12 +65,22 @@ export default function Settings() {
   // 修改密码
   const [changingPassword, setChangingPassword] = useState(false);
 
+  useEffect(() => {
+    if (!user) return;
+    profileForm.setFieldsValue({
+      username: user.username,
+      email: user.email,
+      bio: user.bio || "",
+    });
+  }, [profileForm, user]);
+
   /* ---------- 保存回调 ---------- */
   const handleSaveProfile = async () => {
     try {
       const values = await profileForm.validateFields();
       setSavingProfile(true);
-      await saveProfile({ ...values, avatarColor });
+      const updatedUser = await saveProfile(values);
+      updateUser(updatedUser);
       message.success("个人资料已更新");
       setSavingProfile(false);
     } catch {

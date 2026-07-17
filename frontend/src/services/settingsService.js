@@ -2,7 +2,7 @@ import { createEndpoint, request } from './apiClient';
 
 export const saveProfile = createEndpoint({
   mock: (profile) => profile,
-  http: (profile) => request('/settings/profile', { body: profile, method: 'PUT' }),
+  http: (profile) => request('/auth/me', { body: profile, method: 'PATCH' }),
 });
 
 export const saveNotificationPreferences = createEndpoint({
