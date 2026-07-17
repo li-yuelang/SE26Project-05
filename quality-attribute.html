@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>arxiv-PaperMate — 可靠性质量属性架构视图</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --card-bg: #fff;
+    --primary: #1677ff;
+    --primary-light: #e6f4ff;
+    --text: #1f1f1f;
+    --text-secondary: #595959;
+    --border: #e8e8e8;
+    --success: #52c41a;
+    --warning: #faad14;
+    --error: #ff4d4f;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .container { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 50%, #0d1b2a 100%);
+    color: #fff;
+    padding: 48px 24px 40px;
+    text-align: center;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,.7);
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .header .badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 5px 18px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    font-size: .88rem;
+    font-weight: 600;
+  }
+
+  /* Section */
+  .section { margin-top: 28px; }
+  .section-title {
+    font-size: 1.28rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .icon { font-size: 1.4rem; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 1.05rem;
+    margin-bottom: 10px;
+    color: var(--primary);
+  }
+  .card p, .card li { font-size: .95rem; color: var(--text-secondary); }
+  .card ul { padding-left: 20px; }
+  .card li { margin-bottom: 6px; }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Architecture Diagram */
+  .arch-diagram {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 32px 24px;
+    overflow-x: auto;
+  }
+
+  .layer-label {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+
+  .layer-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: stretch;
+  }
+
+  .box {
+    flex: 1 1 180px;
+    min-width: 140px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+    font-size: .88rem;
+    font-weight: 600;
+    background: #fafafa;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .box .desc {
+    display: block;
+    font-size: .78rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .box.primary   { border-color: var(--primary); background: var(--primary-light); }
+  .box.success   { border-color: var(--success); background: #f6ffed; }
+  .box.warning   { border-color: var(--warning); background: #fffbe6; }
+  .box.error     { border-color: var(--error); background: #fff2f0; }
+
+  .arrow-down {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0 12px;
+    color: var(--primary);
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  /* Tactic Table */
+  .tactic-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .tactic-table th, .tactic-table td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: .92rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tactic-table th {
+    background: #fafafa;
+    font-weight: 700;
+    color: var(--text);
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .tactic-table td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: .78rem;
+    font-weight: 600;
+  }
+  .tag-fault    { background: #fff2f0; color: #cf1322; }
+  .tag-degrade  { background: #fffbe6; color: #d48806; }
+  .tag-recover  { background: #f6ffed; color: #389e0d; }
+  .tag-guard    { background: #e6f4ff; color: #0958d9; }
+
+  .footer {
+    text-align: center;
+    margin-top: 36px;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== HEADER ======== -->
+<div class="header">
+  <h1>arxiv-PaperMate 可靠性质量属性架构视图</h1>
+  <p class="subtitle">
+    本系统是一个 AI 驱动的 arXiv 论文助手，涵盖论文自动抓取、PDF 解析、语义分块、
+    向量化索引、结构化分析与 RAG 智能问答。外部依赖多、处理链路长，因此<strong>可靠性</strong>是最核心的质量属性。
+  </p>
+  <span class="badge">核心质量属性：可靠性 (Reliability)</span>
+</div>
+
+<div class="container">
+
+<!-- ======== WHY RELIABILITY ======== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🎯</span> 为什么可靠性最重要？</div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>长链路依赖</h3>
+      <p>论文分析管线涉及 arXiv API、PDF 下载、解析器、LLM、嵌入模型、数据库等多重外部依赖，任一步骤失败都会中断整个流程。</p>
+    </div>
+    <div class="card">
+      <h3>异步任务脆弱性</h3>
+      <p>论文分析与抓取通过 Celery 异步执行，worker 崩溃、网络抖动、API 限流都可能导致任务静默失败，用户无法感知。</p>
+    </div>
+    <div class="card">
+      <h3>用户信任关键</h3>
+      <p>研究人员依赖系统获取准确的论文分析和可靠的问答结果。若分析结果丢失或不一致，将严重损害用户对系统的信任。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======== ARCHITECTURE DIAGRAM ======== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🏗️</span> 可靠性架构分层视图</div>
+
+  <div class="arch-diagram">
+
+    <!-- 接入层 -->
+    <div class="layer-label">接入层 — 请求入口</div>
+    <div class="layer-row">
+      <div class="box primary">
+        React SPA (Vite)
+        <span class="desc">Mock/HTTP 双模式切换<br>离线调试不依赖后端</span>
+      </div>
+      <div class="box warning">
+        CORS 安全策略
+        <span class="desc">白名单域名控制<br>防止跨域攻击</span>
+      </div>
+      <div class="box success">
+        统一错误响应
+        <span class="desc">{code, message, details}<br>结构化错误便于诊断</span>
+      </div>
+    </div>
+
+    <div class="arrow-down">&#x25BC; 请求通过 JWT Bearer Token 认证 &#x25BC;</div>
+
+    <!-- 应用层 -->
+    <div class="layer-label">应用层 — FastAPI 后端</div>
+    <div class="layer-row">
+      <div class="box primary">
+        FastAPI (async/await)
+        <span class="desc">异步非阻塞 IO<br>高并发稳定服务</span>
+      </div>
+      <div class="box warning">
+        全局异常处理链
+        <span class="desc">AppError / HTTPException<br>/ ValidationError 全覆盖</span>
+      </div>
+      <div class="box success">
+        WebSocket 流式回答
+        <span class="desc">chat stream 逐字推送<br>连接超时自动回收</span>
+      </div>
+    </div>
+
+    <div class="arrow-down">&#x25BC; 异步任务投递到消息队列 &#x25BC;</div>
+
+    <!-- 任务队列层 -->
+    <div class="layer-label">任务队列层 — Celery + Redis</div>
+    <div class="layer-row">
+      <div class="box primary">
+        Redis Broker
+        <span class="desc">消息持久化<br>任务不丢失</span>
+      </div>
+      <div class="box warning">
+        Celery Worker (通用队列)
+        <span class="desc">论文分析异步执行<br>max_retries=3 自动重试</span>
+      </div>
+      <div class="box error">
+        arxiv 专用队列 (concurrency=1)
+        <span class="desc">单并发 + beat 调度<br>间隔 3s，防 API 封禁</span>
+      </div>
+    </div>
+
+    <div class="arrow-down">&#x25BC; 数据处理管线 &#x25BC;</div>
+
+    <!-- 处理管线层 -->
+    <div class="layer-label">处理管线层 — 论文分析状态机</div>
+    <div class="layer-row">
+      <div class="box">
+        Stage 1: downloading
+        <span class="desc">超时 45s | 50MB 上限<br>Content-Type + PDF 魔数校验</span>
+      </div>
+      <div class="box">
+        Stage 2: parsing
+        <span class="desc">PDF 文本抽取<br>空内容检测 & 异常回滚</span>
+      </div>
+      <div class="box">
+        Stage 3: extracting
+        <span class="desc">LLM 结构化提取<br>timeout 90s | temperature 0.3</span>
+      </div>
+    </div>
+    <div class="layer-row">
+      <div class="box">
+        Stage 4: embedding
+        <span class="desc">向量化 1536d<br>维度校验 + 批次完整性检查</span>
+      </div>
+      <div class="box">
+        Stage 5: persisting
+        <span class="desc">事务写入 chunks + embeddings<br>metadata_extra.analysis JSON</span>
+      </div>
+      <div class="box success">
+        完成状态: completed
+        <span class="desc">幂等跳过（force=false）<br>citation 回填</span>
+      </div>
+    </div>
+
+    <div class="arrow-down">&#x25BC; 数据持久化 &#x25BC;</div>
+
+    <!-- 数据层 -->
+    <div class="layer-label">数据层 — 存储与缓存</div>
+    <div class="layer-row">
+      <div class="box primary">
+        PostgreSQL (asyncpg)
+        <span class="desc">Alembic 版本化迁移<br>事务回滚保证一致性</span>
+      </div>
+      <div class="box warning">
+        Redis 缓存 + 分布式锁
+        <span class="desc">arXiv 锁 120s<br>防并发重复请求</span>
+      </div>
+      <div class="box">
+        外部 API 网关
+        <span class="desc">arXiv API | LLM API<br>Embedding API | PDF URL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== RELIABILITY TACTICS ======== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🛡️</span> 可靠性设计战术详解</div>
+
+  <table class="tactic-table">
+    <thead>
+      <tr><th>战术类别</th><th>具体措施</th><th>代码/配置位置</th><th>作用</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-fault">故障预防</span></td>
+        <td>PDF 下载前校验：Content-Type 检测 + PDF 魔数 (%PDF) 校验 + 大小上限 50MB</td>
+        <td>paper_analysis.py :: download_pdf()</td>
+        <td>提前拒绝非法输入，避免无效处理占用资源</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-fault">故障预防</span></td>
+        <td>Embedding 批次完整性校验：维度 (1536d) 与数量双重检查</td>
+        <td>paper_analysis.py L146-148</td>
+        <td>防止部分嵌入失败导致数据不一致</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-fault">故障预防</span></td>
+        <td>arXiv API 请求间隔 3 秒 + Redis 分布式锁 (120s TTL)</td>
+        <td>config.py L47-49</td>
+        <td>遵守 API 速率限制，避免被 ban</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-fault">故障预防</span></td>
+        <td>临时文件隔离：NamedTemporaryFile + delete=True 确保异常自动清理</td>
+        <td>paper_analysis.py :: _materialise_pdf()</td>
+        <td>避免磁盘残留文件积累</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-degrade">优雅降级</span></td>
+        <td>向量检索不可用 → 回退到关键词 (ILIKE) 检索</td>
+        <td>rag.py :: retrieve() L99-101</td>
+        <td>Embedding API 故障时仍可检索</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-degrade">优雅降级</span></td>
+        <td>LLM 不可用 → 回退到抽取式答案 (fallback_answer)</td>
+        <td>rag.py :: answer() L176-179</td>
+        <td>LLM 服务故障时仍可返回相关片段</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-degrade">优雅降级</span></td>
+        <td>无 API Key 时直接使用关键词检索 + 抽取式回答</td>
+        <td>rag.py L87, L171</td>
+        <td>零配置最小可用模式</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-recover">故障恢复</span></td>
+        <td>论文分析 max_retries=3，Celery 自动重试</td>
+        <td>config.py L39</td>
+        <td>瞬时故障（网络抖动）自动恢复</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-recover">故障恢复</span></td>
+        <td>arXiv 请求 max_retries=3 + 结构化错误记录</td>
+        <td>config.py L48</td>
+        <td>抓取失败自动重试</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-recover">故障恢复</span></td>
+        <td>分析失败状态持久化：mark_analysis_failed 记录错误信息到 DB</td>
+        <td>analysis_state.py + paper_analysis.py L178</td>
+        <td>失败任务可追溯，支持 force=true 重新执行</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-guard">守卫检查</span></td>
+        <td>分析状态机：每阶段 set_analysis_state + commit，精确追踪进度</td>
+        <td>paper_analysis.py L107-169</td>
+        <td>任一阶段失败都能定位，支持断点恢复</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-guard">守卫检查</span></td>
+        <td>幂等设计：parsed_status=="completed" && !force 时跳过已处理论文</td>
+        <td>paper_analysis.py L104</td>
+        <td>重复请求不产生副作用</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-guard">守卫检查</span></td>
+        <td>超时控制全覆盖：LLM 90s / Embedding 60s / PDF 45s / arXiv 60s</td>
+        <td>config.py L23-47</td>
+        <td>防止外部服务 hung 住导致资源泄漏</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-guard">守卫检查</span></td>
+        <td>结构化日志 + 统一错误码响应</td>
+        <td>logging.py + exceptions.py</td>
+        <td>生产问题快速定位与排查</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======== DEPLOYMENT VIEW ======== -->
+<div class="section">
+  <div class="section-title"><span class="icon">🚀</span> 部署可靠性视图</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>容器化部署</h3>
+      <ul>
+        <li>Docker Compose 一键编排所有服务</li>
+        <li>PostgreSQL + Redis 独立容器，资源隔离</li>
+        <li>健康检查端点 GET /health 支持监控探活</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>CI/CD 保障</h3>
+      <ul>
+        <li>GitHub Actions 自动运行后端测试</li>
+        <li>代码合并前必须通过单元测试</li>
+        <li>Alembic 数据库迁移自动验证</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>SSH 隧道安全连接</h3>
+      <ul>
+        <li>本地开发通过 SSH 端口转发连接云端 DB/Redis</li>
+        <li>避免数据库端口直接暴露公网</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>一键启动脚本</h3>
+      <ul>
+        <li>Windows / macOS / Linux 三平台启动脚本</li>
+        <li>自动打开 5 个终端窗口并行启动所有服务</li>
+        <li>减少手工操作导致的配置错误</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======== SUMMARY ======== -->
+<div class="section">
+  <div class="section-title"><span class="icon">📋</span> 总结</div>
+
+  <div class="card">
+    <p style="font-size:1rem; line-height:1.9;">
+      <strong>arxiv-PaperMate</strong> 论文助手系统的核心质量属性是<strong style="color: var(--primary);">可靠性</strong>。
+      系统通过<strong>分层架构</strong>（接入层 → 应用层 → 任务队列层 → 处理管线层 → 数据层），
+      结合<strong>四大类可靠性战术</strong>——故障预防（输入校验、限流）、优雅降级（检索/LLM 多级回退）、
+      故障恢复（自动重试、状态持久化）、守卫检查（状态机追踪、超时控制、幂等设计）——
+      确保在外部依赖故障、网络异常、数据处理错误等场景下，系统依然能提供稳定可靠的服务。
+    </p>
+  </div>
+</div>
+
+<div class="footer">
+  arxiv-PaperMate &copy; 2026 — SE26Project-05 软件工程大作业 · 质量属性架构视图
+</div>
+
+</div>
+</body>
+</html>
