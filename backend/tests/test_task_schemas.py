@@ -46,3 +46,4 @@ def test_task_catalog_response():
     assert "statusMeta" in d
     assert "typeMeta" in d
     assert len(d["tasks"]) == 1
+    assert len(d["items"]) == 1

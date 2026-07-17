@@ -77,7 +77,8 @@ echo ""
 echo "[2/2] Starting application services..."
 
 open_terminal "FastAPI Backend" "echo 'FastAPI (port 8080)'; cd \"$PROJECT_DIR/backend\" && uv run uvicorn app.main:app --reload --port 8080"
-open_terminal "Celery Worker" "echo 'Celery Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo"
+open_terminal "Celery Default Worker" "echo 'Celery Default Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default"
+open_terminal "Celery arXiv Worker" "echo 'Celery arXiv Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1"
 open_terminal "Frontend Vite" "echo 'Vite Frontend (port 3000)'; cd \"$PROJECT_DIR/frontend\" && npm run dev"
 
 echo ""
