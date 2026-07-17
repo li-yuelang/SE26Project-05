@@ -1,8 +1,10 @@
 export const taskStatusMeta = {
+  queued: { label: '排队中', color: 'processing', tagColor: 'blue' },
   running: { label: '运行中', color: 'processing', tagColor: 'blue' },
   scheduled: { label: '已计划', color: 'default', tagColor: 'default' },
   paused: { label: '已暂停', color: 'warning', tagColor: 'orange' },
   failed: { label: '失败', color: 'error', tagColor: 'red' },
+  succeeded_with_warnings: { label: '成功但有警告', color: 'warning', tagColor: 'orange' },
   completed: { label: '已完成', color: 'success', tagColor: 'green' },
 };
 

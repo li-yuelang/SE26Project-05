@@ -43,8 +43,12 @@ async def list_tasks(
 async def create_task(body: TaskCreateRequest, db: DbSession, user: CurrentUser) -> dict:
     detail, run = await task_service.create_task(db, user.id, body)
     payload = detail.model_dump(mode="json")
-    payload["run"] = run.model_dump(mode="json") if run else None
+    payload["run"] = _run_payload(run)
     return success(payload, "task created")
+
+
+def _run_payload(run) -> dict | None:
+    return task_service.run_response(run).model_dump(mode="json") if run else None
 
 
 @router.get("/{task_id}")
@@ -86,7 +90,7 @@ async def resume_task(task_id: UUID, db: DbSession, user: CurrentUser) -> dict:
 async def create_task_run(task_id: UUID, db: DbSession, user: CurrentUser) -> dict:
     detail, run = await task_service.create_run(db, user.id, task_id)
     return success(
-        {"task": detail.model_dump(mode="json"), "run": run.model_dump(mode="json")},
+        {"task": detail.model_dump(mode="json"), "run": _run_payload(run)},
         "task run queued",
     )
 
@@ -113,6 +117,6 @@ async def get_task_run(task_id: UUID, run_id: UUID, db: DbSession, user: Current
 async def retry_task_run(task_id: UUID, run_id: UUID, db: DbSession, user: CurrentUser) -> dict:
     detail, run = await task_service.retry_run(db, user.id, task_id, run_id)
     return success(
-        {"task": detail.model_dump(mode="json"), "run": run.model_dump(mode="json")},
+        {"task": detail.model_dump(mode="json"), "run": _run_payload(run)},
         "task run retry queued",
     )

@@ -244,7 +244,7 @@ def _run_paper_response(link: FetchTaskRunPaper) -> TaskRunPaperResponse | None:
     )
 
 
-def _run_response(run: FetchTaskRun, *, include_papers: bool = False) -> FetchTaskRunResponse:
+def run_response(run: FetchTaskRun, *, include_papers: bool = False) -> FetchTaskRunResponse:
     papers = []
     if include_papers:
         papers = [item for link in run.papers if (item := _run_paper_response(link)) is not None]
@@ -351,9 +351,21 @@ async def list_tasks(
     elif status == "succeeded_with_warnings":
         base = base.where(FetchTask.is_enabled.is_(True), ~active_exists, latest_status == status)
     elif status == "completed":
-        base = base.where(FetchTask.is_enabled.is_(True), ~active_exists, latest_status == "succeeded")
+        base = base.where(
+            FetchTask.is_enabled.is_(True),
+            ~active_exists,
+            FetchTask.schedule_kind == "manual",
+            latest_status == "succeeded",
+        )
     elif status == "scheduled":
-        base = base.where(FetchTask.is_enabled.is_(True), ~active_exists)
+        base = base.where(
+            FetchTask.is_enabled.is_(True),
+            ~active_exists,
+            or_(
+                latest_status.is_(None),
+                (FetchTask.schedule_kind != "manual") & (latest_status == "succeeded"),
+            ),
+        )
 
     count = (await db.scalar(select(func.count()).select_from(base.subquery()))) or 0
     rows = (
@@ -488,7 +500,7 @@ async def get_task_detail(db: AsyncSession, user_id: UUID, task_id: UUID) -> Tas
     return TaskDetailResponse(
         task=_task_response(task, active, latest),
         summary=latest_summary,
-        recent_runs=[_run_response(run) for run in runs],
+        recent_runs=[run_response(run) for run in runs],
         status_meta=STATUS_META,
         type_meta=TYPE_META,
     )
@@ -613,7 +625,7 @@ async def list_runs(
         )
     ).all()
     return TaskRunListResponse(
-        items=[_run_response(run) for run in runs], total=total, page=page, page_size=page_size
+        items=[run_response(run) for run in runs], total=total, page=page, page_size=page_size
     )
 
 
@@ -628,7 +640,7 @@ async def get_run(
     )
     if run is None:
         raise AppError("运行记录不存在", code="TASK_RUN_NOT_FOUND", status_code=404)
-    return _run_response(run, include_papers=True)
+    return run_response(run, include_papers=True)
 
 
 async def retry_run(
@@ -687,6 +699,7 @@ __all__ = [
     "list_tasks",
     "mark_run_failed",
     "retry_run",
+    "run_response",
     "set_task_enabled",
     "task_config_snapshot",
     "task_meta",

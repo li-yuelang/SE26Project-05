@@ -73,7 +73,8 @@ export default function TaskList() {
   );
   const resource = useAsyncResource(catalogLoader, [catalogLoader]);
   const catalog = resource.data || { items: [], total: 0, summary: {}, statusMeta: {}, typeMeta: {} };
-  const tasks = catalog.items || catalog.tasks || [];
+  const taskCollections = [catalog.items, catalog.tasks].filter(Array.isArray);
+  const tasks = taskCollections.find((collection) => collection.length > 0) || taskCollections[0] || [];
   const taskStatusMeta = catalog.statusMeta || {};
   const taskTypeMeta = catalog.typeMeta || {};
 

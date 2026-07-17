@@ -64,11 +64,14 @@ cd backend
 uv run uvicorn app.main:app --reload --port 8080
 ```
 
-论文异步分析需要在第二个终端启动 Celery worker：
+论文异步分析和 arXiv 抓取分别使用两个 Celery 队列，需要启动两个 worker：
 
 ```bash
-cd backend
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo
+# default 队列：论文解析和定时调度
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default
+
+# arxiv 队列：抓取任务（单并发，遵守 arXiv 请求频率限制）
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1
 ```
 
 后端启动后可访问：
@@ -114,13 +117,14 @@ VITE_BACKEND_TARGET=http://远程服务器地址:8080
 >
 > **Linux 注意**：脚本会自动检测 gnome-terminal / konsole / xfce4-terminal / lxterminal / xterm，未安装则需先安装其一。
 
-脚本会自动启动以下 5 个窗口：
+脚本会自动启动以下 6 个窗口：
 
 1. **PostgreSQL SSH 隧道** — `ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37`
 2. **Redis SSH 隧道** — `ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37`
 3. **FastAPI 后端** — `uv run uvicorn app.main:app --reload --port 8080`
-4. **Celery Worker** — `uv run celery ... worker --loglevel=info --pool=solo`
-5. **前端 Vite** — `npm run dev`
+4. **Celery Default Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q default`
+5. **Celery arXiv Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q arxiv --concurrency=1`
+6. **前端 Vite** — `npm run dev`
 
 ## 前端
 
@@ -216,4 +220,4 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8080
 ```
 
-完整启动流程和 Celery worker 命令见上方“本地启动”。
+完整启动流程和两个 Celery worker 命令见上方“本地启动”。

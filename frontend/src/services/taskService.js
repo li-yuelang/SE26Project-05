@@ -149,7 +149,12 @@ function normalizeMeta(raw = {}) {
 }
 
 function normalizeCatalog(raw = {}) {
-  const items = (raw.items || raw.tasks || []).map(toTask);
+  // Newer APIs expose `items`; older task endpoints only expose `tasks`.
+  // Prefer the non-empty collection so a compatibility response containing an
+  // empty default `items` field does not hide the actual task list.
+  const collections = [raw.items, raw.tasks].filter(Array.isArray);
+  const sourceItems = collections.find((collection) => collection.length > 0) || collections[0] || [];
+  const items = sourceItems.map(toTask);
   return {
     ...raw,
     items,
@@ -319,7 +324,7 @@ export const getTaskCatalog = createEndpoint({
   http: (query = {}) => request('/tasks', {
     query: {
       q: query.q,
-      task_type: query.taskType,
+      task_type: query.taskType === 'all' ? undefined : query.taskType,
       status: query.status === 'all' ? undefined : query.status,
       page: query.page,
       page_size: query.pageSize,
@@ -346,7 +351,10 @@ export const createTask = createEndpoint({
     }
     return { ...mockDetail(task.id), run: runStore.get(task.id)?.[0] || null };
   },
-  http: (body) => request('/tasks', { method: 'POST', body: toApiPayload(body) }).then(normalizeDetail),
+  http: (body) => request('/tasks', { method: 'POST', body: toApiPayload(body) }).then((payload) => ({
+    ...normalizeDetail(payload),
+    run: payload.run ? toRun(payload.run) : null,
+  })),
 });
 
 function createMockRun(task, triggerKind = 'manual', sourceRun = null) {
