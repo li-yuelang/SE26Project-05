@@ -29,7 +29,8 @@ Write-Host ""
 Write-Host "[2/2] Starting application services..."
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FastAPI (port 8080)'; cd '$ProjectDir\backend'; uv run uvicorn app.main:app --reload --port 8080"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery Default Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery arXiv Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Vite Frontend (port 3000)'; cd '$ProjectDir\frontend'; npm run dev"
 
 Write-Host ""

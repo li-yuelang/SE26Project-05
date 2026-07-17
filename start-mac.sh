@@ -38,7 +38,11 @@ osascript -e "tell app \"Terminal\"
 end tell"
 
 osascript -e "tell app \"Terminal\"
-    do script \"echo 'Celery Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo\"
+    do script \"echo 'Celery Default Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default\"
+end tell"
+
+osascript -e "tell app \"Terminal\"
+    do script \"echo 'Celery arXiv Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1\"
 end tell"
 
 osascript -e "tell app \"Terminal\"

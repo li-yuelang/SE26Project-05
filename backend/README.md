@@ -18,17 +18,17 @@
 5. Apply the schema with `uv run alembic upgrade head`.
 6. Start the API with `uv run uvicorn app.main:app --reload --port 8080`.
 
-For asynchronous paper analysis, start the worker in a second terminal:
+Start the default worker for asynchronous paper analysis and scheduled dispatch:
 
 ```bash
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default
 ```
 
-Fetch runs use a dedicated single-concurrency queue and a minute-level beat
-dispatcher:
+Fetch runs use a dedicated single-concurrency queue. Start the arXiv worker and
+the minute-level beat dispatcher separately:
 
 ```bash
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q arxiv --concurrency=1
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1
 uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info
 ```
 

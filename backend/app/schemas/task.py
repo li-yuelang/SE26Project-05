@@ -371,6 +371,16 @@ class TaskCatalogResponse(BaseModel):
     page_size: int = Field(default=20, serialization_alias="pageSize")
     summary: TaskSummary = Field(default_factory=TaskSummary)
 
+    @model_validator(mode="after")
+    def synchronize_task_collections(self) -> "TaskCatalogResponse":
+        """Keep the current ``items`` and legacy ``tasks`` fields equivalent."""
+
+        if self.items and not self.tasks:
+            self.tasks = list(self.items)
+        elif self.tasks and not self.items:
+            self.items = list(self.tasks)
+        return self
+
 
 class TaskDetailResponse(BaseModel):
     task: FetchTaskResponse
