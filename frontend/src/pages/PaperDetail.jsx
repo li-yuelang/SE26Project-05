@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
-import { getPaperChunk, getPaperDetail } from '../services/paperService';
+
 import { updateLearningPaper } from '../services/learningService';
 import {
   deletePaper,
