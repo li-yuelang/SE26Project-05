@@ -1,10 +1,8 @@
 """Tests for auth API endpoints — register, login, get_me, update_me."""
 
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user, get_db_session
@@ -76,7 +74,6 @@ def _make_user(**override):
 # ---------------------------------------------------------------------------
 class TestRegister:
     def test_register_success(self, monkeypatch) -> None:
-        user = _make_user()
         db = FakeAuthSession(scalar_result=None)
         db._scalar = None  # no existing user
 

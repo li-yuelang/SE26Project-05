@@ -39,7 +39,6 @@ def test_create_and_decode_access_token_round_trip() -> None:
 
 
 def test_decode_expired_token_raises() -> None:
-    import time
     from app.config import settings
 
     # Create an already-expired token by overriding expiration directly

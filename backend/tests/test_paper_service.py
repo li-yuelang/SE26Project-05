@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 
 from app.services.paper_service import upsert_arxiv_papers
 

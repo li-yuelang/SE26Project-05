@@ -1,7 +1,6 @@
 """Tests for analysis state machine helpers."""
 
-from datetime import datetime, timezone
-from uuid import uuid4
+from datetime import datetime
 
 from app.services.analysis_state import (
     get_analysis_metadata,

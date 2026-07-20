@@ -1,6 +1,5 @@
 """Tests for settings service — profile update, notification / system settings, password change."""
 
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
