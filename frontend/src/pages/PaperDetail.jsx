@@ -14,7 +14,14 @@ import {
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
-import { deletePaper, getPaperChunk, getPaperDetail, updatePaper } from '../services/paperService';
+import {
+  deletePaper,
+  getPaperBookmarkStatus,
+  getPaperChunk,
+  getPaperDetail,
+  setPaperBookmark,
+  updatePaper,
+} from '../services/paperService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -24,6 +31,10 @@ export default function PaperDetail() {
   const [searchParams] = useSearchParams();
   const citedChunkIndex = searchParams.get('chunk');
   const resource = useAsyncResource(() => getPaperDetail(paperId), [paperId]);
+  const bookmarkResource = useAsyncResource(
+    () => getPaperBookmarkStatus(paperId),
+    [paperId],
+  );
   const citedChunk = useAsyncResource(
     () => citedChunkIndex == null ? Promise.resolve(null) : getPaperChunk(paperId, citedChunkIndex),
     [paperId, citedChunkIndex],
@@ -34,13 +45,19 @@ export default function PaperDetail() {
   const [note, setNote] = useState('');
   const [readingProgress, setReadingProgress] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
 
   useEffect(() => {
     if (!paper) return;
-    setStarred(paper.isStarred);
     setNote(paper.userNote || '');
     setReadingProgress(paper.progress || 0);
   }, [paper]);
+
+  useEffect(() => {
+    if (typeof bookmarkResource.data === 'boolean') {
+      setStarred(bookmarkResource.data);
+    }
+  }, [bookmarkResource.data]);
 
   if (resource.loading || resource.error) {
     return (
@@ -56,12 +73,16 @@ export default function PaperDetail() {
 
   // ===================== 操作回调 =====================
   const handleToggleStar = async () => {
+    const nextStarred = !starred;
+    setBookmarkUpdating(true);
     try {
-      await updatePaper(paper.id, { isStarred: !starred, isFavorite: !starred });
-      setStarred(!starred);
-      message.success(starred ? '已取消收藏' : '已收藏');
+      await setPaperBookmark(paper.id, nextStarred);
+      setStarred(nextStarred);
+      message.success(nextStarred ? '已收藏' : '已取消收藏');
     } catch (error) {
       message.error(error.message || '收藏状态更新失败');
+    } finally {
+      setBookmarkUpdating(false);
     }
   };
 
@@ -195,6 +216,7 @@ export default function PaperDetail() {
               <Button
                 icon={starred ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
                 onClick={handleToggleStar}
+                loading={bookmarkResource.loading || bookmarkUpdating}
               >
                 {starred ? '已收藏' : '收藏'}
               </Button>

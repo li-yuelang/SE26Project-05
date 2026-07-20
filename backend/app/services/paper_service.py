@@ -119,6 +119,18 @@ async def delete_paper(db: AsyncSession, paper_id: UUID) -> None:
     await db.commit()
 
 
+async def delete_papers(db: AsyncSession, paper_ids: list[UUID]) -> list[UUID]:
+    """Delete up to 100 papers in one transaction, ignoring missing IDs."""
+    unique_ids = list(dict.fromkeys(paper_ids))
+    result = await db.scalars(select(Paper).where(Paper.id.in_(unique_ids)))
+    papers = result.all()
+
+    for paper in papers:
+        await db.delete(paper)
+    await db.commit()
+    return [paper.id for paper in papers]
+
+
 async def upsert_arxiv_papers(
     db: AsyncSession,
     raw_papers: list[dict],

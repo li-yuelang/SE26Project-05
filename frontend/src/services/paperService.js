@@ -99,6 +99,69 @@ export const getPaperDetail = createEndpoint({
   http: async (paperId) => fromHttpPaperDetail(await request(`/papers/${paperId}`)),
 });
 
+export const getPaperBookmarkStatus = createEndpoint({
+  mock: (paperId) => {
+    const paper = paperStore.find((item) => item.id === paperId);
+    return Boolean(paper?.favorite || paper?.isFavorite);
+  },
+  http: async (paperId) => {
+    const pageSize = 100;
+    let page = 1;
+    let total = 0;
+
+    do {
+      const result = await request('/learning/bookmarks', {
+        query: { page, pageSize },
+      });
+      if ((result.items || []).some((bookmark) => bookmark.paper_id === paperId)) {
+        return true;
+      }
+      total = result.total || 0;
+      page += 1;
+    } while ((page - 1) * pageSize < total);
+
+    return false;
+  },
+});
+
+export const setPaperBookmark = createEndpoint({
+  mock: (paperId, bookmarked) => {
+    paperStore = paperStore.map((paper) => (
+      paper.id === paperId
+        ? { ...paper, favorite: bookmarked, isFavorite: bookmarked }
+        : paper
+    ));
+    return bookmarked;
+  },
+  http: async (paperId, bookmarked) => {
+    await request(`/learning/bookmarks${bookmarked ? '' : `/${paperId}`}`, {
+      ...(bookmarked ? { body: { folder: null, paper_id: paperId } } : {}),
+      method: bookmarked ? 'POST' : 'DELETE',
+    });
+    return bookmarked;
+  },
+});
+
+export const setPaperBookmarks = createEndpoint({
+  mock: (paperIds, bookmarked) => {
+    const selectedIds = new Set(paperIds);
+    paperStore = paperStore.map((paper) => (
+      selectedIds.has(paper.id)
+        ? { ...paper, favorite: bookmarked, isFavorite: bookmarked }
+        : paper
+    ));
+    return {
+      paperIds,
+      bookmarked,
+      processedCount: paperIds.length,
+    };
+  },
+  http: (paperIds, bookmarked) => request('/learning/bookmarks/batch', {
+    body: { paper_ids: paperIds, bookmarked },
+    method: 'PUT',
+  }),
+});
+
 export const getPaperChunk = createEndpoint({
   mock: (paperId, chunkIndex) => ({
     paperId,
@@ -135,4 +198,19 @@ export const deletePaper = createEndpoint({
     return null;
   },
   http: (paperId) => request(`/papers/${paperId}`, { method: 'DELETE' }),
+});
+
+export const deletePapers = createEndpoint({
+  mock: (paperIds) => {
+    const selectedIds = new Set(paperIds);
+    const deletedIds = paperStore
+      .filter((paper) => selectedIds.has(paper.id))
+      .map((paper) => paper.id);
+    paperStore = paperStore.filter((paper) => !selectedIds.has(paper.id));
+    return { deletedIds, deletedCount: deletedIds.length };
+  },
+  http: (paperIds) => request('/papers/batch', {
+    body: { paper_ids: paperIds },
+    method: 'DELETE',
+  }),
 });
