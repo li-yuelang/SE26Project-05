@@ -104,6 +104,34 @@ def test_delete_missing_paper_uses_shared_error_shape() -> None:
     assert response.json()["code"] == "PAPER_NOT_FOUND"
 
 
+def test_batch_delete_returns_deleted_ids(monkeypatch) -> None:
+    paper_ids = [uuid4(), uuid4()]
+
+    async def fake_delete_papers(db, requested_ids):
+        del db
+        assert requested_ids == paper_ids
+        return requested_ids
+
+    monkeypatch.setattr(papers_api.paper_service, "delete_papers", fake_delete_papers)
+    app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: object()
+    try:
+        with TestClient(app) as client:
+            response = client.request(
+                "DELETE",
+                "/api/papers/batch",
+                json={"paper_ids": [str(paper_id) for paper_id in paper_ids]},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "deletedIds": [str(paper_id) for paper_id in paper_ids],
+        "deletedCount": 2,
+    }
+
+
 def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
     paper = make_paper()
     db = FakeSession(paper)

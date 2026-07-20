@@ -84,6 +84,42 @@ class LearningService:
         await db.delete(bookmark)
         await db.commit()
 
+    async def set_bookmarks(
+        self,
+        db: AsyncSession,
+        user: User,
+        paper_ids: list[UUID],
+        bookmarked: bool,
+    ) -> dict:
+        """Set every existing selected paper to the requested bookmark state."""
+        unique_ids = list(dict.fromkeys(paper_ids))
+        paper_result = await db.scalars(select(Paper.id).where(Paper.id.in_(unique_ids)))
+        valid_ids = list(paper_result.all())
+
+        bookmark_result = await db.scalars(
+            select(Bookmark).where(
+                Bookmark.user_id == user.id,
+                Bookmark.paper_id.in_(valid_ids),
+            )
+        )
+        existing = list(bookmark_result.all())
+        existing_ids = {item.paper_id for item in existing}
+
+        if bookmarked:
+            for paper_id in valid_ids:
+                if paper_id not in existing_ids:
+                    db.add(Bookmark(user_id=user.id, paper_id=paper_id, folder=None))
+        else:
+            for bookmark in existing:
+                await db.delete(bookmark)
+
+        await db.commit()
+        return {
+            "paperIds": [str(paper_id) for paper_id in valid_ids],
+            "bookmarked": bookmarked,
+            "processedCount": len(valid_ids),
+        }
+
     async def list_bookmarks(
         self, db: AsyncSession, user: User, page: int = 1, page_size: int = 20
     ) -> tuple[list[dict], int]:

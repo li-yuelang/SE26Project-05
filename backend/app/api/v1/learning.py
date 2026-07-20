@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.common import success
 from app.schemas.learning import (
-    BookmarkCreate, CommentCreate, FollowedTopicCreate, LearningOverview,
+    BookmarkBatchRequest, BookmarkCreate, CommentCreate, FollowedTopicCreate, LearningOverview,
     NoteCreate, NoteUpdate,
     ReadingHistoryRecord,
 )
@@ -46,6 +46,14 @@ async def add_bookmark(body: BookmarkCreate, user: CurrentUser, db: DbSession):
         return success(result, "Bookmark added")
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+
+
+@router.put("/bookmarks/batch", response_model=dict)
+async def set_bookmarks(body: BookmarkBatchRequest, user: CurrentUser, db: DbSession):
+    result = await learning_service.set_bookmarks(
+        db, user, body.paper_ids, body.bookmarked,
+    )
+    return success(result, "Bookmarks updated")
 
 
 @router.delete("/bookmarks/{paper_id}", response_model=dict)

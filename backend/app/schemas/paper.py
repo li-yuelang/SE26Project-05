@@ -45,6 +45,10 @@ class PaperListResponse(BaseModel):
     page_size: int = Field(serialization_alias="pageSize")
 
 
+class PaperBatchRequest(BaseModel):
+    paper_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+
 # ── 详情 ─────────────────────────────────────────────────────
 
 class PaperDetail(PaperListItem):

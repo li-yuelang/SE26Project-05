@@ -14,7 +14,12 @@ from app.core.embedding import EmbeddingProviderError, get_embedding_provider
 from app.core.exceptions import AppError
 from app.models.paper import Paper, PaperChunk
 from app.schemas.common import success
-from app.schemas.paper import PaperFilterParams, PaperListResponse, PaperUpdateRequest
+from app.schemas.paper import (
+    PaperBatchRequest,
+    PaperFilterParams,
+    PaperListResponse,
+    PaperUpdateRequest,
+)
 from app.services import paper_service
 from app.services.analysis_state import get_analysis_metadata, new_analysis_version
 from app.tasks.paper_tasks import process_paper
@@ -72,6 +77,23 @@ async def list_papers(
         page_size=page_size,
     )
     return success(resp.model_dump(by_alias=True))
+
+
+@router.delete("/batch")
+async def delete_papers(
+    body: PaperBatchRequest,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    del user
+    deleted_ids = await paper_service.delete_papers(db, body.paper_ids)
+    return success(
+        {
+            "deletedIds": [str(paper_id) for paper_id in deleted_ids],
+            "deletedCount": len(deleted_ids),
+        },
+        "Papers deleted",
+    )
 
 
 @router.get("/search/semantic")
