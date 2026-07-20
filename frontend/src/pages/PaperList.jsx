@@ -16,6 +16,7 @@ import {
   Card,
   Typography,
   Badge,
+  Modal,
 } from 'antd';
 import {
   SearchOutlined,
@@ -28,8 +29,9 @@ import {
   CalendarOutlined,
   UserOutlined,
   TagOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
-import { listPapers, updatePaper } from '../services/paperService';
+import { deletePaper, listPapers, updatePaper } from '../services/paperService';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -65,6 +67,7 @@ export default function PaperList() {
   const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [sortBy, setSortBy] = useState('date_desc');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [deletingPaperId, setDeletingPaperId] = useState(null);
 
   const loadPapers = useCallback(async ({ showSuccess = false } = {}) => {
     setLoading(true);
@@ -138,6 +141,31 @@ export default function PaperList() {
   const goToDetail = (paperId, e) => {
     if (e) e.stopPropagation();
     navigate(`/papers/${paperId}`);
+  };
+
+  const handleDelete = (paper, event) => {
+    event.stopPropagation();
+    Modal.confirm({
+      title: '删除论文？',
+      content: `“${paper.title}”将从论文库中永久删除，相关解析内容、收藏、笔记和引用记录也会一并清理。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setDeletingPaperId(paper.id);
+        try {
+          await deletePaper(paper.id);
+          setPapers((current) => current.filter((item) => item.id !== paper.id));
+          setPagination((current) => ({ ...current, current: 1 }));
+          message.success('论文已删除');
+        } catch (error) {
+          message.error(error.message || '论文删除失败');
+          throw error;
+        } finally {
+          setDeletingPaperId(null);
+        }
+      },
+    });
   };
 
   // 表格列定义
@@ -225,7 +253,7 @@ export default function PaperList() {
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_, record) => (
         <Space>
           <Tooltip title="查看详情">
@@ -245,6 +273,16 @@ export default function PaperList() {
                 e.stopPropagation();
                 window.open(record.link, '_blank');
               }}
+            />
+          </Tooltip>
+          <Tooltip title="删除论文">
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={deletingPaperId === record.id}
+              onClick={(event) => handleDelete(record, event)}
             />
           </Tooltip>
         </Space>

@@ -25,6 +25,10 @@ class FakeSession:
     async def commit(self) -> None:
         return None
 
+    async def delete(self, paper: Paper) -> None:
+        if self.paper is paper:
+            self.paper = None
+
 
 class FakeTaskResult:
     id = "fake-task-1"
@@ -57,6 +61,42 @@ def test_analysis_not_found_uses_shared_error_shape() -> None:
     try:
         with TestClient(app) as client:
             response = client.get(f"/api/papers/{uuid4()}/analysis")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "PAPER_NOT_FOUND"
+
+
+def test_delete_paper_requires_authentication() -> None:
+    with TestClient(app) as client:
+        response = client.delete(f"/api/papers/{uuid4()}")
+
+    assert response.status_code == 401
+
+
+def test_delete_paper_returns_no_content() -> None:
+    paper = make_paper()
+    db = FakeSession(paper)
+    app.dependency_overrides[get_db_session] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: object()
+    try:
+        with TestClient(app) as client:
+            response = client.delete(f"/api/papers/{paper.id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert db.paper is None
+
+
+def test_delete_missing_paper_uses_shared_error_shape() -> None:
+    app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: object()
+    try:
+        with TestClient(app) as client:
+            response = client.delete(f"/api/papers/{uuid4()}")
     finally:
         app.dependency_overrides.clear()
 

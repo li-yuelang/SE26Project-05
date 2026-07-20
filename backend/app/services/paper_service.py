@@ -109,6 +109,16 @@ async def update_paper(
     return await get_paper_detail(db, paper_id)
 
 
+async def delete_paper(db: AsyncSession, paper_id: UUID) -> None:
+    """Delete a paper and its database-managed dependent records."""
+    paper = await db.get(Paper, paper_id)
+    if paper is None:
+        raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+
+    await db.delete(paper)
+    await db.commit()
+
+
 async def upsert_arxiv_papers(
     db: AsyncSession,
     raw_papers: list[dict],

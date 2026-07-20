@@ -87,7 +87,7 @@ export const listPapers = createEndpoint({
 
 export const getPaperDetail = createEndpoint({
   mock: (paperId) => {
-    const paper = learningPapers.find((item) => item.id === paperId);
+    const paper = paperStore.find((item) => item.id === paperId);
     if (!paper) {
       throw new ApiError('论文不存在', {
         code: 'PAPER_NOT_FOUND',
@@ -120,4 +120,19 @@ export const updatePaper = createEndpoint({
     body: changes,
     method: 'PATCH',
   }),
+});
+
+export const deletePaper = createEndpoint({
+  mock: (paperId) => {
+    const exists = paperStore.some((paper) => paper.id === paperId);
+    if (!exists) {
+      throw new ApiError('论文不存在', {
+        code: 'PAPER_NOT_FOUND',
+        status: 404,
+      });
+    }
+    paperStore = paperStore.filter((paper) => paper.id !== paperId);
+    return null;
+  },
+  http: (paperId) => request(`/papers/${paperId}`, { method: 'DELETE' }),
 });
