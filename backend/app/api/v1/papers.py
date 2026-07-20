@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession
@@ -231,3 +231,14 @@ async def update_paper(
 ) -> dict:
     detail = await paper_service.update_paper(db, paper_id, body)
     return success(detail.model_dump(mode="json"))
+
+
+@router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_paper(
+    paper_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+) -> Response:
+    del user
+    await paper_service.delete_paper(db, paper_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
