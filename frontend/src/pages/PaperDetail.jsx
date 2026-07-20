@@ -22,8 +22,8 @@ import {
   getPaperChunk,
   getPaperDetail,
   setPaperBookmark,
-  updatePaper,
 } from '../services/paperService';
+import { getPaperNote, savePaperNote } from '../services/learningService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -37,6 +37,7 @@ export default function PaperDetail() {
     () => getPaperBookmarkStatus(paperId),
     [paperId],
   );
+  const noteResource = useAsyncResource(() => getPaperNote(paperId), [paperId]);
   const citedChunk = useAsyncResource(
     () => citedChunkIndex == null ? Promise.resolve(null) : getPaperChunk(paperId, citedChunkIndex),
     [paperId, citedChunkIndex],
@@ -48,12 +49,18 @@ export default function PaperDetail() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
 
   useEffect(() => {
     if (!paper) return;
-    setNote(paper.userNote || '');
     setReadingProgress(paper.progress || 0);
   }, [paper]);
+
+  useEffect(() => {
+    if (!noteResource.loading) {
+      setNote(noteResource.data?.content || '');
+    }
+  }, [noteResource.data, noteResource.loading]);
 
   useEffect(() => {
     if (typeof bookmarkResource.data === 'boolean') {
@@ -89,12 +96,16 @@ export default function PaperDetail() {
   };
 
   const handleSaveNote = async () => {
+    setNoteSaving(true);
     try {
-      await updatePaper(paper.id, { userNote: note });
+      const savedNote = await savePaperNote(paper.id, note);
+      setNote(savedNote?.content || '');
       setNoteVisible(false);
-      message.success('笔记已保存');
+      message.success(savedNote ? '笔记已保存' : '笔记已清除');
     } catch (error) {
       message.error(error.message || '笔记保存失败');
+    } finally {
+      setNoteSaving(false);
     }
   };
 
@@ -223,7 +234,11 @@ export default function PaperDetail() {
                 {starred ? '已收藏' : '收藏'}
               </Button>
             </Tooltip>
-            <Button icon={<EditOutlined />} onClick={() => setNoteVisible(true)}>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setNoteVisible(true)}
+              loading={noteResource.loading}
+            >
               笔记
             </Button>
             <Button icon={<DownloadOutlined />}>导出</Button>
@@ -413,7 +428,7 @@ export default function PaperDetail() {
             />
             <Space style={{ marginTop: 12, justifyContent: 'flex-end', display: 'flex' }}>
               <Button onClick={() => setNoteVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleSaveNote}>保存</Button>
+              <Button type="primary" loading={noteSaving} onClick={handleSaveNote}>保存</Button>
             </Space>
           </div>
         </div>

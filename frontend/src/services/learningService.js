@@ -8,6 +8,7 @@ import {
 import { cloneMockData, createEndpoint, request } from './apiClient';
 
 let paperStore = cloneMockData(learningPapers);
+let noteStore = cloneMockData(learningNotes);
 let topicStore = cloneMockData(followedTopics);
 let httpPaperStore = new Map();
 let httpTopicStore = new Map();
@@ -142,13 +143,83 @@ async function getHttpLearningCenter() {
 
 export const getLearningCenter = createEndpoint({
   mock: () => ({
-    notes: learningNotes,
+    notes: noteStore,
     papers: paperStore,
     readingHistory,
     statusMeta,
     topics: topicStore,
   }),
   http: getHttpLearningCenter,
+});
+
+async function getHttpPaperNote(paperId) {
+  const result = await request('/learning/notes', {
+    query: { paper_id: paperId, page: 1, pageSize: 1 },
+  });
+  return result.items?.[0] || null;
+}
+
+export const getPaperNote = createEndpoint({
+  mock: (paperId) => noteStore.find((note) => note.paperId === paperId) || null,
+  http: getHttpPaperNote,
+});
+
+export const savePaperNote = createEndpoint({
+  mock: (paperId, rawContent) => {
+    const content = rawContent.trim();
+    const existing = noteStore.find((note) => note.paperId === paperId);
+
+    if (!content) {
+      noteStore = noteStore.filter((note) => note.paperId !== paperId);
+      return null;
+    }
+
+    if (existing) {
+      noteStore = noteStore.map((note) => (
+        note.id === existing.id ? { ...note, content, updatedAt: '刚刚' } : note
+      ));
+      return noteStore.find((note) => note.id === existing.id);
+    }
+
+    const note = {
+      id: `note-${paperId}`,
+      content,
+      paperId,
+      tags: [],
+      title: '论文笔记',
+      updatedAt: '刚刚',
+    };
+    noteStore = [note, ...noteStore];
+    return note;
+  },
+  http: async (paperId, rawContent) => {
+    const content = rawContent.trim();
+    const existing = await getHttpPaperNote(paperId);
+
+    if (!content) {
+      if (existing) {
+        await request(`/learning/notes/${existing.id}`, { method: 'DELETE' });
+      }
+      return null;
+    }
+
+    if (existing) {
+      return request(`/learning/notes/${existing.id}`, {
+        body: { content },
+        method: 'PUT',
+      });
+    }
+
+    return request('/learning/notes', {
+      body: {
+        anchor: { title: '论文笔记' },
+        content,
+        is_public: false,
+        paper_id: paperId,
+      },
+      method: 'POST',
+    });
+  },
 });
 
 export const listLearningPapers = createEndpoint({
