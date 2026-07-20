@@ -230,7 +230,7 @@ async def get_paper_detail(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    detail = await paper_service.get_paper_detail(db, paper_id)
+    detail = await paper_service.get_paper_detail(db, paper_id, user.id)
     return success(detail.model_dump(mode="json"))
 
 

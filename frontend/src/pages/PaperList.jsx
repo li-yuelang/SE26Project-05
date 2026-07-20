@@ -31,6 +31,8 @@ import {
   StarOutlined,
   StarFilled,
 } from '@ant-design/icons';
+import { listPapers } from '../services/paperService';
+import { updateLearningPaper } from '../services/learningService';
 import {
   deletePaper,
   deletePapers,

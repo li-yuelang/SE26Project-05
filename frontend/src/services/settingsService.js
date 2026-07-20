@@ -5,18 +5,35 @@ export const saveProfile = createEndpoint({
   http: (profile) => request('/auth/me', { body: profile, method: 'PATCH' }),
 });
 
+export const getNotificationPreferences = createEndpoint({
+  mock: () => ({ email_digest: true, push_new_paper: true, push_recommendation: false }),
+  http: () => request('/settings/notifications'),
+});
+
 export const saveNotificationPreferences = createEndpoint({
   mock: (preferences) => preferences,
   http: (preferences) => request('/settings/notifications', {
-    body: preferences,
+    body: {
+      email_digest: preferences.dailyDigest,
+      push_new_paper: preferences.paperAlert,
+      push_recommendation: preferences.subscriptionAlert,
+    },
     method: 'PUT',
   }),
+});
+
+export const getSystemPreferences = createEndpoint({
+  mock: () => ({ theme: 'light', language: 'zh-CN', default_page_size: 20 }),
+  http: () => request('/settings/system'),
 });
 
 export const saveSystemPreferences = createEndpoint({
   mock: (preferences) => preferences,
   http: (preferences) => request('/settings/system', {
-    body: preferences,
+    body: {
+      language: preferences.language,
+      theme: preferences.theme === 'system' ? 'auto' : preferences.theme,
+    },
     method: 'PUT',
   }),
 });

@@ -46,7 +46,7 @@ function fromHttpPaper(paper) {
     ...paper,
     arxivId: paper.arxiv_id,
     id: paper.id,
-    isFavorite: false,
+    isFavorite: paper.is_favorite ?? false,
     isRead: paper.parsed_status === 'done',
     link: paper.arxiv_url,
     pdfLink: paper.pdf_url,
@@ -61,7 +61,7 @@ function fromHttpPaperDetail(paper) {
   const structured = paper.structured_content || {};
   return {
     ...normalized,
-    isStarred: false,
+    isStarred: normalized.isFavorite,
     keywords: paper.metadata_extra?.keywords || paper.categories || [],
     published: normalized.publishedDate,
     updated: normalized.updatedDate || paper.updated_at?.slice(0, 10) || '',

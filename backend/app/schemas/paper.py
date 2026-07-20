@@ -59,6 +59,7 @@ class PaperDetail(PaperListItem):
     metadata_extra: dict | None
     created_at: datetime
     updated_at: datetime
+    is_favorite: bool = False
 
 
 # ── 更新 ─────────────────────────────────────────────────────
