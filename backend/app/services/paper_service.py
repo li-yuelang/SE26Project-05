@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
+from app.models.learning import Bookmark
 from app.models.paper import Paper, PaperChunk
 from app.schemas.paper import PaperDetail, PaperFilterParams, PaperListItem, PaperUpdateRequest
 
@@ -64,7 +65,7 @@ async def list_papers(
     return items, total
 
 
-async def get_paper_detail(db: AsyncSession, paper_id: UUID) -> PaperDetail:
+async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID | None = None) -> PaperDetail:
     """获取论文详情（含结构化内容和元数据）。"""
     paper = await db.scalar(
         select(Paper)
@@ -73,7 +74,17 @@ async def get_paper_detail(db: AsyncSession, paper_id: UUID) -> PaperDetail:
     )
     if not paper:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
-    return PaperDetail.model_validate(paper)
+
+    detail = PaperDetail.model_validate(paper)
+    if user_id:
+        bookmark = await db.scalar(
+            select(Bookmark).where(
+                Bookmark.user_id == user_id,
+                Bookmark.paper_id == paper_id,
+            )
+        )
+        detail.is_favorite = bookmark is not None
+    return detail
 
 
 async def get_paper_chunk(db: AsyncSession, paper_id: UUID, chunk_index: int) -> dict:

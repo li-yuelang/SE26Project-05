@@ -13,7 +13,8 @@ import {
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
-import { getPaperChunk, getPaperDetail, updatePaper } from '../services/paperService';
+import { getPaperChunk, getPaperDetail } from '../services/paperService';
+import { updateLearningPaper } from '../services/learningService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -54,7 +55,7 @@ export default function PaperDetail() {
   // ===================== 操作回调 =====================
   const handleToggleStar = async () => {
     try {
-      await updatePaper(paper.id, { isStarred: !starred, isFavorite: !starred });
+      await updateLearningPaper(paper.id, { favorite: !starred });
       setStarred(!starred);
       message.success(starred ? '已取消收藏' : '已收藏');
     } catch (error) {

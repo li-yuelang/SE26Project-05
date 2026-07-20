@@ -29,7 +29,8 @@ import {
   UserOutlined,
   TagOutlined,
 } from '@ant-design/icons';
-import { listPapers, updatePaper } from '../services/paperService';
+import { listPapers } from '../services/paperService';
+import { updateLearningPaper } from '../services/learningService';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -89,11 +90,11 @@ export default function PaperList() {
     const paper = papers.find((item) => item.id === paperId);
     if (!paper) return;
     try {
-      const updatedPaper = await updatePaper(paperId, {
-        isFavorite: !paper.isFavorite,
+      const updatedPaper = await updateLearningPaper(paperId, {
+        favorite: !paper.isFavorite,
       });
       setPapers((currentPapers) => currentPapers.map((item) => (
-        item.id === paperId ? updatedPaper : item
+        item.id === paperId ? { ...item, isFavorite: updatedPaper.favorite } : item
       )));
     } catch (error) {
       message.error(error.message || '收藏状态更新失败');

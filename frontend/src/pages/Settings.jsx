@@ -25,6 +25,8 @@ import {
 } from "@ant-design/icons";
 import {
   changePassword,
+  getNotificationPreferences,
+  getSystemPreferences,
   saveNotificationPreferences,
   saveProfile,
   saveSystemPreferences,
@@ -72,6 +74,19 @@ export default function Settings() {
       email: user.email,
       bio: user.bio || "",
     });
+
+    // 从后端加载通知偏好
+    getNotificationPreferences().then((data) => {
+      if (data.email_digest !== undefined) setDailyDigest(data.email_digest);
+      if (data.push_new_paper !== undefined) setPaperAlert(data.push_new_paper);
+      if (data.push_recommendation !== undefined) setSubscriptionAlert(data.push_recommendation);
+    }).catch(() => {});
+
+    // 从后端加载系统设置
+    getSystemPreferences().then((data) => {
+      if (data.language) setLanguage(data.language);
+      if (data.theme) setTheme(data.theme === 'auto' ? 'system' : data.theme);
+    }).catch(() => {});
   }, [profileForm, user]);
 
   /* ---------- 保存回调 ---------- */

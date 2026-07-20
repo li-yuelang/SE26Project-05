@@ -16,7 +16,7 @@ Write-Host "  Please enter SSH passwords in the popup windows."
 Write-Host ""
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'PostgreSQL Tunnel (port 15432)'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Redis Tunnel (port 6379)'; ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Redis Tunnel (port 16379)'; ssh -N -L 16379:127.0.0.1:6379 root@10.119.4.37"
 
 Write-Host "  Waiting 30s for SSH tunnels to be established..."
 Start-Sleep -Seconds 30
