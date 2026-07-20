@@ -5,7 +5,12 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
+from app.api.v1 import learning as learning_api
+from app.database import get_db_session
+from app.main import app
 from app.services.learning import LearningService
 
 
@@ -209,6 +214,41 @@ class TestBookmarkCRUD:
         asyncio.run(service.remove_bookmark(db, user, bm.paper_id))
         assert len(db.deleted) == 1
         assert db.commit_called
+
+
+def test_batch_bookmarks_set_one_target_state(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    paper_ids = [uuid4(), uuid4()]
+
+    async def fake_set_bookmarks(db, current_user, requested_ids, bookmarked):
+        del db
+        assert current_user is user
+        assert requested_ids == paper_ids
+        assert bookmarked is True
+        return {
+            "paperIds": [str(paper_id) for paper_id in requested_ids],
+            "bookmarked": bookmarked,
+            "processedCount": len(requested_ids),
+        }
+
+    monkeypatch.setattr(learning_api.learning_service, "set_bookmarks", fake_set_bookmarks)
+    app.dependency_overrides[get_db_session] = lambda: FakeDBSession()
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        with TestClient(app) as client:
+            response = client.put(
+                "/api/learning/bookmarks/batch",
+                json={
+                    "paper_ids": [str(paper_id) for paper_id in paper_ids],
+                    "bookmarked": True,
+                },
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["data"]["bookmarked"] is True
+    assert response.json()["data"]["processedCount"] == 2
 
 
 class TestNoteCRUD:

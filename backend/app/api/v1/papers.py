@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession
@@ -14,7 +14,12 @@ from app.core.embedding import EmbeddingProviderError, get_embedding_provider
 from app.core.exceptions import AppError
 from app.models.paper import Paper, PaperChunk
 from app.schemas.common import success
-from app.schemas.paper import PaperFilterParams, PaperListResponse, PaperUpdateRequest
+from app.schemas.paper import (
+    PaperBatchRequest,
+    PaperFilterParams,
+    PaperListResponse,
+    PaperUpdateRequest,
+)
 from app.services import paper_service
 from app.services.analysis_state import get_analysis_metadata, new_analysis_version
 from app.tasks.paper_tasks import process_paper
@@ -52,7 +57,7 @@ async def list_papers(
     date_from: str | None = Query(default=None),
     date_to: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=10000),
 ) -> dict:
     params = PaperFilterParams(
         query=query,
@@ -72,6 +77,23 @@ async def list_papers(
         page_size=page_size,
     )
     return success(resp.model_dump(by_alias=True))
+
+
+@router.delete("/batch")
+async def delete_papers(
+    body: PaperBatchRequest,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    del user
+    deleted_ids = await paper_service.delete_papers(db, body.paper_ids)
+    return success(
+        {
+            "deletedIds": [str(paper_id) for paper_id in deleted_ids],
+            "deletedCount": len(deleted_ids),
+        },
+        "Papers deleted",
+    )
 
 
 @router.get("/search/semantic")
@@ -231,3 +253,14 @@ async def update_paper(
 ) -> dict:
     detail = await paper_service.update_paper(db, paper_id, body)
     return success(detail.model_dump(mode="json"))
+
+
+@router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_paper(
+    paper_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+) -> Response:
+    del user
+    await paper_service.delete_paper(db, paper_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

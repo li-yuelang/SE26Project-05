@@ -35,20 +35,37 @@ class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     parsed_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     metadata_extra: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    chunks: Mapped[list[PaperChunk]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    concepts: Mapped[list[PaperConcept]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    chunks: Mapped[list[PaperChunk]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
+    concepts: Mapped[list[PaperConcept]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
     outgoing_citations: Mapped[list[PaperCitation]] = relationship(
-        foreign_keys="PaperCitation.source_paper_id", back_populates="source_paper", cascade="all, delete-orphan"
+        foreign_keys="PaperCitation.source_paper_id",
+        back_populates="source_paper",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     incoming_citations: Mapped[list[PaperCitation]] = relationship(
-        foreign_keys="PaperCitation.target_paper_id", back_populates="target_paper"
+        foreign_keys="PaperCitation.target_paper_id",
+        back_populates="target_paper",
+        passive_deletes=True,
     )
-    bookmarks: Mapped[list[Bookmark]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    notes: Mapped[list[Note]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    comments: Mapped[list[Comment]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    readers: Mapped[list[ReadingHistory]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    bookmarks: Mapped[list[Bookmark]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
+    notes: Mapped[list[Note]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
+    comments: Mapped[list[Comment]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
+    readers: Mapped[list[ReadingHistory]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
     relation_evidence: Mapped[list[ConceptRelationEvidence]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan"
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
     )
 
 

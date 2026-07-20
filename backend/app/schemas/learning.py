@@ -15,6 +15,11 @@ class BookmarkCreate(BaseModel):
     folder: str | None = None
 
 
+class BookmarkBatchRequest(BaseModel):
+    paper_ids: list[UUID] = Field(min_length=1, max_length=100)
+    bookmarked: bool
+
+
 class BookmarkOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

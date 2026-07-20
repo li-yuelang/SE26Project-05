@@ -1,28 +1,42 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Descriptions, Tag, Tabs, Card, Row, Col, Typography,
   Divider, Space, Button, Rate, List, Alert, Skeleton, Empty,
-  Table, Collapse, Tooltip, message,
+  Table, Collapse, Tooltip, message, Modal,
 } from 'antd';
 import {
   StarOutlined, StarFilled, EditOutlined, LinkOutlined,
   ArrowLeftOutlined, BookOutlined, ExperimentOutlined,
   FileTextOutlined, BranchesOutlined, TagsOutlined,
   DownloadOutlined, ShareAltOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
 import { getPaperChunk, getPaperDetail } from '../services/paperService';
 import { updateLearningPaper } from '../services/learningService';
+import {
+  deletePaper,
+  getPaperBookmarkStatus,
+  getPaperChunk,
+  getPaperDetail,
+  setPaperBookmark,
+  updatePaper,
+} from '../services/paperService';
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function PaperDetail() {
+  const navigate = useNavigate();
   const { paperId } = useParams();
   const [searchParams] = useSearchParams();
   const citedChunkIndex = searchParams.get('chunk');
   const resource = useAsyncResource(() => getPaperDetail(paperId), [paperId]);
+  const bookmarkResource = useAsyncResource(
+    () => getPaperBookmarkStatus(paperId),
+    [paperId],
+  );
   const citedChunk = useAsyncResource(
     () => citedChunkIndex == null ? Promise.resolve(null) : getPaperChunk(paperId, citedChunkIndex),
     [paperId, citedChunkIndex],
@@ -32,13 +46,20 @@ export default function PaperDetail() {
   const [noteVisible, setNoteVisible] = useState(false);
   const [note, setNote] = useState('');
   const [readingProgress, setReadingProgress] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
 
   useEffect(() => {
     if (!paper) return;
-    setStarred(paper.isStarred);
     setNote(paper.userNote || '');
     setReadingProgress(paper.progress || 0);
   }, [paper]);
+
+  useEffect(() => {
+    if (typeof bookmarkResource.data === 'boolean') {
+      setStarred(bookmarkResource.data);
+    }
+  }, [bookmarkResource.data]);
 
   if (resource.loading || resource.error) {
     return (
@@ -54,12 +75,16 @@ export default function PaperDetail() {
 
   // ===================== 操作回调 =====================
   const handleToggleStar = async () => {
+    const nextStarred = !starred;
+    setBookmarkUpdating(true);
     try {
-      await updateLearningPaper(paper.id, { favorite: !starred });
-      setStarred(!starred);
-      message.success(starred ? '已取消收藏' : '已收藏');
+      await setPaperBookmark(paper.id, nextStarred);
+      setStarred(nextStarred);
+      message.success(nextStarred ? '已收藏' : '已取消收藏');
     } catch (error) {
       message.error(error.message || '收藏状态更新失败');
+    } finally {
+      setBookmarkUpdating(false);
     }
   };
 
@@ -75,6 +100,29 @@ export default function PaperDetail() {
 
   const handleRate = (value) => {
     message.success(`评分: ${value} 分`);
+  };
+
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '删除论文？',
+      content: '该论文及相关解析内容、收藏、笔记和引用记录将被永久删除。',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          await deletePaper(paper.id);
+          message.success('论文已删除');
+          navigate('/papers', { replace: true });
+        } catch (error) {
+          message.error(error.message || '论文删除失败');
+          throw error;
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
   };
 
   // ===================== 结构化内容 Tab =====================
@@ -170,6 +218,7 @@ export default function PaperDetail() {
               <Button
                 icon={starred ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
                 onClick={handleToggleStar}
+                loading={bookmarkResource.loading || bookmarkUpdating}
               >
                 {starred ? '已收藏' : '收藏'}
               </Button>
@@ -179,6 +228,9 @@ export default function PaperDetail() {
             </Button>
             <Button icon={<DownloadOutlined />}>导出</Button>
             <Button icon={<ShareAltOutlined />}>分享</Button>
+            <Button danger icon={<DeleteOutlined />} loading={deleting} onClick={handleDelete}>
+              删除
+            </Button>
             <Button type="primary" icon={<LinkOutlined />} href={paper.pdfUrl} target="_blank">
               查看 PDF
             </Button>

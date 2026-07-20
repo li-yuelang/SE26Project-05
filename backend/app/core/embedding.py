@@ -40,7 +40,7 @@ class OpenAICompatibleEmbeddingProvider:
         batch_size = max(1, self.config.embedding_batch_size)
         for start in range(0, len(texts), batch_size):
             batch = texts[start : start + batch_size]
-            payload = {"model": self.config.embedding_model, "input": batch}
+            payload = {"model": self.config.embedding_model, "input": batch, "dimensions": self.config.embedding_dimension}
             try:
                 response = await self._post(f"{base_url.rstrip('/')}/embeddings", headers, payload)
                 if hasattr(response, "raise_for_status"):

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import tempfile
-from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -81,7 +80,8 @@ def _materialise_pdf(pdf_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(prefix="papermate-", suffix=".pdf", delete=True) as handle:
         handle.write(pdf_bytes)
         handle.flush()
-        return Path(handle.name).read_bytes()
+        handle.seek(0)
+        return handle.read()
 
 
 async def run_paper_analysis(
