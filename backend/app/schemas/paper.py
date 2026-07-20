@@ -18,7 +18,7 @@ class PaperFilterParams(BaseModel):
     date_from: str | None = Field(default=None, description="发表日期起始 (YYYY-MM-DD)")
     date_to: str | None = Field(default=None, description="发表日期截止 (YYYY-MM-DD)")
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1, le=100)
+    page_size: int = Field(default=20, ge=1, le=10000)
 
 
 class PaperListItem(BaseModel):

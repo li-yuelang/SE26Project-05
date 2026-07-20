@@ -69,7 +69,7 @@ export default function PaperList() {
   const loadPapers = useCallback(async ({ showSuccess = false } = {}) => {
     setLoading(true);
     try {
-      const result = await listPapers();
+      const result = await listPapers({ page: 1, page_size: 1000 });
       setPapers(result.items);
       if (showSuccess) message.success('论文列表已刷新');
     } catch (error) {
