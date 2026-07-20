@@ -17,7 +17,7 @@ class PageResponse(BaseModel, Generic[T]):
     items: list[T] = Field(default_factory=list)
     total: int = 0
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1, le=100, serialization_alias="pageSize")
+    page_size: int = Field(default=20, ge=1, le=10000, serialization_alias="pageSize")
 
 
 def success(data: T, message: str = "success") -> dict[str, Any]:
