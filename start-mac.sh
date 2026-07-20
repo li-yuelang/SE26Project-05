@@ -16,11 +16,11 @@ echo "Please enter SSH passwords in the popup Terminal windows."
 echo ""
 
 osascript -e "tell app \"Terminal\"
-    do script \"echo 'PostgreSQL Tunnel (port 15432)'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37\"
+    do script \"echo 'PostgreSQL Tunnel (port 15432)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37\"
 end tell"
 
 osascript -e "tell app \"Terminal\"
-    do script \"echo 'Redis Tunnel (port 6379)'; ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37\"
+    do script \"echo 'Redis Tunnel (port 6379)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37\"
 end tell"
 
 echo "Waiting 30s for SSH tunnels to be established..."
@@ -38,11 +38,15 @@ osascript -e "tell app \"Terminal\"
 end tell"
 
 osascript -e "tell app \"Terminal\"
-    do script \"echo 'Celery Default Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default\"
+    do script \"echo 'Celery Analysis Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q analysis --concurrency=2\"
 end tell"
 
 osascript -e "tell app \"Terminal\"
     do script \"echo 'Celery arXiv Worker'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1\"
+end tell"
+
+osascript -e "tell app \"Terminal\"
+    do script \"echo 'Celery Beat'; cd '$PROJECT_DIR/backend' && uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info\"
 end tell"
 
 osascript -e "tell app \"Terminal\"

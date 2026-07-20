@@ -15,8 +15,8 @@ Write-Host "[1/2] Starting SSH tunnels..."
 Write-Host "  Please enter SSH passwords in the popup windows."
 Write-Host ""
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'PostgreSQL Tunnel (port 15432)'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Redis Tunnel (port 16379)'; ssh -N -L 16379:127.0.0.1:6379 root@10.119.4.37"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'PostgreSQL Tunnel (port 15432)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Redis Tunnel (port 6379)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
 
 Write-Host "  Waiting 30s for SSH tunnels to be established..."
 Start-Sleep -Seconds 30
@@ -29,8 +29,9 @@ Write-Host ""
 Write-Host "[2/2] Starting application services..."
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FastAPI (port 8080)'; cd '$ProjectDir\backend'; uv run uvicorn app.main:app --reload --port 8080"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery Default Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery Analysis Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q analysis --concurrency=2"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery arXiv Worker'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Celery Beat'; cd '$ProjectDir\backend'; uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Vite Frontend (port 3000)'; cd '$ProjectDir\frontend'; npm run dev"
 
 Write-Host ""

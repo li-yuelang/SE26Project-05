@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from app.config import Settings, settings
 from app.core.llm_gateway import LLMGateway
@@ -173,11 +173,20 @@ class StructuredExtractor:
         self.llm = llm
         self.config = config
 
-    async def extract(self, *, title: str, abstract: str, chunks: list[PaperTextChunk]) -> ExtractionResult:
+    async def extract(
+        self,
+        *,
+        title: str,
+        abstract: str,
+        chunks: list[PaperTextChunk],
+        progress_callback: Callable[[], Awaitable[None]] | None = None,
+    ) -> ExtractionResult:
         if not chunks:
             raise StructuredExtractionError("No chunks are available for LLM extraction")
         local_results: list[ChunkExtraction] = []
         for chunk in chunks:
+            if progress_callback is not None:
+                await progress_callback()
             raw = await self.llm.generate(
                 build_chunk_prompt(title, abstract, chunk),
                 system_prompt="Return JSON only. Validate every field against the requested structure.",
@@ -188,6 +197,8 @@ class StructuredExtractor:
                 if isinstance(exc, StructuredExtractionError):
                     raise
                 raise StructuredExtractionError("Local extraction failed schema validation") from exc
+            if progress_callback is not None:
+                await progress_callback()
 
         reduced_raw = await self.llm.generate(
             build_reduce_prompt(title, abstract, local_results),
@@ -199,6 +210,8 @@ class StructuredExtractor:
             if isinstance(exc, StructuredExtractionError):
                 raise
             raise StructuredExtractionError("Reduce extraction failed schema validation") from exc
+        if progress_callback is not None:
+            await progress_callback()
         markdown = render_markdown(final, fallback_summary=abstract)
         structured = {
             **markdown,

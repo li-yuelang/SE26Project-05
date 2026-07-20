@@ -78,7 +78,13 @@ async def retrieve(
         select(PaperChunk)
         .options(selectinload(PaperChunk.paper))
         .join(PaperChunk.paper)
-        .where(PaperChunk.content.is_not(None))
+        .where(
+            PaperChunk.content.is_not(None),
+            or_(
+                Paper.active_analysis_run_id.is_(None),
+                PaperChunk.analysis_run_id == Paper.active_analysis_run_id,
+            ),
+        )
     )
     if paper_ids:
         statement = statement.where(PaperChunk.paper_id.in_(paper_ids))

@@ -21,10 +21,10 @@ SE26Project-05/
 
 ```bash
 # PostgreSQL 端口映射（映射到本地 15432）
-ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37
+ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37
 
 # Redis 端口映射（映射到本地 6379）
-ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37
+ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37
 ```
 
 > 以上两条 SSH 隧道会保持前台运行，请分别在独立终端中执行，或加 `-f` 参数后台运行。
@@ -67,8 +67,11 @@ uv run uvicorn app.main:app --reload --port 8080
 论文异步分析和 arXiv 抓取分别使用两个 Celery 队列，需要启动两个 worker：
 
 ```bash
-# default 队列：论文解析和定时调度
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default
+# analysis 队列：论文解析和 outbox 派发
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q analysis --concurrency=2
+
+# beat：定期派发 outbox、恢复僵尸运行和调度抓取任务
+uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info
 
 # arxiv 队列：抓取任务（单并发，遵守 arXiv 请求频率限制）
 uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1
@@ -117,14 +120,15 @@ VITE_BACKEND_TARGET=http://远程服务器地址:8080
 >
 > **Linux 注意**：脚本会自动检测 gnome-terminal / konsole / xfce4-terminal / lxterminal / xterm，未安装则需先安装其一。
 
-脚本会自动启动以下 6 个窗口：
+脚本会自动启动以下 7 个窗口：
 
-1. **PostgreSQL SSH 隧道** — `ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37`
-2. **Redis SSH 隧道** — `ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37`
+1. **PostgreSQL SSH 隧道** — `ssh ... -L 15432:127.0.0.1:5432 root@10.119.4.37`
+2. **Redis SSH 隧道** — `ssh ... -L 6379:127.0.0.1:6379 root@10.119.4.37`
 3. **FastAPI 后端** — `uv run uvicorn app.main:app --reload --port 8080`
-4. **Celery Default Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q default`
+4. **Celery Analysis Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q analysis --concurrency=2`
 5. **Celery arXiv Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q arxiv --concurrency=1`
-6. **前端 Vite** — `npm run dev`
+6. **Celery Beat** — `uv run celery ... beat --loglevel=info`
+7. **前端 Vite** — `npm run dev`
 
 ## 前端
 

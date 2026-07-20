@@ -10,6 +10,14 @@ from app.config import Settings, settings
 class EmbeddingProviderError(RuntimeError):
     """Raised when an embedding provider cannot return a valid vector batch."""
 
+    error_code = "EMBEDDING_ERROR"
+    retryable = True
+
+
+class EmbeddingConfigurationError(EmbeddingProviderError):
+    error_code = "EMBEDDING_ERROR"
+    retryable = False
+
 
 class EmbeddingProvider(Protocol):
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
@@ -28,12 +36,14 @@ class OpenAICompatibleEmbeddingProvider:
         if not texts:
             return []
         if self.config.embedding_dimension != self.EXPECTED_DIMENSION:
-            raise EmbeddingProviderError(
+            error = EmbeddingProviderError(
                 f"Embedding dimension must be {self.EXPECTED_DIMENSION}"
             )
+            error.retryable = False
+            raise error
         api_key = self.config.embedding_api_key or self.config.llm_api_key
         if not api_key:
-            raise EmbeddingProviderError("Embedding API key is not configured")
+            raise EmbeddingConfigurationError("Embedding API key is not configured")
         base_url = self.config.embedding_base_url or self.config.llm_base_url
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         results: list[list[float]] = []
@@ -45,8 +55,22 @@ class OpenAICompatibleEmbeddingProvider:
                 response = await self._post(f"{base_url.rstrip('/')}/embeddings", headers, payload)
                 if hasattr(response, "raise_for_status"):
                     response.raise_for_status()
-            except (httpx.HTTPError, OSError) as exc:
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code if exc.response is not None else 0
+                error = EmbeddingProviderError(
+                    "Embedding provider rate limit exceeded"
+                    if status_code == 429
+                    else f"Embedding request returned HTTP {status_code}"
+                )
+                error.retryable = status_code == 429 or status_code >= 500
+                error.error_code = "EMBEDDING_RATE_LIMIT" if status_code == 429 else "EMBEDDING_ERROR"
+                raise error from exc
+            except (httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError, OSError) as exc:
                 raise EmbeddingProviderError(f"Embedding request failed: {exc}") from exc
+            except httpx.HTTPError as exc:
+                error = EmbeddingProviderError(f"Embedding request failed: {exc}")
+                error.retryable = False
+                raise error from exc
             try:
                 body = response.json()
                 rows = body["data"]

@@ -10,6 +10,19 @@ from app.config import Settings, settings
 class LLMProviderError(RuntimeError):
     """Raised when an OpenAI-compatible LLM request cannot be completed."""
 
+    error_code = "LLM_ERROR"
+    retryable = True
+
+
+class LLMConfigurationError(LLMProviderError):
+    error_code = "LLM_CONFIG_ERROR"
+    retryable = False
+
+
+class LLMRateLimitError(LLMProviderError):
+    error_code = "LLM_RATE_LIMIT"
+    retryable = True
+
 
 class LLMGateway(Protocol):
     async def generate(self, prompt: str, *, system_prompt: str | None = None) -> str: ...
@@ -25,7 +38,7 @@ class OpenAICompatibleLLM:
     async def generate(self, prompt: str, *, system_prompt: str | None = None) -> str:
         api_key = self.config.llm_api_key
         if not api_key:
-            raise LLMProviderError("LLM API key is not configured")
+            raise LLMConfigurationError("LLM API key is not configured")
         messages: list[dict[str, str]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -43,8 +56,20 @@ class OpenAICompatibleLLM:
             )
             if hasattr(response, "raise_for_status"):
                 response.raise_for_status()
-        except (httpx.HTTPError, OSError) as exc:
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code if exc.response is not None else 0
+            if status_code == 429:
+                raise LLMRateLimitError("LLM provider rate limit exceeded") from exc
+            error = LLMProviderError(f"LLM request returned HTTP {status_code}")
+            error.retryable = status_code >= 500
+            error.error_code = "LLM_SERVER_ERROR" if status_code >= 500 else "LLM_ERROR"
+            raise error from exc
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError, OSError) as exc:
             raise LLMProviderError(f"LLM request failed: {exc}") from exc
+        except httpx.HTTPError as exc:
+            error = LLMProviderError(f"LLM request failed: {exc}")
+            error.retryable = False
+            raise error from exc
         try:
             content = response.json()["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
