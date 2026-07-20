@@ -12,6 +12,9 @@ let topicStore = cloneMockData(followedTopics);
 let httpPaperStore = new Map();
 let httpTopicStore = new Map();
 
+const PAPER_PAGE_SIZE = 1000;
+const LEARNING_PAGE_SIZE = 100;
+
 const httpStatusMeta = {
   todo: { color: 'default', text: '待读' },
   reading: { color: 'processing', text: '阅读中' },
@@ -88,33 +91,50 @@ function normalizePaper(paper, bookmarks, histories, notes) {
   return normalized;
 }
 
+async function getAllLearningItems(path) {
+  const items = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const result = await request(path, {
+      query: { page, pageSize: LEARNING_PAGE_SIZE },
+    });
+    items.push(...(result.items || []));
+    total = result.total || 0;
+    page += 1;
+  } while (items.length < total);
+
+  return items;
+}
+
 async function getHttpLearningCenter() {
-  const [paperResult, bookmarkResult, noteResult, historyResult, topicResult] = await Promise.all([
-    request('/papers', { query: { page: 1, page_size: 100 } }),
-    request('/learning/bookmarks', { query: { page: 1, pageSize: 100 } }),
-    request('/learning/notes', { query: { page: 1, pageSize: 100 } }),
-    request('/learning/history', { query: { page: 1, pageSize: 100 } }),
+  const [paperResult, bookmarksResult, notesResult, historiesResult, topicResult] = await Promise.all([
+    request('/papers', { query: { page: 1, page_size: PAPER_PAGE_SIZE } }),
+    getAllLearningItems('/learning/bookmarks'),
+    getAllLearningItems('/learning/notes'),
+    getAllLearningItems('/learning/history'),
     request('/learning/topics'),
   ]);
   const bookmarks = new Map(
-    (bookmarkResult.items || []).map((bookmark) => [bookmark.paper_id, bookmark]),
+    bookmarksResult.map((bookmark) => [bookmark.paper_id, bookmark]),
   );
   const histories = new Map(
-    (historyResult.items || []).map((history) => [history.paper_id, history]),
+    historiesResult.map((history) => [history.paper_id, history]),
   );
   const notesByPaper = new Map();
-  (noteResult.items || []).forEach((note) => {
+  notesResult.forEach((note) => {
     notesByPaper.set(note.paper_id, [...(notesByPaper.get(note.paper_id) || []), note]);
   });
   const topics = (topicResult.items || []).map(normalizeTopic);
   httpTopicStore = new Map(topics.map((topic) => [topic.id, topic]));
   httpPaperStore = new Map();
   return {
-    notes: (noteResult.items || []).map(normalizeNote),
+    notes: notesResult.map(normalizeNote),
     papers: (paperResult.items || []).map((paper) => (
       normalizePaper(paper, bookmarks, histories, notesByPaper)
     )),
-    readingHistory: (historyResult.items || []).map(normalizeHistory),
+    readingHistory: historiesResult.map(normalizeHistory),
     statusMeta: httpStatusMeta,
     topics,
   };
@@ -134,7 +154,9 @@ export const getLearningCenter = createEndpoint({
 export const listLearningPapers = createEndpoint({
   mock: () => paperStore,
   http: async (query) => {
-    const result = await request('/papers', { query: { ...query, page_size: 100 } });
+    const result = await request('/papers', {
+      query: { ...query, page_size: PAPER_PAGE_SIZE },
+    });
     return result.items || [];
   },
 });
