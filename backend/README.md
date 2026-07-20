@@ -7,10 +7,10 @@
 
    ```bash
    # PostgreSQL (mapped to local 15432)
-   ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37
+   ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37
 
    # Redis (mapped to local 6379)
-   ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37
+   ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37
    ```
 
 3. **Cloud server**: In this directory, run `uv sync`, then copy `.env.example` to `.env`.
@@ -18,10 +18,10 @@
 5. Apply the schema with `uv run alembic upgrade head`.
 6. Start the API with `uv run uvicorn app.main:app --reload --port 8080`.
 
-Start the default worker for asynchronous paper analysis and scheduled dispatch:
+Start the dedicated analysis worker for paper parsing and outbox dispatch:
 
 ```bash
-uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default
+uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q analysis --concurrency=2
 ```
 
 Fetch runs use a dedicated single-concurrency queue. Start the arXiv worker and
@@ -33,8 +33,19 @@ uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info
 ```
 
 Configure `LLM_API_KEY` and the optional `LLM_BASE_URL`, `LLM_MODEL`,
-`EMBEDDING_BASE_URL`, and `EMBEDDING_MODEL` settings in `.env`. The analysis pipeline writes its durable state to
-`papers.metadata_extra.analysis`; it does not create Markdown files on disk.
+`EMBEDDING_BASE_URL`, and `EMBEDDING_MODEL` settings in `.env`. The analysis
+pipeline writes its durable lifecycle to `paper_analysis_runs` and publishes
+through `task_outbox`. `papers.parsed_status` and
+`papers.metadata_extra.analysis` remain compatibility caches. Chunks, concept
+links and citations are written per run; a new run becomes visible only after
+`active_analysis_run_id` is switched in the same transaction.
+
+For Linux Compose deployments, copy `.env.production.example` to
+`.env.production` and run with `PAPERMATE_ENV_FILE=.env.production`. The
+`migrate` service is the only service that runs Alembic; API and workers wait
+for it to complete. PostgreSQL and Redis ports are bound to localhost by
+default, and Celery can use Redis DB 0 for the broker, DB 1 for results and DB
+2 for coordination when those URLs are configured.
 
 The API root is `http://localhost:8080/api`. The health endpoint is `GET /health`.
 To launch all services in containers, run `docker compose up --build` from this directory.

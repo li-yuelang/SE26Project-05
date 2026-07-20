@@ -1,33 +1,74 @@
-"""Celery entry points for asynchronous paper analysis."""
+"""Celery entry points for durable paper-analysis runs."""
 
 from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+from uuid import UUID
+
+from sqlalchemy import select
 
 from app.config import settings
-from app.services.analysis_state import mark_analysis_retrying
-from app.services.paper_analysis import process_paper_async, record_failure
 from app.database import AsyncSessionLocal
+from app.models.paper import PaperAnalysisRun
+from app.services.analysis_errors import classify_analysis_error
+from app.services.analysis_runs import (
+    dispatch_pending_outbox,
+    mark_analysis_retry_wait,
+    recover_stale_analysis_runs,
+)
+from app.services.paper_analysis import process_paper_async, record_failure
 from app.tasks.celery_app import celery_app
 
 
-async def _record_retry(paper_id: str, error: Exception, retry_number: int) -> None:
+async def _record_retry(
+    paper_id: str,
+    task_id: str | None,
+    run_id: str | None,
+    error: Exception,
+    retry_number: int,
+) -> None:
+    info = classify_analysis_error(error)
     async with AsyncSessionLocal() as db:
-        await mark_analysis_retrying(db, paper_id, str(error), retry_number=retry_number)
+        run = await db.get(PaperAnalysisRun, run_id, with_for_update=True) if run_id else None
+        if run is None and task_id:
+            run = await db.scalar(
+                select(PaperAnalysisRun)
+                .where(PaperAnalysisRun.celery_task_id == task_id)
+                .with_for_update()
+            )
+        if run is None:
+            run = await db.scalar(
+                select(PaperAnalysisRun)
+                .where(PaperAnalysisRun.paper_id == UUID(paper_id))
+                .order_by(PaperAnalysisRun.created_at.desc())
+                .limit(1)
+                .with_for_update()
+            )
+        if run is None:
+            return
+        stage = run.stage if run.stage not in {"queued", "completed", "failed"} else "downloading"
+        await mark_analysis_retry_wait(
+            db,
+            run.id,
+            stage=stage,
+            error_code=info.code,
+            error_message=str(error),
+            retry_after_seconds=min(900, 2 ** min(retry_number, 8)),
+            attempt=retry_number,
+        )
 
 
 def _run_async(coroutine: Any) -> Any:
-    """Run a coroutine from both a worker thread and Celery eager API calls."""
+    """Run async worker code in normal Celery and eager/test execution."""
 
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(coroutine)
-    # Celery eager mode executes the task synchronously inside FastAPI's event
-    # loop.  A short-lived thread gives the coroutine its own loop while
-    # preserving the normal synchronous Celery task contract.
+    # Celery eager mode can execute synchronously inside FastAPI's loop.  A
+    # short-lived thread gives the coroutine its own event loop.
     with ThreadPoolExecutor(max_workers=1) as executor:
         return executor.submit(asyncio.run, coroutine).result()
 
@@ -37,21 +78,61 @@ def _run_async(coroutine: Any) -> Any:
     name="app.tasks.process_paper",
     max_retries=settings.analysis_max_retries,
     track_started=True,
+    acks_late=True,
+    queue=settings.analysis_queue,
 )
-def process_paper(self: Any, paper_id: str, force: bool = False) -> dict[str, Any]:
-    """Run one paper analysis with finite exponential-backoff retries."""
+def process_paper(
+    self: Any,
+    paper_id: str,
+    run_id: str | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Run one paper analysis and retry only transient failures."""
 
     task_id = getattr(self.request, "id", None)
     try:
-        return _run_async(process_paper_async(paper_id, task_id=task_id, force=force))
+        return _run_async(
+            process_paper_async(
+                paper_id,
+                task_id=task_id,
+                run_id=run_id,
+                force=force,
+            )
+        )
     except Exception as exc:
+        info = classify_analysis_error(exc)
         retry_number = int(getattr(self.request, "retries", 0)) + 1
-        if retry_number <= self.max_retries:
-            _run_async(_record_retry(paper_id, exc, retry_number))
-            countdown = min(300, 2 ** min(retry_number, 8))
-            raise self.retry(exc=exc, countdown=countdown)
-        _run_async(record_failure(paper_id, exc, task_id=task_id))
+        if info.retryable and retry_number <= self.max_retries:
+            _run_async(_record_retry(paper_id, task_id, run_id, exc, retry_number))
+            raise self.retry(exc=exc, countdown=min(900, 2 ** min(retry_number, 8)))
+        _run_async(
+            record_failure(
+                paper_id,
+                exc,
+                task_id=task_id,
+                run_id=run_id,
+                error_code=info.code,
+            )
+        )
         raise
 
 
-__all__ = ["process_paper"]
+@celery_app.task(name="app.tasks.dispatch_analysis_outbox", queue=settings.analysis_queue)
+def dispatch_analysis_outbox() -> dict[str, int]:
+    """Publish committed analysis events to the dedicated queue."""
+
+    return _run_async(dispatch_pending_outbox())
+
+
+@celery_app.task(name="app.tasks.reconcile_analysis_runs", queue=settings.analysis_queue)
+def reconcile_analysis_runs() -> dict[str, int]:
+    """Recover runs whose worker heartbeat has expired."""
+
+    return _run_async(recover_stale_analysis_runs())
+
+
+__all__ = [
+    "dispatch_analysis_outbox",
+    "process_paper",
+    "reconcile_analysis_runs",
+]

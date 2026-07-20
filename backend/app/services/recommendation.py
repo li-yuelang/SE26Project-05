@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.learning import Bookmark, ReadingHistory
@@ -75,7 +75,14 @@ class RecommendationService:
         # Get concepts from bookmarked papers
         pc_rows = (await db.scalars(
             select(PaperConcept.concept_id)
+            .join(Paper, Paper.id == PaperConcept.paper_id)
             .where(PaperConcept.paper_id.in_(bookmarked_papers))
+            .where(
+                or_(
+                    Paper.active_analysis_run_id.is_(None),
+                    PaperConcept.analysis_run_id == Paper.active_analysis_run_id,
+                )
+            )
         )).all()
         concept_ids = list(set(pc_rows))
 
@@ -85,9 +92,14 @@ class RecommendationService:
         # Find papers sharing those concepts, excluding already bookmarked ones
         candidate_paper_ids = (await db.scalars(
             select(PaperConcept.paper_id)
+            .join(Paper, Paper.id == PaperConcept.paper_id)
             .where(
                 PaperConcept.concept_id.in_(concept_ids),
                 PaperConcept.paper_id.not_in(bookmarked_papers),
+                or_(
+                    Paper.active_analysis_run_id.is_(None),
+                    PaperConcept.analysis_run_id == Paper.active_analysis_run_id,
+                ),
             )
             .group_by(PaperConcept.paper_id)
             .order_by(func.count(PaperConcept.concept_id).desc())

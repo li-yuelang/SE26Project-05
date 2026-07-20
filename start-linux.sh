@@ -63,8 +63,8 @@ echo "[1/2] Starting SSH tunnels..."
 echo "  Please enter SSH passwords in the popup windows."
 echo ""
 
-open_terminal "PostgreSQL SSH Tunnel" "echo 'PostgreSQL Tunnel (port 15432)'; ssh -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
-open_terminal "Redis SSH Tunnel" "echo 'Redis Tunnel (port 6379)'; ssh -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
+open_terminal "PostgreSQL SSH Tunnel" "echo 'PostgreSQL Tunnel (port 15432)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37"
+open_terminal "Redis SSH Tunnel" "echo 'Redis Tunnel (port 6379)'; ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37"
 
 echo "  Waiting 30s for SSH tunnels to be established..."
 sleep 30
@@ -77,8 +77,9 @@ echo ""
 echo "[2/2] Starting application services..."
 
 open_terminal "FastAPI Backend" "echo 'FastAPI (port 8080)'; cd \"$PROJECT_DIR/backend\" && uv run uvicorn app.main:app --reload --port 8080"
-open_terminal "Celery Default Worker" "echo 'Celery Default Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q default"
+open_terminal "Celery Analysis Worker" "echo 'Celery Analysis Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q analysis --concurrency=2"
 open_terminal "Celery arXiv Worker" "echo 'Celery arXiv Worker'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app worker --loglevel=info --pool=solo -Q arxiv --concurrency=1"
+open_terminal "Celery Beat" "echo 'Celery Beat'; cd \"$PROJECT_DIR/backend\" && uv run celery -A app.tasks.celery_app.celery_app beat --loglevel=info"
 open_terminal "Frontend Vite" "echo 'Vite Frontend (port 3000)'; cd \"$PROJECT_DIR/frontend\" && npm run dev"
 
 echo ""

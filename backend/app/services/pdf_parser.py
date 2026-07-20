@@ -37,6 +37,16 @@ _KNOWN_HEADING = re.compile(
 _TOKEN_PATTERN = re.compile(r"[\u3400-\u9fff]|[A-Za-z0-9_]+|[^\s]", re.UNICODE)
 
 
+class PDFInvalidError(ValueError):
+    error_code = "PDF_INVALID"
+    retryable = False
+
+
+class OCRRequiredError(ValueError):
+    error_code = "OCR_REQUIRED"
+    retryable = False
+
+
 @dataclass(slots=True)
 class TextBlock:
     text: str
@@ -222,7 +232,7 @@ class PDFParser:
 
     def parse(self, pdf_bytes: bytes) -> ParsedDocument:
         if not pdf_bytes.startswith(b"%PDF"):
-            raise ValueError("The downloaded file is not a PDF")
+            raise PDFInvalidError("The downloaded file is not a PDF")
 
         primary_error: Exception | None = None
         try:
@@ -242,11 +252,11 @@ class PDFParser:
             blocks, page_count = _extract_with_pdfplumber(pdf_bytes)
         except Exception as fallback_error:
             if primary_error:
-                raise ValueError("Unable to extract text from the PDF") from fallback_error
+                raise PDFInvalidError("Unable to extract text from the PDF") from fallback_error
             raise
         text_length = sum(len(block.text) for block in blocks)
         if text_length < max(40, page_count * max(10, self.min_characters_per_page // 4)):
-            raise ValueError("PDF has insufficient text-layer content")
+            raise OCRRequiredError("PDF has no usable text layer; OCR is required")
         return ParsedDocument(
             sections=identify_sections(blocks, page_count),
             blocks=blocks,

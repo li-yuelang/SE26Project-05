@@ -89,9 +89,15 @@ async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID | Non
 
 async def get_paper_chunk(db: AsyncSession, paper_id: UUID, chunk_index: int) -> dict:
     chunk = await db.scalar(
-        select(PaperChunk).where(
+        select(PaperChunk)
+        .join(Paper, Paper.id == PaperChunk.paper_id)
+        .where(
             PaperChunk.paper_id == paper_id,
             PaperChunk.chunk_index == chunk_index,
+            or_(
+                Paper.active_analysis_run_id.is_(None),
+                PaperChunk.analysis_run_id == Paper.active_analysis_run_id,
+            ),
         )
     )
     if chunk is None:

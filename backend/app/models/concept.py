@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,10 +33,17 @@ class Concept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class PaperConcept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "paper_concepts"
-    __table_args__ = (UniqueConstraint("paper_id", "concept_id", name="uq_paper_concept"),)
+    __table_args__ = (
+        UniqueConstraint("paper_id", "concept_id", "analysis_run_id", name="uq_paper_concept_run"),
+        Index("ix_paper_concepts_paper_run", "paper_id", "analysis_run_id"),
+    )
 
     paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
     concept_id: Mapped[UUID] = mapped_column(ForeignKey("concepts.id", ondelete="CASCADE"), index=True)
+    analysis_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("paper_analysis_runs.id", ondelete="CASCADE"), index=True
+    )
+    analysis_version: Mapped[str | None] = mapped_column(String(128), index=True)
     relevance: Mapped[float] = mapped_column(Float, default=1.0)
     evidence: Mapped[str | None] = mapped_column(Text)
 
@@ -80,6 +87,9 @@ class ConceptRelationEvidence(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("concept_relations.id", ondelete="CASCADE"), index=True
     )
     paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+    analysis_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("paper_analysis_runs.id", ondelete="CASCADE"), index=True
+    )
     evidence: Mapped[str] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
     analysis_version: Mapped[str] = mapped_column(String(128), index=True)

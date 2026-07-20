@@ -12,7 +12,7 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.concept import Concept, ConceptRelation, ConceptRelationEvidence, PaperConcept
-from app.models.paper import Paper, PaperChunk, PaperCitation
+from app.models.paper import Paper, PaperAnalysisRun, PaperChunk, PaperCitation
 from app.schemas.analysis import (
     ExtractedConcept,
     ExtractedReference,
@@ -227,19 +227,32 @@ async def persist_analysis(
     source_content: str,
     analysis_version: str,
     analysis_metadata: dict[str, Any],
+    analysis_run_id: UUID | None = None,
 ) -> None:
-    """Replace all paper-owned analysis rows in one transaction."""
+    """Persist one immutable result version in the caller's transaction.
+
+    New runs never delete a previous successful version.  The legacy delete
+    path remains available only for callers that have not supplied a run id.
+    """
 
     if len(chunks) != len(embeddings):
         raise ValueError("The number of embeddings must equal the number of chunks")
     concepts, relations = collect_concepts(extraction.final, extraction.local)
     references = await match_references(db, collect_references(extraction.final, extraction.local), paper.id)
 
-    # All deletes and inserts happen on the same transaction.  A failed flush
-    # therefore leaves the previous completed analysis untouched.
-    await db.execute(delete(PaperChunk).where(PaperChunk.paper_id == paper.id))
-    await db.execute(delete(PaperConcept).where(PaperConcept.paper_id == paper.id))
-    await db.execute(delete(PaperCitation).where(PaperCitation.source_paper_id == paper.id))
+    if analysis_run_id is not None:
+        run = await db.get(PaperAnalysisRun, analysis_run_id, with_for_update=True)
+        if run is None or run.paper_id != paper.id:
+            raise ValueError("Analysis run does not belong to this paper")
+        if run.status in {"failed", "cancelled", "completed"}:
+            raise RuntimeError(f"Analysis run {analysis_run_id} is no longer writable")
+
+    # The legacy path is retained for old callers and one-time compatibility
+    # scripts.  The production worker always supplies ``analysis_run_id``.
+    if analysis_run_id is None:
+        await db.execute(delete(PaperChunk).where(PaperChunk.paper_id == paper.id))
+        await db.execute(delete(PaperConcept).where(PaperConcept.paper_id == paper.id))
+        await db.execute(delete(PaperCitation).where(PaperCitation.source_paper_id == paper.id))
     # Relation evidence is intentionally retained across reruns.  The current
     # paper links/chunks are replaced, while each evidence row records its
     # analysis version for auditability.
@@ -250,6 +263,8 @@ async def persist_analysis(
         db.add(
             PaperChunk(
                 paper_id=paper.id,
+                analysis_run_id=analysis_run_id,
+                analysis_version=analysis_version,
                 chunk_index=chunk.chunk_index,
                 section_title=chunk.section_title,
                 content=chunk.content,
@@ -286,6 +301,8 @@ async def persist_analysis(
             PaperConcept(
                 paper_id=paper.id,
                 concept_id=concept_rows[key].id,
+                analysis_run_id=analysis_run_id,
+                analysis_version=analysis_version,
                 relevance=record.relevance,
                 evidence=record.evidence or None,
             )
@@ -321,6 +338,7 @@ async def persist_analysis(
                 evidence=relation.evidence or "该关系由论文分析结果推断。",
                 confidence=relation.confidence,
                 analysis_version=analysis_version,
+                analysis_run_id=analysis_run_id,
             )
         )
 
@@ -332,6 +350,8 @@ async def persist_analysis(
             PaperCitation(
                 source_paper_id=paper.id,
                 target_paper_id=UUID(target_id),
+                analysis_run_id=analysis_run_id,
+                analysis_version=analysis_version,
                 context=reference.get("context") or None,
                 confidence=clamp_confidence(reference.get("confidence")),
             )
@@ -342,11 +362,12 @@ async def persist_analysis(
     structured_content["analysisVersion"] = analysis_version
     paper.source_content = source_content
     paper.structured_content = structured_content
-    paper.parsed_status = "completed"
-    paper.metadata_extra = {
-        **(paper.metadata_extra or {}),
-        "analysis": {**analysis_metadata, "status": "completed", "stage": "completed"},
-    }
+    if analysis_run_id is None:
+        paper.parsed_status = "completed"
+        paper.metadata_extra = {
+            **(paper.metadata_extra or {}),
+            "analysis": {**analysis_metadata, "status": "completed", "stage": "completed"},
+        }
 
 
 async def backfill_unresolved_citations(db: AsyncSession, target_paper_id: UUID) -> int:
@@ -386,6 +407,8 @@ async def backfill_unresolved_citations(db: AsyncSession, target_paper_id: UUID)
                         PaperCitation(
                             source_paper_id=paper.id,
                             target_paper_id=target.id,
+                            analysis_run_id=paper.active_analysis_run_id,
+                            analysis_version=content.get("analysisVersion"),
                             context=reference.get("context"),
                             confidence=clamp_confidence(reference.get("confidence")),
                         )
