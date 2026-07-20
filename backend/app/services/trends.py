@@ -192,10 +192,12 @@ class TrendService:
             avg = sum(seg) / window
             if avg == 0:
                 continue
-            if sum(seg[:3]) < sum(seg[3:]):
+            first_half = sum(seg[:3])
+            second_half = sum(seg[3:])
+            if first_half > 0 and second_half > first_half * 1.2:
                 phase = "growing"
                 desc = "论文数量持续增长"
-            elif sum(seg[:3]) > sum(seg[3:]) * 1.3:
+            elif first_half > second_half * 1.3:
                 phase = "declining"
                 desc = "论文热度逐渐下降"
             elif avg > sum(counts) / len(counts):
