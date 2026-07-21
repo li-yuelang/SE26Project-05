@@ -126,24 +126,55 @@ async def retrieve(
             for chunk in (await db.scalars(statement.limit(candidate_limit))).unique().all()
         }
 
+    # Metadata fallback: for papers without analysis chunks, use abstract as context
+    if paper_ids and (not candidates or len(candidates) < result_limit):
+        hit_paper_ids = {c.paper_id for c in candidates.values() if hasattr(c, 'paper_id')}
+        missing_ids = [pid for pid in paper_ids if pid not in hit_paper_ids]
+        if missing_ids:
+            fallback_papers = (await db.scalars(select(Paper).where(Paper.id.in_(missing_ids)))).all()
+            for paper in fallback_papers:
+                if not paper.abstract:
+                    continue
+                synthetic = PaperChunk(
+                    paper_id=paper.id,
+                    chunk_index=-1,
+                    section_title="论文摘要",
+                    content=paper.abstract[:1500],
+                    analysis_run_id=None,
+                )
+                synthetic.paper = paper
+                import uuid as _uuid
+                synthetic.id = _uuid.uuid4()
+                score = lexical_score(question, synthetic.content, paper.title) * 0.3
+                candidates[id(synthetic)] = RetrievedChunk(
+                    chunk=synthetic, paper=paper, score=score
+                )
+
     ranked = []
-    for chunk in candidates.values():
-        lexical = lexical_score(question, chunk.content, chunk.paper.title)
-        vector = 1 - vector_distances.get(chunk.id, 1.0)
-        score = lexical * 0.65 + vector * 0.35 if chunk.id in vector_distances else lexical
-        ranked.append(RetrievedChunk(chunk=chunk, paper=chunk.paper, score=score))
+    for candidate in candidates.values():
+        if isinstance(candidate, RetrievedChunk):
+            ranked.append(candidate)
+            continue
+        lexical = lexical_score(question, candidate.content, candidate.paper.title)
+        vector = 1 - vector_distances.get(candidate.id, 1.0)
+        score = lexical * 0.65 + vector * 0.35 if candidate.id in vector_distances else lexical
+        ranked.append(RetrievedChunk(chunk=candidate, paper=candidate.paper, score=score))
     return sorted(ranked, key=lambda item: item.score, reverse=True)[:result_limit]
 
 
 def build_prompt(question: str, chunks: list[RetrievedChunk], scenario: str) -> tuple[str, str]:
-    evidence = "\n\n".join(
-        (
+    evidence_parts = []
+    for index, item in enumerate(chunks, start=1):
+        if item.chunk.chunk_index == -1:
+            # Synthetic chunk from paper metadata (no analysis)
+            portion = f"摘要"
+        else:
+            portion = f"章节：{item.chunk.section_title or '未标注'}；片段：{item.chunk.chunk_index}"
+        evidence_parts.append(
             f"[{index}] 论文：{item.paper.title}（arXiv:{item.paper.arxiv_id}）\n"
-            f"章节：{item.chunk.section_title or '未标注'}；片段：{item.chunk.chunk_index}\n"
-            f"{item.chunk.content}"
+            f"{portion}\n{item.chunk.content}"
         )
-        for index, item in enumerate(chunks, start=1)
-    )
+    evidence = "\n\n".join(evidence_parts)
     prompt = (
         f"问题：{question}\n\n可用论文证据：\n{evidence or '没有检索到可用证据。'}\n\n"
         "请直接回答问题。末尾增加“证据边界”一节，简述哪些内容无法由片段确认。"

@@ -30,6 +30,10 @@ import {
   CheckSquareOutlined,
   StarOutlined,
   StarFilled,
+  ExperimentOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 
 import { updateLearningPaper } from '../services/learningService';
@@ -38,6 +42,7 @@ import {
   deletePapers,
   listPapers,
   setPaperBookmarks,
+  triggerAnalysis,
 } from '../services/paperService';
 
 const { Search } = Input;
@@ -78,6 +83,29 @@ export default function PaperList() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedPaperIds, setSelectedPaperIds] = useState([]);
   const [batchAction, setBatchAction] = useState(null);
+  const [analysingPaperIds, setAnalysingPaperIds] = useState(new Set());
+
+  const handleTriggerAnalysis = async (paperId) => {
+    setAnalysingPaperIds((prev) => new Set(prev).add(paperId));
+    try {
+      await triggerAnalysis(paperId);
+      // Update local state to reflect "processing"
+      setPapers((current) =>
+        current.map((p) =>
+          p.id === paperId ? { ...p, parsedStatus: 'processing' } : p
+        )
+      );
+      message.success('已加入解析队列');
+    } catch (error) {
+      message.error(error.message || '触发解析失败');
+    } finally {
+      setAnalysingPaperIds((prev) => {
+        const next = new Set(prev);
+        next.delete(paperId);
+        return next;
+      });
+    }
+  };
 
   const loadPapers = useCallback(async ({ showSuccess = false } = {}) => {
     setLoading(true);
@@ -265,13 +293,50 @@ export default function PaperList() {
     {
       title: '状态',
       key: 'status',
-      width: 80,
-      render: (_, record) => (
-        <Badge
-          status={record.isRead ? 'default' : 'processing'}
-          text={record.isRead ? '已读' : '未读'}
-        />
-      ),
+      width: 130,
+      render: (_, record) => {
+        const status = record.parsedStatus || 'pending';
+        if (status === 'completed') {
+          return <Badge status="success" text="已解析" />;
+        }
+        if (status === 'processing') {
+          return <Badge status="processing" text="解析中" />;
+        }
+        if (status === 'failed') {
+          return <Tag color="error" icon={<CloseCircleOutlined />}>解析失败</Tag>;
+        }
+        return <Badge status="default" text="待解析" />;
+      },
+    },
+    {
+      title: '解析',
+      key: 'analyse',
+      width: 100,
+      render: (_, record) => {
+        const status = record.parsedStatus || 'pending';
+        const isAnalysing = analysingPaperIds.has(record.id);
+        if (status === 'completed') {
+          return <Tag color="success" icon={<CheckCircleOutlined />} style={{ cursor: 'default' }}>已解析</Tag>;
+        }
+        if (status === 'processing') {
+          return <Tag color="processing" icon={<LoadingOutlined />}>解析中</Tag>;
+        }
+        return (
+          <Button
+            size="small"
+            type="primary"
+            ghost
+            icon={isAnalysing ? <LoadingOutlined /> : <ExperimentOutlined />}
+            loading={isAnalysing}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTriggerAnalysis(record.id);
+            }}
+          >
+            {status === 'failed' ? '重试' : '解析'}
+          </Button>
+        );
+      },
     },
     {
       title: '操作',

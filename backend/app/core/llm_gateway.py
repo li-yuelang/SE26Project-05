@@ -25,7 +25,13 @@ class LLMRateLimitError(LLMProviderError):
 
 
 class LLMGateway(Protocol):
-    async def generate(self, prompt: str, *, system_prompt: str | None = None) -> str: ...
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str | None = None,
+        max_tokens: int | None = None,
+    ) -> str: ...
 
 
 class OpenAICompatibleLLM:
@@ -35,7 +41,13 @@ class OpenAICompatibleLLM:
         self.config = config
         self.client = client
 
-    async def generate(self, prompt: str, *, system_prompt: str | None = None) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str | None = None,
+        max_tokens: int | None = None,
+    ) -> str:
         api_key = self.config.llm_api_key
         if not api_key:
             raise LLMConfigurationError("LLM API key is not configured")
@@ -47,7 +59,7 @@ class OpenAICompatibleLLM:
             "model": self.config.llm_model,
             "messages": messages,
             "temperature": self.config.llm_temperature,
-            "max_tokens": self.config.llm_max_tokens,
+            "max_tokens": max_tokens if max_tokens is not None else self.config.llm_max_tokens,
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         try:
