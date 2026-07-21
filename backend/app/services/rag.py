@@ -167,7 +167,7 @@ def build_prompt(question: str, chunks: list[RetrievedChunk], scenario: str) -> 
     for index, item in enumerate(chunks, start=1):
         if item.chunk.chunk_index == -1:
             # Synthetic chunk from paper metadata (no analysis)
-            portion = f"摘要"
+            portion = "摘要"
         else:
             portion = f"章节：{item.chunk.section_title or '未标注'}；片段：{item.chunk.chunk_index}"
         evidence_parts.append(
