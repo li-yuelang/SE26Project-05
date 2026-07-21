@@ -96,6 +96,9 @@ export default function Compare() {
   const [selectedPaperIds, setSelectedPaperIds] = useState([]);
   const [keyword, setKeyword] = useState('');
   const [activeView, setActiveView] = useState('matrix');
+  const [comparisonId, setComparisonId] = useState(null);
+  const [comparisonReport, setComparisonReport] = useState('');
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
     if (selectionInitialized.current || papers.length === 0) return;
@@ -286,15 +289,41 @@ export default function Compare() {
       return;
     }
     setSelectedPaperIds(paperIds);
+    setComparisonId(null);
+    setComparisonReport('');
   };
 
   const exportCompare = async () => {
-    try {
-      await exportComparison(selectedPaperIds);
-      message.success('已生成对比报告草稿');
-    } catch (error) {
-      message.error(error.message || '对比报告生成失败');
+    if (selectedPaperIds.length < 2) {
+      message.warning('请至少选择 2 篇论文');
+      return;
     }
+    setGeneratingReport(true);
+    try {
+      const result = await exportComparison(selectedPaperIds, comparisonId);
+      if (!result?.report_content) {
+        throw new Error('AI 未返回对比报告，请检查后端的大模型配置与日志');
+      }
+      setComparisonId(result.comparison_id);
+      setComparisonReport(result.report_content);
+      message.success('AI 对比报告已生成');
+    } catch (error) {
+      message.error(error.message || 'AI 对比报告生成失败');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const restoreDefaultSelection = () => {
+    setSelectedPaperIds(papers.slice(0, 3).map((paper) => paper.id));
+    setComparisonId(null);
+    setComparisonReport('');
+  };
+
+  const removePaper = (paperId) => {
+    setSelectedPaperIds((paperIds) => paperIds.filter((id) => id !== paperId));
+    setComparisonId(null);
+    setComparisonReport('');
   };
 
   if (resource.loading || resource.error) {
@@ -328,8 +357,14 @@ export default function Compare() {
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/learning')}>
             返回学习中心
           </Button>
-          <Button type="primary" icon={<ExportOutlined />} onClick={exportCompare}>
-            导出报告
+          <Button
+            type="primary"
+            icon={<ExportOutlined />}
+            loading={generatingReport}
+            disabled={selectedPapers.length < 2}
+            onClick={exportCompare}
+          >
+            生成 AI 对比报告
           </Button>
         </Space>
       </Flex>
@@ -392,11 +427,26 @@ export default function Compare() {
             optionFilterProp="label"
             maxTagCount="responsive"
           />
-          <Button onClick={() => setSelectedPaperIds(papers.slice(0, 3).map((paper) => paper.id))}>
+          <Button onClick={restoreDefaultSelection}>
             恢复默认
           </Button>
         </Flex>
       </Card>
+
+      {comparisonReport && (
+        <Card
+          variant="borderless"
+          className="compare-ai-report-card"
+          title={
+            <Space>
+              <FileTextOutlined />
+              AI 对比报告
+            </Space>
+          }
+        >
+          <div className="compare-ai-report">{comparisonReport}</div>
+        </Card>
+      )}
 
       <Card variant="borderless" className="compare-view-card">
         <Flex align="center" justify="space-between" gap={12} wrap="wrap">
@@ -415,11 +465,7 @@ export default function Compare() {
               <Tag
                 key={paper.id}
                 closable
-                onClose={() =>
-                  setSelectedPaperIds((paperIds) =>
-                    paperIds.filter((paperId) => paperId !== paper.id),
-                  )
-                }
+                onClose={() => removePaper(paper.id)}
               >
                 {paper.id}
               </Tag>

@@ -202,3 +202,56 @@ class TestGenerateReport:
                   {"title": "B", "authors": ["Y"], "primary_category": "cs.AI", "abstract": "test", "methods": "", "experiments": ""}]
         result = asyncio.run(CompareService._generate_report(papers, "对比"))
         assert result is None
+
+    def test_generate_report_calls_llm(self, monkeypatch):
+        import asyncio
+
+        class FakeLLM:
+            def __init__(self):
+                self.calls = []
+
+            async def generate(self, prompt, *, system_prompt=None):
+                self.calls.append((prompt, system_prompt))
+                return "# AI 对比报告"
+
+        llm = FakeLLM()
+        monkeypatch.setattr("app.core.get_llm_gateway", lambda: llm)
+        papers = [
+            {"title": "A", "authors": ["X"], "primary_category": "cs.AI", "abstract": "a", "methods": "", "experiments": ""},
+            {"title": "B", "authors": ["Y"], "primary_category": "cs.AI", "abstract": "b", "methods": "", "experiments": ""},
+        ]
+
+        result = asyncio.run(CompareService._generate_report(papers, "对比"))
+
+        assert result == "# AI 对比报告"
+        assert len(llm.calls) == 1
+        assert "论文 1: A" in llm.calls[0][0]
+        assert "论文 2: B" in llm.calls[0][0]
+
+
+class TestCompareExport:
+    def test_export_generates_and_persists_report(self, monkeypatch):
+        import asyncio
+
+        service = CompareService()
+        user = SimpleNamespace(id=uuid4())
+        papers = [_make_paper(title="A"), _make_paper(title="B")]
+        comparison = _make_comparison(
+            user.id,
+            title="AI 对比",
+            paper_ids=[str(paper.id) for paper in papers],
+        )
+        db = FakeDBSession(scalar_result=comparison, scalars_result=papers)
+
+        async def fake_generate(papers_data, title):
+            assert len(papers_data) == 2
+            assert title == "AI 对比"
+            return "# 已生成"
+
+        monkeypatch.setattr(CompareService, "_generate_report", staticmethod(fake_generate))
+
+        result = asyncio.run(service.export_comparison(db, user, comparison.id))
+
+        assert result["report_content"] == "# 已生成"
+        assert comparison.report_content == "# 已生成"
+        assert db.commit_called
