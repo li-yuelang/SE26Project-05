@@ -154,6 +154,19 @@
   width: 100%;
 }
 
+.subscriptions-management-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.subscriptions-management-item:last-child {
+  border-bottom: 0;
+}
+
+.subscriptions-management-item .ant-list-item-meta-description {
+  margin-top: 6px;
+}
+
 /* -- Subscriptions Responsive -- */
 @media (max-width: 768px) {
   .subscriptions-digest-hero .ant-card-extra {
@@ -164,6 +177,16 @@
   .subscriptions-digest-paper .ant-list-item-extra {
     margin-left: 0;
     margin-top: 8px;
+  }
+
+  .subscriptions-management-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .subscriptions-management-item .ant-list-item-action {
+    margin-left: 0;
   }
 }
 

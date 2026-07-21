@@ -16,6 +16,29 @@ let httpTopicStore = new Map();
 const PAPER_PAGE_SIZE = 1000;
 const LEARNING_PAGE_SIZE = 100;
 
+const localDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  month: '2-digit',
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+});
+
+function formatLocalDateTime(value, fallback = '') {
+  if (!value) return fallback;
+  const text = String(value);
+  const zonedValue = /(?:Z|[+-]\d{2}:\d{2})$/i.test(text) ? text : `${text}Z`;
+  const date = new Date(zonedValue);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  const parts = Object.fromEntries(
+    localDateTimeFormatter.formatToParts(date).map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
 const httpStatusMeta = {
   todo: { color: 'default', text: '待读' },
   reading: { color: 'processing', text: '阅读中' },
@@ -29,7 +52,7 @@ function normalizeNote(note) {
     paperId: note.paper_id,
     tags: note.anchor?.tags || [],
     title: note.anchor?.title || '学习笔记',
-    updatedAt: note.updated_at?.slice(0, 16).replace('T', ' ') || '',
+    updatedAt: formatLocalDateTime(note.updated_at),
   };
 }
 
@@ -38,7 +61,7 @@ function normalizeHistory(item) {
     action: item.progress >= 100 ? '完成阅读' : '更新阅读进度',
     detail: `阅读进度 ${item.progress}%`,
     paperId: item.paper_id,
-    time: item.last_read_at?.slice(0, 16).replace('T', ' ') || '',
+    time: formatLocalDateTime(item.last_read_at),
   };
 }
 
@@ -70,7 +93,7 @@ function normalizePaper(paper, bookmarks, histories, notes) {
     direction: paper.primary_category || paper.categories?.[0] || '未分类',
     experiment: '',
     favorite: Boolean(bookmark),
-    lastReadAt: history?.last_read_at?.slice(0, 16).replace('T', ' ') || '尚未阅读',
+    lastReadAt: formatLocalDateTime(history?.last_read_at, '尚未阅读'),
     limitations: '',
     methods: [],
     noteId: paperNotes[0]?.id || null,
@@ -284,7 +307,7 @@ export const updateLearningPaper = createEndpoint({
     const updated = {
       ...current,
       ...changes,
-      lastReadAt: progressResult?.last_read_at?.slice(0, 16).replace('T', ' ')
+      lastReadAt: formatLocalDateTime(progressResult?.last_read_at)
         || changes.lastReadAt
         || current?.lastReadAt,
       noteId: nextNoteId,
