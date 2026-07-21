@@ -30,7 +30,6 @@ import {
   EditOutlined,
   FireOutlined,
   HistoryOutlined,
-  LinkOutlined,
   MailOutlined,
   PushpinOutlined,
   PlusOutlined,
@@ -42,6 +41,7 @@ import {
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
 import { getLearningCenter } from '../services/learningService';
+import { addPaperToLibrary } from '../services/paperService';
 import {
   createSubscription,
   deleteSubscription,
@@ -70,6 +70,8 @@ export default function Subscriptions() {
   const [editingSubscription, setEditingSubscription] = useState(null);
   const [subscriptionSaving, setSubscriptionSaving] = useState(false);
   const [updatingSubscriptionId, setUpdatingSubscriptionId] = useState(null);
+  const [addingPaperIds, setAddingPaperIds] = useState(() => new Set());
+  const [addedPaperIds, setAddedPaperIds] = useState(() => new Set());
   const [digestEnabled, setDigestEnabled] = useState(true);
   const [pushTime, setPushTime] = useState('09:00');
   const [digestConfirmed, setDigestConfirmed] = useState(true);
@@ -170,6 +172,25 @@ export default function Subscriptions() {
     });
   };
 
+  const handleAddPaperToLibrary = async (paper) => {
+    setAddingPaperIds((current) => new Set(current).add(paper.id));
+    try {
+      const result = await addPaperToLibrary(paper.id);
+      setAddedPaperIds((current) => new Set(current).add(paper.id));
+      message.success(result.added ? '已加入论文列表' : '该论文已在论文列表中');
+    } catch (error) {
+      message.error(error.message || '加入论文列表失败');
+    } finally {
+      setAddingPaperIds((current) => {
+        const next = new Set(current);
+        next.delete(paper.id);
+        return next;
+      });
+    }
+  };
+
+  const isPaperInLibrary = (paper) => paper.inLibrary || addedPaperIds.has(paper.id);
+
   const handlePushTimeChange = async (value) => {
     setPushTime(value);
     await saveSubscriptionPreferences({ pushTime: value });
@@ -251,19 +272,22 @@ export default function Subscriptions() {
                       type="primary"
                       size="small"
                       icon={<ReadOutlined />}
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      href={paper.arxivUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      disabled={!paper.arxivUrl}
                     >
                       阅读
                     </Button>,
                     <Button
-                      key="arxiv"
-                      type="link"
+                      key="add"
                       size="small"
-                      icon={<LinkOutlined />}
-                      href={`https://arxiv.org/abs/${paper.id}`}
-                      target="_blank"
+                      icon={<BookOutlined />}
+                      loading={addingPaperIds.has(paper.id)}
+                      disabled={isPaperInLibrary(paper)}
+                      onClick={() => handleAddPaperToLibrary(paper)}
                     >
-                      arXiv
+                      {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                     </Button>,
                   ]}
                 >
@@ -273,7 +297,7 @@ export default function Subscriptions() {
                         <Text
                           strong
                           className="subscriptions-paper-link"
-                          onClick={() => navigate(`/papers/${paper.id}`)}
+                          onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                         >
                           {paper.title}
                         </Text>
@@ -348,27 +372,22 @@ export default function Subscriptions() {
                       type="primary"
                       size="small"
                       icon={<ReadOutlined />}
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      href={paper.arxivUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      disabled={!paper.arxivUrl}
                     >
                       阅读
                     </Button>,
                     <Button
-                      key="save"
+                      key="add"
                       size="small"
                       icon={<BookOutlined />}
-                      onClick={() => message.success('已加入阅读队列')}
+                      loading={addingPaperIds.has(paper.id)}
+                      disabled={isPaperInLibrary(paper)}
+                      onClick={() => handleAddPaperToLibrary(paper)}
                     >
-                      加入队列
-                    </Button>,
-                    <Button
-                      key="arxiv"
-                      type="link"
-                      size="small"
-                      icon={<LinkOutlined />}
-                      href={`https://arxiv.org/abs/${paper.id}`}
-                      target="_blank"
-                    >
-                      arXiv
+                      {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                     </Button>,
                   ]}
                 >
@@ -393,7 +412,7 @@ export default function Subscriptions() {
                         <Text
                           strong
                           className="subscriptions-paper-link"
-                          onClick={() => navigate(`/papers/${paper.id}`)}
+                          onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                         >
                           {paper.title}
                         </Text>
@@ -538,17 +557,22 @@ export default function Subscriptions() {
                   type="primary"
                   size="small"
                   icon={<ReadOutlined />}
-                  onClick={() => navigate(`/papers/${paper.id}`)}
+                  href={paper.arxivUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  disabled={!paper.arxivUrl}
                 >
                   阅读
                 </Button>,
                 <Button
-                  key="save"
+                  key="add"
                   size="small"
                   icon={<BookOutlined />}
-                  onClick={() => message.success('已加入阅读队列')}
+                  loading={addingPaperIds.has(paper.id)}
+                  disabled={isPaperInLibrary(paper)}
+                  onClick={() => handleAddPaperToLibrary(paper)}
                 >
-                  加入队列
+                  {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                 </Button>,
               ]}
             >
@@ -573,7 +597,7 @@ export default function Subscriptions() {
                     <Text
                       strong
                       className="subscriptions-paper-link"
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                     >
                       {paper.title}
                     </Text>

@@ -103,6 +103,23 @@ async def list_papers(
     return success(resp.model_dump(by_alias=True))
 
 
+@router.post("/{paper_id}/library")
+async def add_paper_to_library(
+    paper_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    paper, added = await paper_service.add_paper_to_library(db, user.id, paper_id)
+    return success(
+        {
+            "added": added,
+            "paperId": str(paper.id),
+            "arxivId": paper.arxiv_id,
+        },
+        "Paper added to library" if added else "Paper already in library",
+    )
+
+
 @router.delete("/batch")
 async def delete_papers(
     body: PaperBatchRequest,
