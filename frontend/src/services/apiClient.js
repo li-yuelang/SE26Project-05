@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 export const AUTH_UNAUTHORIZED_EVENT = 'papermate:unauthorized';
+const MOCK_USER_SCOPE_KEY = 'papermate:mock-user-scope';
 
 export const apiMode = import.meta.env.VITE_API_MODE === 'mock' ? 'mock' : 'http';
 
@@ -23,6 +24,18 @@ export function setAccessToken(token) {
 
 export function clearAccessToken() {
   window.localStorage.removeItem('access_token');
+}
+
+export function getMockUserScope() {
+  return window.localStorage.getItem(MOCK_USER_SCOPE_KEY) || 'anonymous';
+}
+
+export function setMockUserScope(userId) {
+  if (userId) window.localStorage.setItem(MOCK_USER_SCOPE_KEY, String(userId));
+}
+
+export function clearMockUserScope() {
+  window.localStorage.removeItem(MOCK_USER_SCOPE_KEY);
 }
 
 export function buildWebSocketUrl(path) {

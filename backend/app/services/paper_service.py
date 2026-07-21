@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -122,21 +122,14 @@ async def update_paper(
     paper_id: UUID,
     changes: PaperUpdateRequest,
 ) -> PaperDetail:
-    """更新论文部分字段（解析状态、结构化内容等）。"""
-    update_data = changes.model_dump(exclude_none=True)
-    if not update_data:
-        # 不需要更新，直接返回当前详情
-        return await get_paper_detail(db, paper_id, user_id)
+    """Reject user attempts to mutate the shared paper cache.
 
-    membership = await db.scalar(
-        select(UserPaper.id).where(UserPaper.user_id == user_id, UserPaper.paper_id == paper_id)
-    )
-    if membership is None:
-        raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
-
-    await db.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
-    await db.commit()
-    return await get_paper_detail(db, paper_id, user_id)
+    Parsed content is owned by the analysis pipeline. User-owned metadata
+    belongs in UserPaper or another user-content table and must not be written
+    to the global Paper row.
+    """
+    del db, user_id, paper_id, changes
+    raise AppError("论文原始内容只能由内部分析任务更新", code="PAPER_CACHE_READ_ONLY", status_code=403)
 
 
 async def delete_paper(db: AsyncSession, user_id: UUID, paper_id: UUID) -> None:

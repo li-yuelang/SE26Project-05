@@ -12,7 +12,20 @@ import {
 } from '../data/trendData';
 import { wikiCategoryOptions } from '../data/wikiData';
 import { getRelatedConcepts } from '../data/wikiData';
-import { createEndpoint, request } from './apiClient';
+import { cloneMockData, createEndpoint, getMockUserScope, request } from './apiClient';
+
+const trendStores = new Map();
+
+function getTrendStore() {
+  const scope = getMockUserScope();
+  if (!trendStores.has(scope)) {
+    trendStores.set(scope, {
+      signals: cloneMockData(trendSignals),
+      topics: cloneMockData(trendTopics),
+    });
+  }
+  return trendStores.get(scope);
+}
 
 const httpRangeOptions = [
   { label: '近 3 月', value: 3 },
@@ -158,11 +171,11 @@ export const getTrendOverview = createEndpoint({
   mock: () => ({
     categoryOptions: wikiCategoryOptions,
     rangeOptions: trendRangeOptions,
-    signals: trendSignals,
+    signals: getTrendStore().signals,
     sortOptions: trendSortOptions,
-    topics: trendTopics,
+    topics: getTrendStore().topics,
     relatedConceptsByTopicId: Object.fromEntries(
-      trendTopics.map((topic) => [topic.id, getRelatedConcepts(topic)]),
+      getTrendStore().topics.map((topic) => [topic.id, getRelatedConcepts(topic)]),
     ),
   }),
   http: async (query) => normalizeOverview(await request('/trends', { query })),
@@ -170,15 +183,16 @@ export const getTrendOverview = createEndpoint({
 
 export const getTrendDetail = createEndpoint({
   mock: (topicId) => {
-    const topic = getTrendTopicById(topicId);
+    const store = getTrendStore();
+    const topic = store.topics.find((item) => item.id === topicId) || getTrendTopicById(topicId);
     return topic
       ? {
           milestones: getTrendMilestones(topic),
           relatedConcepts: getRelatedConcepts(topic),
-          signals: trendSignals.filter((signal) => signal.topicIds.includes(topic.id)),
+          signals: store.signals.filter((signal) => signal.topicIds.includes(topic.id)),
           stages: getTrendStages(topic),
           topic,
-          topics: trendTopics,
+          topics: store.topics,
         }
       : {
           milestones: [],
@@ -186,7 +200,7 @@ export const getTrendDetail = createEndpoint({
           signals: [],
           stages: [],
           topic: null,
-          topics: trendTopics,
+          topics: store.topics,
         };
   },
   http: async (topicId) => normalizeDetail(await request(`/trends/${topicId}`)),

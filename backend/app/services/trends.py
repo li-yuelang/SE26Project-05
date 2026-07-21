@@ -37,7 +37,9 @@ class TrendService:
         topics.sort(key=lambda topic: (topic["hotness"], topic["paper_count"]), reverse=True)
 
         related = {
-            str(concept.id): self._relation_views(concept, {str(item.id) for item in concepts})
+            str(concept.id): self._relation_views(
+                concept, {str(item.id) for item in concepts}, library_ids
+            )
             for concept in concepts
         }
         signals = [self._signal_view(topic) for topic in topics[:6]]
@@ -87,7 +89,7 @@ class TrendService:
         )
 
         phases = self._detect_phases(topic["monthly_trend"])
-        relations = self._relation_views(concept, {item["id"] for item in topics})
+        relations = self._relation_views(concept, {item["id"] for item in topics}, library_ids)
         return {
             "topic": {**topic, "representative_papers": representative_papers[:10]},
             "topics": topics,
@@ -129,6 +131,12 @@ class TrendService:
                 ),
                 selectinload(Concept.incoming_relations).selectinload(
                     ConceptRelation.source_concept
+                ),
+                selectinload(Concept.outgoing_relations).selectinload(
+                    ConceptRelation.evidence_records
+                ),
+                selectinload(Concept.incoming_relations).selectinload(
+                    ConceptRelation.evidence_records
                 ),
             )
             .order_by(Concept.updated_at.desc(), Concept.name)
@@ -273,9 +281,18 @@ class TrendService:
         return milestones
 
     @staticmethod
-    def _relation_views(concept: Concept, available_ids: set[str]) -> list[dict]:
+    def _relation_views(
+        concept: Concept,
+        available_ids: set[str],
+        library_ids: set[UUID],
+    ) -> list[dict]:
         relations = []
         for relation in [*concept.outgoing_relations, *concept.incoming_relations]:
+            evidence = [
+                item for item in relation.evidence_records if item.paper_id in library_ids
+            ]
+            if not evidence:
+                continue
             target = (
                 relation.target_concept
                 if relation.source_concept_id == concept.id
@@ -284,7 +301,7 @@ class TrendService:
             relations.append({
                 "id": str(relation.id),
                 "type": relation.relation_type,
-                "strength": round(relation.weight * 100),
+                "strength": round(max(item.confidence for item in evidence) * 100),
                 "exists": str(target.id) in available_ids,
                 "concept": {"id": str(target.id), "name": target.name},
             })

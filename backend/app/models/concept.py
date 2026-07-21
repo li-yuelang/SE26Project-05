@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +12,7 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from app.models.paper import Paper
+    from app.models.user import User
 
 
 class Concept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -29,6 +30,22 @@ class Concept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     incoming_relations: Mapped[list[ConceptRelation]] = relationship(
         foreign_keys="ConceptRelation.target_concept_id", back_populates="target_concept"
     )
+
+
+class UserConcept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A concept created inside one user's personal Wiki."""
+
+    __tablename__ = "user_concepts"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_user_concept_name"),)
+
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(String(100), index=True)
+    aliases: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    user: Mapped[User] = relationship(back_populates="concepts")
 
 
 class PaperConcept(UUIDPrimaryKeyMixin, TimestampMixin, Base):
