@@ -42,6 +42,8 @@ class DigestPaperItem(BaseModel):
     published_at: str | None = None
     arxiv_url: str | None = None
     in_library: bool = False
+    relevance_score: float = 0.0
+    reason: str = ""
 
 
 class DigestTopicGroup(BaseModel):
