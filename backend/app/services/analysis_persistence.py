@@ -288,12 +288,10 @@ async def persist_analysis(
             )
             db.add(row)
             concept_rows[key] = row
-        else:
-            row.aliases = list(dict.fromkeys([*(row.aliases or []), *record.aliases]))
-            if record.description:
-                row.description = record.description
-            if record.category:
-                row.category = record.category
+        # Concept rows are shared extraction facts.  Do not let a later
+        # user's analysis overwrite descriptions, aliases, or categories
+        # already visible to other users; user-authored Wiki data belongs in
+        # UserConcept instead.
     await db.flush()
 
     for key, record in concepts.items():
@@ -329,8 +327,8 @@ async def persist_analysis(
             )
             db.add(graph_relation)
             await db.flush()
-        else:
-            graph_relation.weight = max(graph_relation.weight or 0.0, relation.confidence)
+        # Relation strength is immutable at the shared-graph level.  A user's
+        # Wiki view derives its strength from evidence in that user's library.
         db.add(
             ConceptRelationEvidence(
                 relation_id=graph_relation.id,

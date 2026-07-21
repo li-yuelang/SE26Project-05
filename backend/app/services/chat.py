@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.core.exceptions import AppError
 from app.models.chat import ChatMessage, Conversation, MessageCitation
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.user import User
 from app.schemas.chat import ConversationCreate, MessageCreate
 from app.services import rag
@@ -127,6 +127,18 @@ async def send_message(
     payload: MessageCreate,
 ) -> dict:
     conversation = await get_conversation(db, user, conversation_id)
+    if payload.paper_ids is not None:
+        requested_ids = set(payload.paper_ids)
+        owned_ids = set(
+            (await db.scalars(
+                select(UserPaper.paper_id).where(
+                    UserPaper.user_id == user.id,
+                    UserPaper.paper_id.in_(requested_ids),
+                )
+            )).all()
+        ) if requested_ids else set()
+        if owned_ids != requested_ids:
+            raise AppError("只能检索自己论文库中的论文", code="PAPER_ACCESS_DENIED", status_code=403)
     user_message = ChatMessage(conversation_id=conversation.id, role="user", content=payload.content)
     db.add(user_message)
     await db.flush()
@@ -134,6 +146,7 @@ async def send_message(
     content, chunks, scenario = await rag.answer(
         db,
         payload.content,
+        user_id=user.id,
         paper_ids=payload.paper_ids,
         requested_scenario=payload.scenario,
     )

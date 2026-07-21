@@ -9,16 +9,27 @@ import {
   cloneMockData,
   createEndpoint,
   getAccessToken,
+  getMockUserScope,
   request,
 } from './apiClient';
 
-let conversationStore = cloneMockData(chatConversations);
-let messageStore = cloneMockData(chatMessages);
+const chatStores = new Map();
+
+function getChatStore() {
+  const scope = getMockUserScope();
+  if (!chatStores.has(scope)) {
+    chatStores.set(scope, {
+      conversationStore: cloneMockData(chatConversations),
+      messageStore: cloneMockData(chatMessages),
+    });
+  }
+  return chatStores.get(scope);
+}
 
 export const getChatBootstrap = createEndpoint({
   mock: () => ({
-    conversations: conversationStore,
-    messages: messageStore,
+    conversations: getChatStore().conversationStore,
+    messages: getChatStore().messageStore,
     suggestions: chatSuggestions,
   }),
   http: () => request('/chat'),
@@ -32,8 +43,9 @@ export const createConversation = createEndpoint({
       date: new Date().toISOString().split('T')[0],
       preview: '',
     };
-    conversationStore = [conversation, ...conversationStore];
-    messageStore[conversation.id] = [];
+    const store = getChatStore();
+    store.conversationStore = [conversation, ...store.conversationStore];
+    store.messageStore[conversation.id] = [];
     return conversation;
   },
   http: () => request('/chat/conversations', { method: 'POST' }),
@@ -58,8 +70,9 @@ export const sendChatMessage = createEndpoint({
         },
       ],
     };
-    messageStore[conversationId] = [
-      ...(messageStore[conversationId] || []),
+    const store = getChatStore();
+    store.messageStore[conversationId] = [
+      ...(store.messageStore[conversationId] || []),
       { role: 'user', content, time: reply.time },
       reply,
     ];
@@ -119,8 +132,9 @@ export async function streamChatMessage(conversationId, content, { onDelta } = {
 
 export const deleteConversation = createEndpoint({
   mock: (conversationId) => {
-    conversationStore = conversationStore.filter((item) => item.id !== conversationId);
-    delete messageStore[conversationId];
+    const store = getChatStore();
+    store.conversationStore = store.conversationStore.filter((item) => item.id !== conversationId);
+    delete store.messageStore[conversationId];
     return { id: conversationId };
   },
   http: (conversationId) => request(`/chat/conversations/${conversationId}`, {

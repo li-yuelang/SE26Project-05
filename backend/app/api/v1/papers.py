@@ -294,6 +294,8 @@ async def update_paper(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
+    # Paper is a shared cache.  Keep this route explicit for clients that have
+    # not migrated yet, but never let a library member write global content.
     detail = await paper_service.update_paper(db, user.id, paper_id, body)
     return success(detail.model_dump(mode="json"))
 

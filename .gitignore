@@ -34,6 +34,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+backend/celerybeat-schedule*
 
 # Cache
 .vite/

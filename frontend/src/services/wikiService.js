@@ -7,23 +7,39 @@ import {
   wikiConcepts,
 } from '../data/wikiData';
 import { createEndpoint, request } from './apiClient';
+import { getMockUserScope, cloneMockData } from './apiClient';
+
+const wikiStores = new Map();
+
+function getWikiState() {
+  const scope = getMockUserScope();
+  if (!wikiStores.has(scope)) {
+    wikiStores.set(scope, {
+      concepts: cloneMockData(wikiConcepts),
+      activity: cloneMockData(wikiActivity),
+      stats: cloneMockData(getWikiStats()),
+    });
+  }
+  return wikiStores.get(scope);
+}
 
 export const getWikiOverview = createEndpoint({
   mock: () => ({
-    activity: wikiActivity,
+    activity: getWikiState().activity,
     categoryOptions: wikiCategoryOptions,
-    concepts: wikiConcepts,
+    concepts: getWikiState().concepts,
     relatedConceptsById: Object.fromEntries(
-      wikiConcepts.map((concept) => [concept.id, getRelatedConcepts(concept)]),
+      getWikiState().concepts.map((concept) => [concept.id, getRelatedConcepts(concept)]),
     ),
-    stats: getWikiStats(),
+    stats: getWikiState().stats,
   }),
   http: (query) => request('/wiki', { query }),
 });
 
 export const getConceptDetail = createEndpoint({
   mock: (conceptId) => {
-    const concept = getConceptById(conceptId);
+    const concept = getWikiState().concepts.find((item) => item.id === conceptId)
+      || getConceptById(conceptId);
     return {
       concept,
       relatedConcepts: concept ? getRelatedConcepts(concept) : [],

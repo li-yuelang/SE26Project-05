@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.core.embedding import get_embedding_provider
 from app.core.llm_gateway import get_llm_gateway
-from app.models.paper import Paper, PaperChunk
+from app.models.paper import Paper, PaperChunk, UserPaper
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ async def retrieve(
     db: AsyncSession,
     question: str,
     *,
+    user_id: UUID,
     paper_ids: list[UUID] | None = None,
     candidate_limit: int = 24,
     result_limit: int = 6,
@@ -78,7 +79,9 @@ async def retrieve(
         select(PaperChunk)
         .options(selectinload(PaperChunk.paper))
         .join(PaperChunk.paper)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
         .where(
+            UserPaper.user_id == user_id,
             PaperChunk.content.is_not(None),
             or_(
                 Paper.active_analysis_run_id.is_(None),
@@ -86,7 +89,7 @@ async def retrieve(
             ),
         )
     )
-    if paper_ids:
+    if paper_ids is not None:
         statement = statement.where(PaperChunk.paper_id.in_(paper_ids))
 
     vector_distances: dict[UUID, float] = {}
@@ -169,11 +172,12 @@ async def answer(
     db: AsyncSession,
     question: str,
     *,
+    user_id: UUID,
     paper_ids: list[UUID] | None = None,
     requested_scenario: str = "auto",
 ) -> tuple[str, list[RetrievedChunk], str]:
     scenario = detect_scenario(question, requested_scenario)
-    chunks = await retrieve(db, question, paper_ids=paper_ids)
+    chunks = await retrieve(db, question, user_id=user_id, paper_ids=paper_ids)
     if settings.llm_api_key and chunks:
         system_prompt, prompt = build_prompt(question, chunks, scenario)
         try:

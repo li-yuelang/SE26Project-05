@@ -10,7 +10,9 @@ import {
   AUTH_UNAUTHORIZED_EVENT,
   clearAccessToken,
   getAccessToken,
+  clearMockUserScope,
   setAccessToken,
+  setMockUserScope,
 } from '../services/apiClient';
 import {
   getCurrentUser,
@@ -26,6 +28,7 @@ export function AuthProvider({ children }) {
 
   const applySession = useCallback((session) => {
     setAccessToken(session.access_token);
+    setMockUserScope(session.user?.id || session.user?.username);
     setUser(session.user);
     return session.user;
   }, []);
@@ -42,6 +45,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearAccessToken();
+    clearMockUserScope();
     setUser(null);
     setLoading(false);
   }, []);
@@ -53,6 +57,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
+      clearMockUserScope();
       setLoading(false);
     };
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
@@ -68,7 +73,10 @@ export function AuthProvider({ children }) {
     let active = true;
     getCurrentUser()
       .then((currentUser) => {
-        if (active) setUser(currentUser);
+        if (active) {
+          setMockUserScope(currentUser?.id || currentUser?.username);
+          setUser(currentUser);
+        }
       })
       .catch(() => {
         if (active) setUser(null);

@@ -7,15 +7,15 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.task import TrendTopic
 
 
 class TrendService:
     """Stateless service for research trend analysis."""
 
-    async def get_trend_overview(self, db: AsyncSession) -> dict:
-        """Aggregate trend signals and topic summaries."""
+    async def get_trend_overview(self, db: AsyncSession, user_id: UUID) -> dict:
+        """Aggregate trend signals and topic summaries for one paper library."""
         trend_topics = (await db.scalars(select(TrendTopic))).all()
 
         now = datetime.now(timezone.utc)
@@ -25,7 +25,9 @@ class TrendService:
         # ----- Signals: categories with rising paper counts -----
         categories = await db.execute(
             select(Paper.primary_category, func.count(Paper.id))
+            .join(UserPaper, UserPaper.paper_id == Paper.id)
             .where(Paper.published_at >= six_months_ago)
+            .where(UserPaper.user_id == user_id)
             .group_by(Paper.primary_category)
             .order_by(func.count(Paper.id).desc())
             .limit(10)
@@ -34,9 +36,11 @@ class TrendService:
 
         prev_categories = await db.execute(
             select(Paper.primary_category, func.count(Paper.id))
+            .join(UserPaper, UserPaper.paper_id == Paper.id)
             .where(
                 Paper.published_at >= six_months_ago - timedelta(days=180),
                 Paper.published_at < six_months_ago,
+                UserPaper.user_id == user_id,
             )
             .group_by(Paper.primary_category)
         )
@@ -57,8 +61,8 @@ class TrendService:
         # ----- Topic summaries -----
         topic_summaries = []
         for topic in trend_topics:
-            paper_count = await self._count_matching_papers(db, topic.keywords)
-            recent_count = await self._count_matching_papers(db, topic.keywords, since=three_months_ago)
+            paper_count = await self._count_matching_papers(db, user_id, topic.keywords)
+            recent_count = await self._count_matching_papers(db, user_id, topic.keywords, since=three_months_ago)
             hotness = min(100, int(paper_count / max(max_count, 1) * 100)) if paper_count > 0 else 0
 
             # Detect direction
@@ -82,7 +86,7 @@ class TrendService:
 
         return {"signals": signals, "topics": topic_summaries}
 
-    async def get_trend_detail(self, db: AsyncSession, topic_id: UUID) -> dict:
+    async def get_trend_detail(self, db: AsyncSession, user_id: UUID, topic_id: UUID) -> dict:
         """Get detailed trend data for a specific topic."""
         topic = await db.get(TrendTopic, topic_id)
         if topic is None:
@@ -97,11 +101,13 @@ class TrendService:
             end = now - timedelta(days=i * 30)
             month_label = start.strftime("%Y-%m")
             months.append(month_label)
-            count = await self._count_matching_papers(db, topic.keywords, since=start, until=end)
+            count = await self._count_matching_papers(
+                db, user_id, topic.keywords, since=start, until=end
+            )
             monthly_data.append({"month": month_label, "count": count})
 
         # Milestone papers
-        milestones = await self._identify_milestones(db, topic.keywords)
+        milestones = await self._identify_milestones(db, user_id, topic.keywords)
 
         # Phase analysis
         phases = self._detect_phases(monthly_data)
@@ -120,12 +126,16 @@ class TrendService:
     # Private helpers
     # ------------------------------------------------------------------
     async def _count_matching_papers(
-        self, db: AsyncSession, keywords: list[str],
+        self, db: AsyncSession, user_id: UUID, keywords: list[str],
         since: datetime | None = None, until: datetime | None = None,
     ) -> int:
         if not keywords:
             return 0
-        stmt = select(func.count(Paper.id))
+        stmt = (
+            select(func.count(Paper.id))
+            .join(UserPaper, UserPaper.paper_id == Paper.id)
+            .where(UserPaper.user_id == user_id)
+        )
         # Match any keyword against title or abstract
         conditions = []
         for kw in keywords:
@@ -140,14 +150,18 @@ class TrendService:
         count = await db.scalar(stmt)
         return count or 0
 
-    async def _identify_milestones(self, db: AsyncSession, keywords: list[str]) -> list[dict]:
+    async def _identify_milestones(
+        self, db: AsyncSession, user_id: UUID, keywords: list[str]
+    ) -> list[dict]:
         """Identify key milestone papers for a research topic."""
         if not keywords:
             return []
         from sqlalchemy import or_
         stmt = (
             select(Paper)
+            .join(UserPaper, UserPaper.paper_id == Paper.id)
             .where(or_(*[Paper.title.ilike(f"%{kw}%") for kw in keywords]))
+            .where(UserPaper.user_id == user_id)
             .order_by(Paper.published_at.asc())
             .limit(10)
         )
