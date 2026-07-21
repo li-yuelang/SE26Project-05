@@ -8,9 +8,13 @@ import {
 import { cloneMockData, createEndpoint, request } from './apiClient';
 
 let paperStore = cloneMockData(learningPapers);
+let noteStore = cloneMockData(learningNotes);
 let topicStore = cloneMockData(followedTopics);
 let httpPaperStore = new Map();
 let httpTopicStore = new Map();
+
+const PAPER_PAGE_SIZE = 1000;
+const LEARNING_PAGE_SIZE = 100;
 
 const httpStatusMeta = {
   todo: { color: 'default', text: '待读' },
@@ -88,33 +92,50 @@ function normalizePaper(paper, bookmarks, histories, notes) {
   return normalized;
 }
 
+async function getAllLearningItems(path) {
+  const items = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const result = await request(path, {
+      query: { page, pageSize: LEARNING_PAGE_SIZE },
+    });
+    items.push(...(result.items || []));
+    total = result.total || 0;
+    page += 1;
+  } while (items.length < total);
+
+  return items;
+}
+
 async function getHttpLearningCenter() {
-  const [paperResult, bookmarkResult, noteResult, historyResult, topicResult] = await Promise.all([
-    request('/papers', { query: { page: 1, page_size: 100 } }),
-    request('/learning/bookmarks', { query: { page: 1, pageSize: 100 } }),
-    request('/learning/notes', { query: { page: 1, pageSize: 100 } }),
-    request('/learning/history', { query: { page: 1, pageSize: 100 } }),
+  const [paperResult, bookmarksResult, notesResult, historiesResult, topicResult] = await Promise.all([
+    request('/papers', { query: { page: 1, page_size: PAPER_PAGE_SIZE } }),
+    getAllLearningItems('/learning/bookmarks'),
+    getAllLearningItems('/learning/notes'),
+    getAllLearningItems('/learning/history'),
     request('/learning/topics'),
   ]);
   const bookmarks = new Map(
-    (bookmarkResult.items || []).map((bookmark) => [bookmark.paper_id, bookmark]),
+    bookmarksResult.map((bookmark) => [bookmark.paper_id, bookmark]),
   );
   const histories = new Map(
-    (historyResult.items || []).map((history) => [history.paper_id, history]),
+    historiesResult.map((history) => [history.paper_id, history]),
   );
   const notesByPaper = new Map();
-  (noteResult.items || []).forEach((note) => {
+  notesResult.forEach((note) => {
     notesByPaper.set(note.paper_id, [...(notesByPaper.get(note.paper_id) || []), note]);
   });
   const topics = (topicResult.items || []).map(normalizeTopic);
   httpTopicStore = new Map(topics.map((topic) => [topic.id, topic]));
   httpPaperStore = new Map();
   return {
-    notes: (noteResult.items || []).map(normalizeNote),
+    notes: notesResult.map(normalizeNote),
     papers: (paperResult.items || []).map((paper) => (
       normalizePaper(paper, bookmarks, histories, notesByPaper)
     )),
-    readingHistory: (historyResult.items || []).map(normalizeHistory),
+    readingHistory: historiesResult.map(normalizeHistory),
     statusMeta: httpStatusMeta,
     topics,
   };
@@ -122,7 +143,7 @@ async function getHttpLearningCenter() {
 
 export const getLearningCenter = createEndpoint({
   mock: () => ({
-    notes: learningNotes,
+    notes: noteStore,
     papers: paperStore,
     readingHistory,
     statusMeta,
@@ -131,10 +152,82 @@ export const getLearningCenter = createEndpoint({
   http: getHttpLearningCenter,
 });
 
+async function getHttpPaperNote(paperId) {
+  const result = await request('/learning/notes', {
+    query: { paper_id: paperId, page: 1, pageSize: 1 },
+  });
+  return result.items?.[0] || null;
+}
+
+export const getPaperNote = createEndpoint({
+  mock: (paperId) => noteStore.find((note) => note.paperId === paperId) || null,
+  http: getHttpPaperNote,
+});
+
+export const savePaperNote = createEndpoint({
+  mock: (paperId, rawContent) => {
+    const content = rawContent.trim();
+    const existing = noteStore.find((note) => note.paperId === paperId);
+
+    if (!content) {
+      noteStore = noteStore.filter((note) => note.paperId !== paperId);
+      return null;
+    }
+
+    if (existing) {
+      noteStore = noteStore.map((note) => (
+        note.id === existing.id ? { ...note, content, updatedAt: '刚刚' } : note
+      ));
+      return noteStore.find((note) => note.id === existing.id);
+    }
+
+    const note = {
+      id: `note-${paperId}`,
+      content,
+      paperId,
+      tags: [],
+      title: '论文笔记',
+      updatedAt: '刚刚',
+    };
+    noteStore = [note, ...noteStore];
+    return note;
+  },
+  http: async (paperId, rawContent) => {
+    const content = rawContent.trim();
+    const existing = await getHttpPaperNote(paperId);
+
+    if (!content) {
+      if (existing) {
+        await request(`/learning/notes/${existing.id}`, { method: 'DELETE' });
+      }
+      return null;
+    }
+
+    if (existing) {
+      return request(`/learning/notes/${existing.id}`, {
+        body: { content },
+        method: 'PUT',
+      });
+    }
+
+    return request('/learning/notes', {
+      body: {
+        anchor: { title: '论文笔记' },
+        content,
+        is_public: false,
+        paper_id: paperId,
+      },
+      method: 'POST',
+    });
+  },
+});
+
 export const listLearningPapers = createEndpoint({
   mock: () => paperStore,
   http: async (query) => {
-    const result = await request('/papers', { query: { ...query, page_size: 100 } });
+    const result = await request('/papers', {
+      query: { ...query, page_size: PAPER_PAGE_SIZE },
+    });
     return result.items || [];
   },
 });
@@ -229,9 +322,26 @@ export const updateFollowedTopic = createEndpoint({
 });
 
 export const exportComparison = createEndpoint({
-  mock: (paperIds) => ({ paperIds, status: 'draft' }),
-  http: (paperIds) => request('/compare', {
-    body: { paper_ids: paperIds, title: `论文对比（${paperIds.length} 篇）` },
-    method: 'POST',
+  mock: (paperIds, comparisonId) => ({
+    comparison_id: comparisonId || `mock-comparison-${Date.now()}`,
+    paperIds,
+    report_content: [
+      '# AI 论文对比报告',
+      '',
+      `已基于所选 ${paperIds.length} 篇论文生成对比分析。`,
+      '',
+      '> Mock 模式不会请求真实大模型；切换到 HTTP 模式后将展示模型生成的完整报告。',
+    ].join('\n'),
   }),
+  http: async (paperIds, comparisonId) => {
+    let id = comparisonId;
+    if (!id) {
+      const comparison = await request('/compare', {
+        body: { paper_ids: paperIds, title: `论文对比（${paperIds.length} 篇）` },
+        method: 'POST',
+      });
+      id = comparison.id;
+    }
+    return request(`/compare/export/${id}`);
+  },
 });

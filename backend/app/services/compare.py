@@ -109,6 +109,9 @@ class CompareService:
         report_content = comparison.report_content
         if not report_content:
             report_content = await self._generate_report(papers_data, comparison.title)
+            if report_content:
+                comparison.report_content = report_content
+                await db.commit()
 
         return {
             "comparison_id": str(comparison.id),
@@ -143,6 +146,7 @@ class CompareService:
 
             llm = get_llm_gateway()
         except Exception:
+            logger.warning("Unable to initialise the LLM for comparison %r", title, exc_info=True)
             return None
 
         # Build a structured prompt with paper information
@@ -172,9 +176,11 @@ class CompareService:
 请控制在 1200 字以内，使用中文。
 """
         try:
+            logger.info("Generating AI comparison report for %d papers", len(papers_data))
             report = await llm.generate(prompt, system_prompt=system_prompt)
             return report if report else None
         except Exception:
+            logger.warning("AI comparison report generation failed", exc_info=True)
             return None
 
 

@@ -16,20 +16,29 @@ import {
   Card,
   Typography,
   Badge,
+  Modal,
 } from 'antd';
 import {
   SearchOutlined,
   ReloadOutlined,
-  StarOutlined,
-  StarFilled,
   ExportOutlined,
   FilterOutlined,
   BookOutlined,
   CalendarOutlined,
   UserOutlined,
-  TagOutlined,
+  DeleteOutlined,
+  CheckSquareOutlined,
+  StarOutlined,
+  StarFilled,
 } from '@ant-design/icons';
-import { listPapers, updatePaper } from '../services/paperService';
+
+import { updateLearningPaper } from '../services/learningService';
+import {
+  deletePaper,
+  deletePapers,
+  listPapers,
+  setPaperBookmarks,
+} from '../services/paperService';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -65,6 +74,10 @@ export default function PaperList() {
   const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [sortBy, setSortBy] = useState('date_desc');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [deletingPaperId, setDeletingPaperId] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedPaperIds, setSelectedPaperIds] = useState([]);
+  const [batchAction, setBatchAction] = useState(null);
 
   const loadPapers = useCallback(async ({ showSuccess = false } = {}) => {
     setLoading(true);
@@ -82,23 +95,6 @@ export default function PaperList() {
   useEffect(() => {
     loadPapers();
   }, [loadPapers]);
-
-  // 切换收藏
-  const toggleFavorite = useCallback(async (paperId, e) => {
-    e.stopPropagation();
-    const paper = papers.find((item) => item.id === paperId);
-    if (!paper) return;
-    try {
-      const updatedPaper = await updatePaper(paperId, {
-        isFavorite: !paper.isFavorite,
-      });
-      setPapers((currentPapers) => currentPapers.map((item) => (
-        item.id === paperId ? updatedPaper : item
-      )));
-    } catch (error) {
-      message.error(error.message || '收藏状态更新失败');
-    }
-  }, [papers]);
 
   // 过滤 + 排序
   const filteredPapers = papers
@@ -140,29 +136,84 @@ export default function PaperList() {
     navigate(`/papers/${paperId}`);
   };
 
+  const handleDelete = (paper, event) => {
+    event.stopPropagation();
+    Modal.confirm({
+      title: '删除论文？',
+      content: `“${paper.title}”将从论文库中永久删除，相关解析内容、收藏、笔记和引用记录也会一并清理。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setDeletingPaperId(paper.id);
+        try {
+          await deletePaper(paper.id);
+          setPapers((current) => current.filter((item) => item.id !== paper.id));
+          setSelectedPaperIds((current) => current.filter((id) => id !== paper.id));
+          setPagination((current) => ({ ...current, current: 1 }));
+          message.success('论文已删除');
+        } catch (error) {
+          message.error(error.message || '论文删除失败');
+          throw error;
+        } finally {
+          setDeletingPaperId(null);
+        }
+      },
+    });
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode((current) => {
+      if (current) setSelectedPaperIds([]);
+      return !current;
+    });
+  };
+
+  const handleBatchBookmark = async (bookmarked) => {
+    if (selectedPaperIds.length === 0) return;
+    setBatchAction(bookmarked ? 'bookmark' : 'unbookmark');
+    try {
+      const result = await setPaperBookmarks(selectedPaperIds, bookmarked);
+      const count = result.processedCount ?? selectedPaperIds.length;
+      message.success(bookmarked ? `已收藏 ${count} 篇论文` : `已取消收藏 ${count} 篇论文`);
+      setSelectedPaperIds([]);
+    } catch (error) {
+      message.error(error.message || (bookmarked ? '批量收藏失败' : '批量取消收藏失败'));
+    } finally {
+      setBatchAction(null);
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedPaperIds.length === 0) return;
+    const idsToDelete = [...selectedPaperIds];
+    Modal.confirm({
+      title: `删除选中的 ${idsToDelete.length} 篇论文？`,
+      content: '论文及其关联的解析内容、收藏、笔记和引用记录将被永久删除。',
+      okText: '批量删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchAction('delete');
+        try {
+          const result = await deletePapers(idsToDelete);
+          const deletedIds = new Set(result.deletedIds || idsToDelete);
+          setPapers((current) => current.filter((paper) => !deletedIds.has(paper.id)));
+          setSelectedPaperIds([]);
+          setPagination((current) => ({ ...current, current: 1 }));
+          message.success(`已删除 ${result.deletedCount ?? deletedIds.size} 篇论文`);
+        } catch (error) {
+          message.error(error.message || '批量删除失败');
+          throw error;
+        } finally {
+          setBatchAction(null);
+        }
+      },
+    });
+  };
+
   // 表格列定义
   const columns = [
-    {
-      title: '',
-      key: 'favorite',
-      width: 40,
-      render: (_, record) => (
-        <Tooltip title={record.isFavorite ? '取消收藏' : '收藏'}>
-          <Button
-            type="text"
-            size="small"
-            icon={
-              record.isFavorite ? (
-                <StarFilled style={{ color: '#faad14' }} />
-              ) : (
-                <StarOutlined style={{ color: '#d9d9d9' }} />
-              )
-            }
-            onClick={(e) => toggleFavorite(record.id, e)}
-          />
-        </Tooltip>
-      ),
-    },
     {
       title: '论文',
       key: 'paper',
@@ -225,7 +276,7 @@ export default function PaperList() {
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_, record) => (
         <Space>
           <Tooltip title="查看详情">
@@ -247,6 +298,16 @@ export default function PaperList() {
               }}
             />
           </Tooltip>
+          <Tooltip title="删除论文">
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={deletingPaperId === record.id}
+              onClick={(event) => handleDelete(record, event)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -260,13 +321,23 @@ export default function PaperList() {
           <h2>论文列表</h2>
           <p>浏览与检索 ArXiv 论文</p>
         </div>
-        <Button
-          type="primary"
-          icon={<ReloadOutlined />}
-          onClick={() => loadPapers({ showSuccess: true })}
-        >
-          刷新
-        </Button>
+        <Space>
+          <Button
+            type={selectionMode ? 'primary' : 'default'}
+            icon={<CheckSquareOutlined />}
+            onClick={toggleSelectionMode}
+            disabled={Boolean(batchAction)}
+          >
+            {selectionMode ? '退出多选' : '多选'}
+          </Button>
+          <Button
+            type="primary"
+            icon={<ReloadOutlined />}
+            onClick={() => loadPapers({ showSuccess: true })}
+          >
+            刷新
+          </Button>
+        </Space>
       </div>
 
       {/* 搜索与筛选 */}
@@ -340,12 +411,59 @@ export default function PaperList() {
         </Text>
       </div>
 
+      {selectionMode && (
+        <div className="paper-batch-toolbar">
+          <Text>
+            已选择 <Text strong>{selectedPaperIds.length}</Text> 篇论文
+          </Text>
+          <Space wrap>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              disabled={selectedPaperIds.length === 0 || Boolean(batchAction)}
+              loading={batchAction === 'delete'}
+              onClick={handleBatchDelete}
+            >
+              删除
+            </Button>
+            <Button
+              icon={<StarOutlined />}
+              disabled={selectedPaperIds.length === 0 || Boolean(batchAction)}
+              loading={batchAction === 'bookmark'}
+              onClick={() => handleBatchBookmark(true)}
+            >
+              收藏
+            </Button>
+            <Button
+              icon={<StarFilled />}
+              disabled={selectedPaperIds.length === 0 || Boolean(batchAction)}
+              loading={batchAction === 'unbookmark'}
+              onClick={() => handleBatchBookmark(false)}
+            >
+              取消收藏
+            </Button>
+            <Button
+              type="text"
+              disabled={selectedPaperIds.length === 0 || Boolean(batchAction)}
+              onClick={() => setSelectedPaperIds([])}
+            >
+              清空选择
+            </Button>
+          </Space>
+        </div>
+      )}
+
       {/* 论文表格 */}
       <Table
         columns={columns}
         dataSource={filteredPapers}
         rowKey="id"
         loading={loading}
+        rowSelection={selectionMode ? {
+          selectedRowKeys: selectedPaperIds,
+          onChange: setSelectedPaperIds,
+          getCheckboxProps: () => ({ disabled: Boolean(batchAction) }),
+        } : undefined}
         pagination={{
           ...pagination,
           total: filteredPapers.length,
@@ -366,8 +484,8 @@ export default function PaperList() {
           ),
         }}
         onRow={(record) => ({
-          onClick: () => navigate(`/papers/${record.id}`),
-          style: { cursor: 'pointer' },
+          onClick: selectionMode ? undefined : () => navigate(`/papers/${record.id}`),
+          style: { cursor: selectionMode ? 'default' : 'pointer' },
         })}
       />
 

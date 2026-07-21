@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, time
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, SmallInteger, String, Text, Time, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, SmallInteger, String, Text, Time, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -36,13 +36,46 @@ class FetchTask(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     initial_lookback_days: Mapped[int] = mapped_column(Integer, default=7)
     max_results: Mapped[int] = mapped_column(Integer, default=50)
-    auto_analyze: Mapped[bool] = mapped_column(default=False)
+    auto_analyze: Mapped[bool] = mapped_column(default=True)
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     creator: Mapped[User | None] = relationship(back_populates="fetch_tasks")
     runs: Mapped[list[FetchTaskRun]] = relationship(
         back_populates="task", cascade="all, delete-orphan", order_by="FetchTaskRun.created_at.desc()"
     )
+
+
+class TaskOutbox(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Transactional event waiting to be published to Celery/Redis."""
+
+    __tablename__ = "task_outbox"
+    __table_args__ = (
+        Index("uq_task_outbox_event_key", "event_key", unique=True),
+        Index("ix_task_outbox_dispatch", "status", "available_at"),
+        Index("ix_task_outbox_aggregate", "aggregate_type", "aggregate_id"),
+        CheckConstraint(
+            "status IN ('pending', 'sending', 'sent', 'failed')",
+            name="ck_task_outbox_status",
+        ),
+    )
+
+    event_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    aggregate_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    aggregate_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    analysis_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("paper_analysis_runs.id", ondelete="CASCADE"), index=True
+    )
+    task_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), index=True
+    )
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class FetchTaskRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):

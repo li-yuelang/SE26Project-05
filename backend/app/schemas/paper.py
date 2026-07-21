@@ -45,6 +45,10 @@ class PaperListResponse(BaseModel):
     page_size: int = Field(serialization_alias="pageSize")
 
 
+class PaperBatchRequest(BaseModel):
+    paper_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+
 # ── 详情 ─────────────────────────────────────────────────────
 
 class PaperDetail(PaperListItem):
@@ -55,6 +59,7 @@ class PaperDetail(PaperListItem):
     metadata_extra: dict | None
     created_at: datetime
     updated_at: datetime
+    is_favorite: bool = False
 
 
 # ── 更新 ─────────────────────────────────────────────────────

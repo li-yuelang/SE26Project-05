@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import {
+  CheckCircleOutlined,
+} from '@ant-design/icons';
+import {
   Alert,
   Button,
   Drawer,
@@ -67,7 +70,7 @@ export default function TaskFormDrawer({
       scheduleWeekday: task.scheduleWeekday || 1,
       initialLookbackDays: task.initialLookbackDays || (meta?.lookbackDays?.includes(7) ? 7 : meta?.lookbackDays?.[0] || 7),
       maxResults: task.maxResults || meta?.maxResults?.default || 50,
-      autoAnalyze: task.autoAnalyze ?? false,
+      autoAnalyze: true,
       isEnabled: task.isEnabled ?? true,
     });
     setSubmitAction('save');
@@ -85,6 +88,7 @@ export default function TaskFormDrawer({
   const handleFinish = async (values) => {
     await onSubmit({
       ...values,
+      autoAnalyze: true,
       runNow: submitAction === 'run',
       scheduleTime: values.scheduleTime ? values.scheduleTime.format('HH:mm') : null,
       scheduleWeekday: values.scheduleKind === 'weekly' ? values.scheduleWeekday : null,
@@ -201,8 +205,11 @@ export default function TaskFormDrawer({
         <Form.Item name="maxResults" label="单次最大结果数">
           <InputNumber min={meta?.maxResults?.min || 10} max={meta?.maxResults?.max || 200} step={10} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="autoAnalyze" label="自动解析新增论文" valuePropName="checked">
-          <Switch />
+        <Form.Item label="自动解析新增论文" required>
+          <Space>
+            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            <Text>已启用，新入库论文将自动进入解析队列</Text>
+          </Space>
         </Form.Item>
         {mode === 'edit' && (
           <Form.Item name="isEnabled" label="启用后续调度" valuePropName="checked">

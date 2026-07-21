@@ -17,6 +17,7 @@ from app.database import AsyncSessionLocal
 from app.models.paper import Paper, UserPaper
 from app.models.task import FetchTask, FetchTaskRun, FetchTaskRunPaper
 from app.services.arxiv_fetch import ArxivFetchError, build_search_query, fetch_arxiv_window
+from app.services.analysis_runs import create_analysis_run
 from app.services.task_service import (
     calculate_next_run_at,
     calculate_run_window,
@@ -226,7 +227,6 @@ async def _persist_candidates(
 async def _enqueue_analysis(paper_ids: list[UUID]) -> tuple[int, int]:
     if not paper_ids:
         return 0, 0
-    from app.tasks.paper_tasks import process_paper
 
     queued = 0
     failed = 0
@@ -234,8 +234,11 @@ async def _enqueue_analysis(paper_ids: list[UUID]) -> tuple[int, int]:
         last_error: Exception | None = None
         for attempt in range(3):
             try:
-                process_paper.delay(str(paper_id))
-                queued += 1
+                async with AsyncSessionLocal() as db:
+                    _, created = await create_analysis_run(db, paper_id, force=False)
+                    await db.commit()
+                if created:
+                    queued += 1
                 last_error = None
                 break
             except Exception as exc:  # pragma: no cover - broker-dependent
@@ -408,7 +411,7 @@ async def _dispatch_due_runs() -> int:
     return dispatched
 
 
-@celery_app.task(name="app.tasks.dispatch_due_fetch_runs", queue="default")
+@celery_app.task(name="app.tasks.dispatch_due_fetch_runs", queue="arxiv")
 def dispatch_due_fetch_runs() -> int:
     return _run_async(_dispatch_due_runs())
 

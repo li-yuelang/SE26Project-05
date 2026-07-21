@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api"
     database_url: str = "postgresql+asyncpg://papermate:papermate@localhost:5432/papermate"
     redis_url: str = "redis://localhost:6379/0"
+    redis_broker_url: str | None = None
+    redis_result_backend_url: str | None = None
+    redis_coordination_url: str | None = None
     jwt_secret_key: str = "change-this-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
@@ -37,6 +40,15 @@ class Settings(BaseSettings):
     analysis_chunk_max_tokens: int = 600
     analysis_chunk_overlap_tokens: int = 50
     analysis_max_retries: int = 3
+    analysis_heartbeat_timeout_seconds: int = 900
+    analysis_reconcile_interval_seconds: int = 60
+    analysis_outbox_batch_size: int = 50
+    analysis_outbox_lease_seconds: int = 120
+    analysis_result_expires_seconds: int = 24 * 60 * 60
+    analysis_queue: str = "analysis"
+    analysis_parser_version: str = "pymupdf-pdfplumber-v1"
+    analysis_auto_requeue_worker_lost: bool = True
+    celery_visibility_timeout_seconds: int = 6 * 60 * 60
     celery_task_always_eager: bool = False
     celery_task_eager_propagates: bool = True
 

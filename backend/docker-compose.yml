@@ -1,3 +1,7 @@
+x-backend-common: &backend-common
+  env_file:
+    - ${PAPERMATE_ENV_FILE:-.env}
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -6,7 +10,7 @@ services:
       POSTGRES_USER: papermate
       POSTGRES_PASSWORD: papermate
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -28,30 +32,16 @@ services:
       retries: 10
 
   api:
+    <<: *backend-common
     build: .
     environment:
       DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
       REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
       JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
-      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.3}
-      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-4096}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
-      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
-      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-60}
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
-      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
-      ARXIV_USER_AGENT: ${ARXIV_USER_AGENT:-PaperMate/1.0 (arxiv metadata client)}
-      ARXIV_CONTACT_EMAIL: ${ARXIV_CONTACT_EMAIL:-}
-      ARXIV_TIMEOUT_SECONDS: ${ARXIV_TIMEOUT_SECONDS:-60}
-      ARXIV_REQUEST_INTERVAL_SECONDS: ${ARXIV_REQUEST_INTERVAL_SECONDS:-3}
-      ARXIV_MAX_RETRIES: ${ARXIV_MAX_RETRIES:-3}
-      ARXIV_REDIS_LOCK_TIMEOUT_SECONDS: ${ARXIV_REDIS_LOCK_TIMEOUT_SECONDS:-120}
     ports:
       - "8080:8080"
     depends_on:
@@ -59,59 +49,69 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8080"
+      migrate:
+        condition: service_completed_successfully
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+
+  migrate:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
 
   worker:
+    <<: *backend-common
     build: .
     environment:
       DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
       REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
       JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
-      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.3}
-      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-4096}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
-      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
-      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-60}
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
-      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q default
+      migrate:
+        condition: service_completed_successfully
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q analysis --concurrency=2
 
   arxiv-worker:
+    <<: *backend-common
     build: .
     environment:
       DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
       REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
       JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      ARXIV_USER_AGENT: ${ARXIV_USER_AGENT:-PaperMate/1.0 (arxiv metadata client)}
-      ARXIV_CONTACT_EMAIL: ${ARXIV_CONTACT_EMAIL:-}
-      ARXIV_TIMEOUT_SECONDS: ${ARXIV_TIMEOUT_SECONDS:-60}
-      ARXIV_REQUEST_INTERVAL_SECONDS: ${ARXIV_REQUEST_INTERVAL_SECONDS:-3}
-      ARXIV_MAX_RETRIES: ${ARXIV_MAX_RETRIES:-3}
-      ARXIV_REDIS_LOCK_TIMEOUT_SECONDS: ${ARXIV_REDIS_LOCK_TIMEOUT_SECONDS:-120}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q arxiv --concurrency=1
 
   beat:
+    <<: *backend-common
     build: .
     environment:
       DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
       REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
       JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
     depends_on:
@@ -119,6 +119,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
 
 volumes:
