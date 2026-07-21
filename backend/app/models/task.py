@@ -36,7 +36,7 @@ class FetchTask(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     initial_lookback_days: Mapped[int] = mapped_column(Integer, default=7)
     max_results: Mapped[int] = mapped_column(Integer, default=50)
-    auto_analyze: Mapped[bool] = mapped_column(default=False)
+    auto_analyze: Mapped[bool] = mapped_column(default=True)
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     creator: Mapped[User | None] = relationship(back_populates="fetch_tasks")
