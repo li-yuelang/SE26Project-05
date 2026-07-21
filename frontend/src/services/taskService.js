@@ -339,6 +339,7 @@ export const getTaskDetail = createEndpoint({
 
 export const createTask = createEndpoint({
   mock: (body) => {
+    body = { ...body, autoAnalyze: true };
     const id = `mock-task-${Date.now()}`;
     const task = toTask({ ...body, id, status: body.isEnabled === false ? 'paused' : 'scheduled' });
     taskStore = [task, ...taskStore];
@@ -351,7 +352,10 @@ export const createTask = createEndpoint({
     }
     return { ...mockDetail(task.id), run: runStore.get(task.id)?.[0] || null };
   },
-  http: (body) => request('/tasks', { method: 'POST', body: toApiPayload(body) }).then((payload) => ({
+  http: (body) => request('/tasks', {
+    method: 'POST',
+    body: toApiPayload({ ...body, autoAnalyze: true }),
+  }).then((payload) => ({
     ...normalizeDetail(payload),
     run: payload.run ? toRun(payload.run) : null,
   })),
