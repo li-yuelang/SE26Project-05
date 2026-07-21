@@ -103,11 +103,14 @@ async def delete_subscription(subscription_id: UUID, user: CurrentUser, db: DbSe
 async def get_daily_digest(user: CurrentUser, db: DbSession):
     """Get today's paper digest based on user subscriptions."""
     from sqlalchemy import select
-    from app.models.paper import Paper
+    from app.models.paper import Paper, UserPaper
     from app.models.task import Subscription
     subs = (await db.scalars(
         select(Subscription).where(Subscription.user_id == user.id, Subscription.enabled == True)
     )).all()
+    library_ids = set(
+        (await db.scalars(select(UserPaper.paper_id).where(UserPaper.user_id == user.id))).all()
+    )
 
     from datetime import datetime, timedelta, timezone
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -139,6 +142,7 @@ async def get_daily_digest(user: CurrentUser, db: DbSession):
                     "abstract": p.abstract or "", "primary_category": p.primary_category or "",
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                     "arxiv_url": p.arxiv_url,
+                    "in_library": p.id in library_ids,
                 }
                 for p in papers
             ],

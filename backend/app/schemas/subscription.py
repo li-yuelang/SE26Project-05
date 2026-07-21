@@ -41,6 +41,7 @@ class DigestPaperItem(BaseModel):
     primary_category: str = ""
     published_at: str | None = None
     arxiv_url: str | None = None
+    in_library: bool = False
 
 
 class DigestTopicGroup(BaseModel):
@@ -57,6 +58,8 @@ class DailyDigestOut(BaseModel):
 class RecommendationItem(BaseModel):
     paper_id: str
     arxiv_id: str
+    arxiv_url: str | None = None
+    in_library: bool = False
     title: str
     authors: list[str] = []
     abstract: str = ""

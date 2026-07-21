@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.learning import Bookmark, ReadingHistory
 from app.models.concept import PaperConcept
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.user import User
 
 
@@ -18,11 +18,23 @@ class RecommendationService:
         history_based = await self._recommend_by_history(db, user)
         content_based = await self._recommend_by_content(db, user)
         collaborative = await self._recommend_collaborative(db, user)
-        return {
+        result = {
             "history_based": history_based,
             "content_based": content_based,
             "collaborative": collaborative,
         }
+        library_ids = {
+            str(paper_id)
+            for paper_id in (
+                await db.scalars(
+                    select(UserPaper.paper_id).where(UserPaper.user_id == user.id)
+                )
+            ).all()
+        }
+        for items in result.values():
+            for item in items:
+                item["in_library"] = item["paper_id"] in library_ids
+        return result
 
     async def _recommend_by_history(self, db: AsyncSession, user: User) -> list[dict]:
         """Recommend papers based on user's reading history (recently viewed categories)."""
@@ -168,6 +180,8 @@ class RecommendationService:
         return {
             "paper_id": str(paper.id),
             "arxiv_id": paper.arxiv_id,
+            "arxiv_url": getattr(paper, "arxiv_url", None)
+            or f"https://arxiv.org/abs/{paper.arxiv_id}",
             "title": paper.title,
             "authors": paper.authors or [],
             "abstract": paper.abstract or "",
