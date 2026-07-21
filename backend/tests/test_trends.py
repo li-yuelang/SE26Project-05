@@ -1,5 +1,8 @@
 """Tests for TrendService — phase detection and pure logic."""
 
+from datetime import datetime, timezone
+from types import SimpleNamespace
+
 from app.services.trends import TrendService
 
 
@@ -79,3 +82,35 @@ def test_detect_phases_mature_detected() -> None:
     ]
     phases = service._detect_phases(data)
     assert any(p["phase"] == "mature" for p in phases)
+
+
+def test_monthly_counts_uses_real_publication_dates() -> None:
+    service = TrendService()
+    now = datetime.now(timezone.utc)
+    papers = [SimpleNamespace(published_at=now), SimpleNamespace(published_at=now)]
+
+    points = service._monthly_counts(papers, months=6)
+
+    assert len(points) == 6
+    assert sum(point["count"] for point in points) == 2
+    assert points[-1]["month"] == now.strftime("%Y-%m")
+
+
+def test_milestones_keep_first_and_latest_papers() -> None:
+    service = TrendService()
+    papers = [
+        {
+            "paper_id": str(index),
+            "published_at": f"20{index:02d}-01-01T00:00:00+00:00",
+            "citation_count": 0,
+        }
+        for index in range(10, 20)
+    ]
+
+    milestones = service._milestones(papers)
+
+    assert len(milestones) == 8
+    assert milestones[0]["paper_id"] == "10"
+    assert milestones[-1]["paper_id"] == "19"
+    assert milestones[0]["significance"] == "foundation"
+    assert milestones[-1]["significance"] == "frontier"

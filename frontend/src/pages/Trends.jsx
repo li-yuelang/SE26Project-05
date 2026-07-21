@@ -272,7 +272,13 @@ export default function Trends() {
                 })}
               </div>
             ) : (
-              <Empty description="没有找到匹配的主题" />
+              <Empty
+                description={
+                  trendTopics.length === 0
+                    ? '暂无可分析的研究主题，请先抓取并完成论文解析'
+                    : '没有找到匹配的主题'
+                }
+              />
             )}
           </Card>
         </Col>
