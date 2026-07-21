@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
@@ -16,9 +18,14 @@ from app.schemas.analysis import (
 )
 from app.services.chunking import PaperTextChunk
 
+logger = logging.getLogger(__name__)
+
 
 class StructuredExtractionError(ValueError):
     """Raised when an LLM response is not valid JSON for the requested schema."""
+
+    error_code = "EXTRACTION_ERROR"
+    retryable = True
 
 
 @dataclass(slots=True)
@@ -26,6 +33,49 @@ class ExtractionResult:
     final: FinalExtraction
     local: list[ChunkExtraction]
     structured_content: dict[str, Any]
+
+
+def _repair_truncated_json(text: str) -> str | None:
+    """Best-effort repair of truncated JSON: close unterminated strings and balance braces."""
+
+    repaired = text
+    in_string = False
+    escape = False
+    brace_depth = 0
+    bracket_depth = 0
+
+    for ch in repaired:
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            brace_depth += 1
+        elif ch == "}":
+            brace_depth -= 1
+        elif ch == "[":
+            bracket_depth += 1
+        elif ch == "]":
+            bracket_depth -= 1
+
+    if in_string:
+        repaired += '"'
+
+    repaired += "]" * max(0, bracket_depth)
+    repaired += "}" * max(0, brace_depth)
+
+    try:
+        json.loads(repaired)
+        return repaired
+    except json.JSONDecodeError:
+        return None
 
 
 def parse_json_object(raw: str) -> dict[str, Any]:
@@ -43,7 +93,14 @@ def parse_json_object(raw: str) -> dict[str, Any]:
     try:
         value = json.loads(candidate)
     except json.JSONDecodeError as exc:
-        raise StructuredExtractionError("LLM response is not valid JSON") from exc
+        repaired = _repair_truncated_json(candidate)
+        if repaired is not None:
+            try:
+                value = json.loads(repaired)
+            except json.JSONDecodeError:
+                raise StructuredExtractionError("LLM response is not valid JSON") from exc
+        else:
+            raise StructuredExtractionError("LLM response is not valid JSON") from exc
     if not isinstance(value, dict):
         raise StructuredExtractionError("LLM response must be a JSON object")
     return value
@@ -91,8 +148,11 @@ def _json_schema_hint() -> str:
 
 
 def build_chunk_prompt(title: str, abstract: str, chunk: PaperTextChunk) -> str:
-    return f"""你是科学论文知识抽取器。请只返回一个可被 JSON 解析的对象，不要 Markdown，不要解释。
-输出字段必须参考这个结构：{_json_schema_hint()}
+    return f"""你是科学论文知识抽取器。请只返回 JSON data，用 ```json 和 ``` 包裹，不要解释。
+输出字段必须参考这个结构：
+```json
+{_json_schema_hint()}
+```
 所有说明用中文；概念必须同时给出规范英文名和中文别名；证据必须来自给定文本，不要臆造。
 
 论文标题：{title}
@@ -107,17 +167,21 @@ def build_reduce_prompt(title: str, abstract: str, local_results: list[ChunkExtr
     local_json = json.dumps(
         [result.model_dump(mode="json") for result in local_results], ensure_ascii=False
     )
-    return f"""你是论文分析汇总器。请只返回一个可被 JSON 解析的对象，不要 Markdown，不要解释。
+    return f"""你是论文分析汇总器。请只返回 JSON data，用 ```json 和 ``` 包裹，不要解释。
 把局部抽取结果合并为一份去重后的中文分析，概念保留标准英文名，中文名放入 name_zh。
 summary、research_question、concept_description 使用完整中文句子；methods、experiments、contributions 使用列表。
 references 保留无法确认的引用，不要创建虚构的 arXiv ID。关系类型使用 IS_A、USES、IMPROVES、RELATED_TO 等大写值。
-输出字段参考：{_json_schema_hint()}
+输出字段参考：
+```json
+{_json_schema_hint()}
+```
 
 论文标题：{title}
 论文摘要：{abstract}
 局部结果 JSON：
+```json
 {local_json}
-"""
+```"""
 
 
 def _nonempty(values: list[str]) -> list[str]:
@@ -173,6 +237,35 @@ class StructuredExtractor:
         self.llm = llm
         self.config = config
 
+    async def _extract_chunk(
+        self, title: str, abstract: str, chunk: PaperTextChunk
+    ) -> ChunkExtraction | None:
+        """Extract one chunk, returning None if LLM fails after retries."""
+        prompt = build_chunk_prompt(title, abstract, chunk)
+        try:
+            raw = await self.llm.generate(
+                prompt,
+                system_prompt="Return JSON inside ```json fence only. No explanation.",
+            )
+            return ChunkExtraction.model_validate(parse_json_object(raw))
+        except Exception:
+            pass
+
+        # Retry once with conciseness hint + double max_tokens
+        retry_prompt = (
+            prompt
+            + "\n\n注意：JSON 必须用 ```json 和 ``` 包裹，只返回最核心的信息，确保完整闭合。"
+        )
+        try:
+            raw = await self.llm.generate(
+                retry_prompt,
+                system_prompt="Return JSON inside ```json fence. Keep concise. Validate schema.",
+                max_tokens=self.config.llm_max_tokens * 2,
+            )
+            return ChunkExtraction.model_validate(parse_json_object(raw))
+        except Exception:
+            return None
+
     async def extract(
         self,
         *,
@@ -183,26 +276,76 @@ class StructuredExtractor:
     ) -> ExtractionResult:
         if not chunks:
             raise StructuredExtractionError("No chunks are available for LLM extraction")
-        local_results: list[ChunkExtraction] = []
-        for chunk in chunks:
-            if progress_callback is not None:
-                await progress_callback()
-            raw = await self.llm.generate(
-                build_chunk_prompt(title, abstract, chunk),
-                system_prompt="Return JSON only. Validate every field against the requested structure.",
+
+        semaphore = asyncio.Semaphore(self.config.analysis_llm_max_concurrency)
+
+        async def _extract_one(chunk: PaperTextChunk) -> tuple[int, ChunkExtraction | None]:
+            """Extract a single chunk; returns (index, result_or_None)."""
+            async with semaphore:
+                if progress_callback is not None:
+                    await progress_callback()
+                result = await self._extract_chunk(title, abstract, chunk)
+                if progress_callback is not None:
+                    await progress_callback()
+                return chunks.index(chunk), result
+
+        # First pass: extract all chunks
+        tasks = [_extract_one(chunk) for chunk in chunks]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Collect success / failure indices
+        local_results: dict[int, ChunkExtraction] = {}
+        failed_indices: list[int] = []
+        for item in results:
+            if isinstance(item, tuple):
+                idx, val = item
+                if val is not None:
+                    local_results[idx] = val
+                else:
+                    failed_indices.append(idx)
+            else:
+                # Unexpected exception in gather itself
+                if isinstance(item, BaseException):
+                    logger.warning("Extract task crashed: %s", item)
+
+        # Retry failed chunks individually with trimmed prompt + triple max_tokens
+        if failed_indices:
+            retry_prompt_suffix = (
+                "\n\n重要：只返回最核心的摘要和概念，JSON 必须用 ```json 和 ``` 包裹。"
             )
-            try:
-                local_results.append(ChunkExtraction.model_validate(parse_json_object(raw)))
-            except Exception as exc:
-                if isinstance(exc, StructuredExtractionError):
-                    raise
-                raise StructuredExtractionError("Local extraction failed schema validation") from exc
-            if progress_callback is not None:
-                await progress_callback()
+            async def _retry_one(idx: int) -> tuple[int, ChunkExtraction | None]:
+                chunk = chunks[idx]
+                prompt = build_chunk_prompt(title, abstract, chunk) + retry_prompt_suffix
+                async with semaphore:
+                    try:
+                        raw = await self.llm.generate(
+                            prompt,
+                            system_prompt="Return a minimal valid JSON inside ```json fence.",
+                            max_tokens=self.config.llm_max_tokens * 3,
+                        )
+                        return idx, ChunkExtraction.model_validate(parse_json_object(raw))
+                    except Exception:
+                        return idx, None
+
+            retry_tasks = [_retry_one(idx) for idx in failed_indices]
+            retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
+            for item in retry_results:
+                if isinstance(item, tuple):
+                    idx, val = item
+                    if val is not None:
+                        local_results[idx] = val
+
+        # Final check: must have at least one successful extraction
+        if not local_results:
+            raise StructuredExtractionError(
+                f"All {len(chunks)} chunk extractions failed after retries"
+            )
+
+        ordered = [local_results[i] for i in sorted(local_results)]
 
         reduced_raw = await self.llm.generate(
-            build_reduce_prompt(title, abstract, local_results),
-            system_prompt="Return JSON only. Merge duplicate concepts and preserve evidence.",
+            build_reduce_prompt(title, abstract, ordered),
+            system_prompt="Return JSON inside ```json fence. Merge duplicates, preserve evidence.",
         )
         try:
             final = FinalExtraction.model_validate(parse_json_object(reduced_raw))
@@ -223,7 +366,7 @@ class StructuredExtractor:
             "promptVersion": self.config.analysis_prompt_version,
             "model": self.config.llm_model,
         }
-        return ExtractionResult(final=final, local=local_results, structured_content=structured)
+        return ExtractionResult(final=final, local=ordered, structured_content=structured)
 
 
 __all__ = [

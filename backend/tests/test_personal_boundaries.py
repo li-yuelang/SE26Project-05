@@ -105,7 +105,7 @@ def test_trend_matching_query_contains_current_user_library_scope():
 
     import asyncio
 
-    asyncio.run(service._count_matching_papers(db, user_id, ["RAG"]))
+    asyncio.run(service._library_paper_ids(db, user_id))
 
     sql = str(db.statements[0].compile(dialect=postgresql.dialect()))
     assert "user_papers" in sql

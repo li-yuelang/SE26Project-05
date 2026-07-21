@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
@@ -155,6 +156,34 @@ async def delete_papers(db: AsyncSession, user_id: UUID, paper_ids: list[UUID]) 
         await db.delete(membership)
     await db.commit()
     return [membership.paper_id for membership in memberships]
+
+
+async def add_paper_to_library(
+    db: AsyncSession,
+    user_id: UUID,
+    paper_id: UUID,
+) -> tuple[Paper, bool]:
+    """Idempotently add a globally cached paper to one user's library."""
+    paper = await db.get(Paper, paper_id)
+    if paper is None:
+        raise AppError("推荐论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+
+    membership = await db.scalar(
+        select(UserPaper.id).where(UserPaper.user_id == user_id, UserPaper.paper_id == paper_id)
+    )
+    if membership is not None:
+        return paper, False
+
+    db.add(UserPaper(user_id=user_id, paper_id=paper_id))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        refreshed_paper = await db.get(Paper, paper_id)
+        if refreshed_paper is None:
+            raise AppError("推荐论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+        return refreshed_paper, False
+    return paper, True
 
 
 async def upsert_arxiv_papers(

@@ -137,6 +137,37 @@ def test_batch_delete_returns_deleted_ids(monkeypatch) -> None:
     }
 
 
+def test_add_recommended_paper_to_library(monkeypatch) -> None:
+    user = SimpleNamespace(id=uuid4())
+    paper = make_paper()
+
+    async def fake_add_paper_to_library(db, user_id, paper_id):
+        del db
+        assert user_id == user.id
+        assert paper_id == paper.id
+        return paper, True
+
+    monkeypatch.setattr(
+        papers_api.paper_service,
+        "add_paper_to_library",
+        fake_add_paper_to_library,
+    )
+    app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        with TestClient(app) as client:
+            response = client.post(f"/api/papers/{paper.id}/library")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "added": True,
+        "paperId": str(paper.id),
+        "arxivId": paper.arxiv_id,
+    }
+
+
 def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
     user = SimpleNamespace(id=uuid4())
     paper = make_paper()

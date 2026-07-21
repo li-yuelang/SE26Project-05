@@ -48,6 +48,7 @@ function fromHttpPaper(paper) {
     id: paper.id,
     isFavorite: paper.is_favorite ?? false,
     isRead: paper.parsed_status === 'done',
+    parsedStatus: paper.parsed_status || 'pending',
     link: paper.arxiv_url,
     pdfLink: paper.pdf_url,
     pdfUrl: paper.pdf_url,
@@ -83,6 +84,11 @@ export const listPapers = createEndpoint({
     const result = await request('/papers', { query });
     return { ...result, items: result.items.map(fromHttpPaper) };
   },
+});
+
+export const addPaperToLibrary = createEndpoint({
+  mock: (paperId) => ({ added: false, paperId }),
+  http: (paperId) => request(`/papers/${paperId}/library`, { method: 'POST' }),
 });
 
 export const getPaperDetail = createEndpoint({
@@ -213,4 +219,21 @@ export const deletePapers = createEndpoint({
     body: { paper_ids: paperIds },
     method: 'DELETE',
   }),
+});
+
+export const triggerAnalysis = createEndpoint({
+  mock: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return { status: 'queued', stage: 'queued' };
+  },
+  http: (paperId) => request(`/papers/${paperId}/analysis`, { method: 'POST' }),
+});
+
+export const getAnalysisStatus = createEndpoint({
+  mock: () => ({
+    status: 'completed',
+    stage: 'completed',
+    error: null,
+  }),
+  http: (paperId) => request(`/papers/${paperId}/analysis`),
 });

@@ -35,16 +35,19 @@ import {
   FireOutlined,
   HistoryOutlined,
   LinkOutlined,
+  LoadingOutlined,
   ReadOutlined,
   StarFilled,
   StarOutlined,
   TagsOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import {
   getLearningCenter,
   updateFollowedTopic,
   updateLearningPaper,
 } from '../services/learningService';
+import { triggerAnalysis } from '../services/paperService';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
 
@@ -72,6 +75,7 @@ export default function Learning() {
   const [draftNote, setDraftNote] = useState('');
   const [draftProgress, setDraftProgress] = useState(0);
   const [draftRating, setDraftRating] = useState(0);
+  const [analysingPaperIds, setAnalysingPaperIds] = useState(new Set());
   const learningNotes = resource.data?.notes || [];
   const readingHistory = resource.data?.readingHistory || [];
   const statusMeta = resource.data?.statusMeta || {};
@@ -218,6 +222,22 @@ export default function Learning() {
     }
   };
 
+  const handleTriggerAnalysis = async (paperId) => {
+    setAnalysingPaperIds((prev) => new Set(prev).add(paperId));
+    try {
+      await triggerAnalysis(paperId);
+      message.success('已加入解析队列');
+    } catch (error) {
+      message.error(error.message || '触发解析失败');
+    } finally {
+      setAnalysingPaperIds((prev) => {
+        const next = new Set(prev);
+        next.delete(paperId);
+        return next;
+      });
+    }
+  };
+
   const startCompare = () => {
     if (selectedPaperIds.length < 2) {
       message.warning('请选择至少 2 篇论文进行对比');
@@ -265,6 +285,36 @@ export default function Learning() {
       render: (status) => (
         <Badge status={statusMeta[status].color} text={statusMeta[status].text} />
       ),
+    },
+    {
+      title: '解析',
+      key: 'analyse',
+      width: 100,
+      render: (_, paper) => {
+        const parsedStatus = paper.parsed_status || 'pending';
+        const isAnalysing = analysingPaperIds.has(paper.id);
+        if (parsedStatus === 'completed') {
+          return <Tag color="success" icon={<CheckCircleOutlined />}>已解析</Tag>;
+        }
+        if (parsedStatus === 'processing') {
+          return <Tag color="processing" icon={<LoadingOutlined />}>解析中</Tag>;
+        }
+        return (
+          <Button
+            size="small"
+            type="primary"
+            ghost
+            icon={isAnalysing ? <LoadingOutlined /> : <ExperimentOutlined />}
+            loading={isAnalysing}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTriggerAnalysis(paper.id);
+            }}
+          >
+            {parsedStatus === 'failed' ? '重试' : '解析'}
+          </Button>
+        );
+      },
     },
     {
       title: '进度',
