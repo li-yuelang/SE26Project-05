@@ -13,6 +13,38 @@ from app.services.recommendation import recommendation_service
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
 
+def _calculate_digest_relevance(paper: object, terms: list[str]) -> tuple[float, list[str]]:
+    """Return a deterministic lexical score and the matched subscription terms."""
+    normalized_terms = list(dict.fromkeys(term.strip().lower() for term in terms if term.strip()))
+    if not normalized_terms:
+        return 0.0, []
+
+    title = (getattr(paper, "title", "") or "").lower()
+    abstract = (getattr(paper, "abstract", "") or "").lower()
+    categories = [getattr(paper, "primary_category", "") or ""]
+    categories.extend(getattr(paper, "categories", None) or [])
+    category_text = " ".join(categories).lower()
+
+    matched: list[str] = []
+    title_hits = 0
+    category_hits = 0
+    for term in normalized_terms:
+        in_title = term in title
+        in_abstract = term in abstract
+        in_category = term in category_text
+        if in_title or in_abstract or in_category:
+            matched.append(term)
+        title_hits += int(in_title)
+        category_hits += int(in_category)
+
+    term_count = len(normalized_terms)
+    coverage = len(matched) / term_count
+    title_ratio = title_hits / term_count
+    category_ratio = category_hits / term_count
+    score = 0.5 * coverage + 0.35 * title_ratio + 0.15 * category_ratio
+    return round(min(score, 1.0), 4), matched
+
+
 # ---------------------------------------------------------------------------
 # Manage subscriptions
 # ---------------------------------------------------------------------------
@@ -117,24 +149,34 @@ async def get_daily_digest(user: CurrentUser, db: DbSession):
 
     topic_groups = []
     for sub in subs:
-        keywords = sub.topic_keywords or []
-        if not keywords:
+        keywords = [keyword.strip() for keyword in (sub.topic_keywords or []) if keyword.strip()]
+        categories = [category.strip() for category in (sub.categories or []) if category.strip()]
+        terms = [*keywords, *categories]
+        if not terms:
             continue
         conditions = []
         for kw in keywords:
             conditions.append(Paper.title.ilike(f"%{kw}%"))
             conditions.append(Paper.abstract.ilike(f"%{kw}%"))
+        for category in categories:
+            conditions.append(Paper.primary_category == category)
+            conditions.append(Paper.categories.contains([category]))
         from sqlalchemy import or_
-        papers = (await db.scalars(
+        candidates = (await db.scalars(
             select(Paper).where(
                 or_(*conditions),
                 Paper.published_at >= datetime.now(timezone.utc) - timedelta(days=1),
-            ).limit(5)
+            ).order_by(Paper.published_at.desc()).limit(50)
         )).all()
+        ranked_papers = []
+        for paper in candidates:
+            relevance_score, matched_terms = _calculate_digest_relevance(paper, terms)
+            ranked_papers.append((paper, relevance_score, matched_terms))
+        ranked_papers.sort(key=lambda item: item[1], reverse=True)
 
         topic_groups.append({
-            "topic": sub.topic_keywords[0] if sub.topic_keywords else "General",
-            "keywords": sub.topic_keywords,
+            "topic": terms[0],
+            "keywords": terms,
             "papers": [
                 {
                     "paper_id": str(p.id), "arxiv_id": p.arxiv_id,
@@ -143,8 +185,10 @@ async def get_daily_digest(user: CurrentUser, db: DbSession):
                     "published_at": p.published_at.isoformat() if p.published_at else None,
                     "arxiv_url": p.arxiv_url,
                     "in_library": p.id in library_ids,
+                    "relevance_score": relevance_score,
+                    "reason": f"命中订阅条件：{'、'.join(matched_terms[:3])}",
                 }
-                for p in papers
+                for p, relevance_score, matched_terms in ranked_papers[:5]
             ],
         })
 
