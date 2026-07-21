@@ -17,6 +17,12 @@
   padding: 0;
 }
 
+.compare-ai-report {
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .task-page-header,
 .task-detail-toolbar {
   display: flex;

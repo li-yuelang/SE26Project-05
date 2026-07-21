@@ -322,9 +322,26 @@ export const updateFollowedTopic = createEndpoint({
 });
 
 export const exportComparison = createEndpoint({
-  mock: (paperIds) => ({ paperIds, status: 'draft' }),
-  http: (paperIds) => request('/compare', {
-    body: { paper_ids: paperIds, title: `论文对比（${paperIds.length} 篇）` },
-    method: 'POST',
+  mock: (paperIds, comparisonId) => ({
+    comparison_id: comparisonId || `mock-comparison-${Date.now()}`,
+    paperIds,
+    report_content: [
+      '# AI 论文对比报告',
+      '',
+      `已基于所选 ${paperIds.length} 篇论文生成对比分析。`,
+      '',
+      '> Mock 模式不会请求真实大模型；切换到 HTTP 模式后将展示模型生成的完整报告。',
+    ].join('\n'),
   }),
+  http: async (paperIds, comparisonId) => {
+    let id = comparisonId;
+    if (!id) {
+      const comparison = await request('/compare', {
+        body: { paper_ids: paperIds, title: `论文对比（${paperIds.length} 篇）` },
+        method: 'POST',
+      });
+      id = comparison.id;
+    }
+    return request(`/compare/export/${id}`);
+  },
 });
