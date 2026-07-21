@@ -25,6 +25,7 @@ class TestRecommendationSerialisation:
         )
         assert result["paper_id"] == str(paper.id)
         assert result["arxiv_id"] == paper.arxiv_id
+        assert result["arxiv_url"] == f"https://arxiv.org/abs/{paper.arxiv_id}"
         assert result["title"] == paper.title
         assert result["relevance_score"] == 0.85
         assert result["reason"] == "与你最近阅读领域相关"

@@ -6,6 +6,12 @@ import httpx
 
 from app.config import Settings, settings
 
+try:
+    from app.core._debug_log import log_embedding_request, log_embedding_response  # type: ignore[unused-ignore]
+except ImportError:
+    def log_embedding_request(*args, **kwargs) -> None: pass
+    def log_embedding_response(*args, **kwargs) -> None: pass
+
 
 class EmbeddingProviderError(RuntimeError):
     """Raised when an embedding provider cannot return a valid vector batch."""
@@ -51,12 +57,14 @@ class OpenAICompatibleEmbeddingProvider:
         for start in range(0, len(texts), batch_size):
             batch = texts[start : start + batch_size]
             payload = {"model": self.config.embedding_model, "input": batch, "dimensions": self.config.embedding_dimension}
+            log_embedding_request(self.config.embedding_model, len(batch), payload)
             try:
                 response = await self._post(f"{base_url.rstrip('/')}/embeddings", headers, payload)
                 if hasattr(response, "raise_for_status"):
                     response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 status_code = exc.response.status_code if exc.response is not None else 0
+                _log_emb_response_body(status_code, exc.response)
                 error = EmbeddingProviderError(
                     "Embedding provider rate limit exceeded"
                     if status_code == 429
@@ -97,6 +105,15 @@ class OpenAICompatibleEmbeddingProvider:
         timeout = httpx.Timeout(self.config.embedding_timeout_seconds)
         async with httpx.AsyncClient(timeout=timeout) as client:
             return await client.post(url, headers=headers, json=payload)
+
+
+def _log_emb_response_body(status: int, response: Any) -> None:
+    """Extract and log embedding response body text."""
+    try:
+        body = response.text
+    except Exception:
+        body = str(response)[:3000]
+    log_embedding_response(status, body)
 
 
 def get_embedding_provider(config: Settings = settings) -> OpenAICompatibleEmbeddingProvider:

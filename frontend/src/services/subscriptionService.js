@@ -1,4 +1,4 @@
-import { dailyDigest, historyBasedRecommendations } from '../data/subscriptionData';
+import { dailyDigest } from '../data/subscriptionData';
 import { createEndpoint, request } from './apiClient';
 
 let subscriptionStore = dailyDigest.topics.map((topic) => ({
@@ -42,32 +42,30 @@ function toSubscriptionUpdatePayload(changes) {
 }
 
 function normalizePaper(paper) {
+  const arxivId = paper.arxiv_id || null;
   return {
     ...paper,
     abstract: paper.abstract || '',
+    arxivId,
+    arxivUrl: paper.arxiv_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : null),
     authors: paper.authors || [],
     categories: paper.primary_category ? [paper.primary_category] : [],
     id: paper.paper_id,
+    inLibrary: Boolean(paper.in_library),
     matchScore: Math.round((paper.relevance_score || 0) * 100),
     reason: paper.reason || '与你的研究兴趣相关',
   };
 }
 
 export const getSubscriptionFeed = createEndpoint({
-  mock: () => {
-    const enabledTopics = new Set(
-      subscriptionStore
-        .filter((subscription) => subscription.enabled)
-        .flatMap((subscription) => subscription.topic_keywords || []),
-    );
-    return {
-      dailyDigest: {
-        ...dailyDigest,
-        topics: dailyDigest.topics.filter((topic) => enabledTopics.has(topic.topicName)),
-      },
-      historyBasedRecommendations,
-    };
-  },
+  mock: () => ({
+    dailyDigest: {
+      date: new Date().toISOString().slice(0, 10),
+      summary: 'Mock 模式不展示真实论文推送，请连接后端获取数据库中的论文。',
+      topics: [],
+    },
+    historyBasedRecommendations: [],
+  }),
   http: async () => {
     const [digest, recommendations] = await Promise.all([
       request('/subscriptions/digest'),

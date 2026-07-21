@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     analysis_chunk_target_tokens: int = 500
     analysis_chunk_max_tokens: int = 600
     analysis_chunk_overlap_tokens: int = 50
+    analysis_llm_max_concurrency: int = 300
     analysis_max_retries: int = 3
     analysis_heartbeat_timeout_seconds: int = 900
     analysis_reconcile_interval_seconds: int = 60

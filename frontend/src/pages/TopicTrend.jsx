@@ -46,12 +46,14 @@ export default function TopicTrend() {
   const topicRank = useMemo(() => {
     if (!topic) return null;
 
+    if (resource.data?.topicRank) return resource.data.topicRank;
+
     return (
       [...trendTopics]
         .sort((left, right) => right.trend - left.trend)
         .findIndex((item) => item.id === topic.id) + 1
     );
-  }, [topic, trendTopics]);
+  }, [resource.data?.topicRank, topic, trendTopics]);
 
   if (resource.loading || resource.error) {
     return (
@@ -94,7 +96,7 @@ export default function TopicTrend() {
           <Button type="link" onClick={() => navigate(`/papers/${paper.id}`)}>
             {paper.title}
           </Button>
-          <Text type="secondary">arXiv: {paper.id}</Text>
+          <Text type="secondary">arXiv: {paper.arxivId}</Text>
         </Space>
       ),
     },
