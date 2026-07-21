@@ -62,6 +62,7 @@ ACTIVE_ANALYSIS_RUN_STATUSES = (
 if TYPE_CHECKING:
     from app.models.concept import ConceptRelationEvidence, PaperConcept
     from app.models.learning import Bookmark, Comment, Note, ReadingHistory
+    from app.models.user import User
 
 
 class PaperAnalysisRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -136,6 +137,7 @@ class PaperAnalysisRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "papers"
 
+    # Content is cached globally. User visibility is represented by UserPaper.
     arxiv_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(1000), index=True)
     authors: Mapped[list[str]] = mapped_column(JSONB, default=list)
@@ -205,6 +207,22 @@ class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     relation_evidence: Mapped[list[ConceptRelationEvidence]] = relationship(
         back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
     )
+    library_entries: Mapped[list[UserPaper]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan"
+    )
+
+
+class UserPaper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A paper's membership in one user's personal library."""
+
+    __tablename__ = "user_papers"
+    __table_args__ = (UniqueConstraint("user_id", "paper_id", name="uq_user_paper"),)
+
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+
+    user: Mapped[User] = relationship(back_populates="paper_library")
+    paper: Mapped[Paper] = relationship(back_populates="library_entries")
 
 
 class PaperChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):

@@ -114,10 +114,11 @@ async def delete_note(note_id: UUID, user: CurrentUser, db: DbSession):
 @router.get("/comments", response_model=dict)
 async def list_comments(
     db: DbSession,
+    user: CurrentUser,
     paper_id: UUID | None = Query(None),
     page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
 ):
-    items, total = await learning_service.list_comments(db, paper_id, page, page_size)
+    items, total = await learning_service.list_comments(db, user, paper_id, page, page_size)
     return success({"items": items, "total": total, "page": page, "pageSize": page_size})
 
 

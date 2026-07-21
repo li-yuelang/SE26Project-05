@@ -148,7 +148,7 @@ class TaskConfigRequest(BaseModel):
     is_enabled: bool = True
     initial_lookback_days: int = 7
     max_results: int = 50
-    auto_analyze: bool = False
+    auto_analyze: bool = True
 
     @field_validator("name", mode="before")
     @classmethod
@@ -157,6 +157,13 @@ class TaskConfigRequest(BaseModel):
         if not cleaned:
             raise ValueError("name must not be blank")
         return cleaned
+
+    @field_validator("auto_analyze")
+    @classmethod
+    def require_auto_analyze(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("auto_analyze must be enabled")
+        return True
 
     @field_validator("keywords", mode="before")
     @classmethod

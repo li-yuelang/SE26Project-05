@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.learning import PaperComparison
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,11 @@ class CompareService:
     async def create_comparison(
         self, db: AsyncSession, user: User, title: str, paper_ids: list[UUID],
     ) -> dict:
-        papers = (await db.scalars(select(Paper).where(Paper.id.in_(paper_ids)))).all()
+        papers = (
+            await db.scalars(
+                select(Paper).join(UserPaper).where(Paper.id.in_(paper_ids), UserPaper.user_id == user.id)
+            )
+        ).all()
         if len(papers) < 2:
             raise ValueError("At least 2 valid papers are required for comparison")
 
@@ -78,7 +82,11 @@ class CompareService:
             raise ValueError("Comparison not found")
 
         paper_uuids = [UUID(pid) for pid in comparison.paper_ids]
-        papers = (await db.scalars(select(Paper).where(Paper.id.in_(paper_uuids)))).all()
+        papers = (
+            await db.scalars(
+                select(Paper).join(UserPaper).where(Paper.id.in_(paper_uuids), UserPaper.user_id == user.id)
+            )
+        ).all()
 
         papers_data = []
         unanalysed_ids: list[UUID] = []
@@ -109,6 +117,9 @@ class CompareService:
         report_content = comparison.report_content
         if not report_content:
             report_content = await self._generate_report(papers_data, comparison.title)
+            if report_content:
+                comparison.report_content = report_content
+                await db.commit()
 
         return {
             "comparison_id": str(comparison.id),
@@ -156,6 +167,7 @@ class CompareService:
 
             llm = get_llm_gateway()
         except Exception:
+            logger.warning("Unable to initialise the LLM for comparison %r", title, exc_info=True)
             return None
 
         # Build a structured prompt with paper information
@@ -185,9 +197,11 @@ class CompareService:
 请控制在 1200 字以内，使用中文。
 """
         try:
+            logger.info("Generating AI comparison report for %d papers", len(papers_data))
             report = await llm.generate(prompt, system_prompt=system_prompt)
             return report if report else None
         except Exception:
+            logger.warning("AI comparison report generation failed", exc_info=True)
             return None
 
 

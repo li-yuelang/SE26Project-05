@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -7,7 +7,9 @@ import {
   Col,
   Empty,
   Flex,
+  Form,
   List,
+  Modal,
   Progress,
   Row,
   Segmented,
@@ -24,26 +26,29 @@ import {
   BellOutlined,
   BookOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FireOutlined,
   HistoryOutlined,
-  LinkOutlined,
   MailOutlined,
   PushpinOutlined,
+  PlusOutlined,
   ReadOutlined,
   ScheduleOutlined,
-  StarOutlined,
   TagsOutlined,
   TrophyOutlined,
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
+import { getLearningCenter } from '../services/learningService';
+import { addPaperToLibrary } from '../services/paperService';
 import {
-  getLearningCenter,
-  updateFollowedTopic,
-} from '../services/learningService';
-import {
+  createSubscription,
+  deleteSubscription,
   getSubscriptionFeed,
+  listSubscriptions,
   saveSubscriptionPreferences,
+  updateSubscription,
 } from '../services/subscriptionService';
 
 const { Paragraph, Text, Title } = Typography;
@@ -52,48 +57,139 @@ export default function Subscriptions() {
   const navigate = useNavigate();
   const resource = useAsyncResource(getLearningCenter, []);
   const feedResource = useAsyncResource(getSubscriptionFeed, []);
+  const subscriptionsResource = useAsyncResource(listSubscriptions, []);
+  const [subscriptionForm] = Form.useForm();
+  const managementRef = useRef(null);
   const dailyDigest = feedResource.data?.dailyDigest;
   const historyBasedRecommendations = feedResource.data?.historyBasedRecommendations || [];
   const learningPapers = resource.data?.papers || [];
   const readingHistory = resource.data?.readingHistory || [];
   const [activeTab, setActiveTab] = useState('digest');
-  const [topics, setTopics] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState(null);
+  const [subscriptionSaving, setSubscriptionSaving] = useState(false);
+  const [updatingSubscriptionId, setUpdatingSubscriptionId] = useState(null);
+  const [addingPaperIds, setAddingPaperIds] = useState(() => new Set());
+  const [addedPaperIds, setAddedPaperIds] = useState(() => new Set());
   const [digestEnabled, setDigestEnabled] = useState(true);
   const [pushTime, setPushTime] = useState('09:00');
   const [digestConfirmed, setDigestConfirmed] = useState(true);
 
   useEffect(() => {
-    if (resource.data) setTopics(resource.data.topics);
-  }, [resource.data]);
+    if (subscriptionsResource.data) setSubscriptions(subscriptionsResource.data);
+  }, [subscriptionsResource.data]);
 
   const followedCount = useMemo(
-    () => topics.filter((t) => t.followed).length,
-    [topics],
+    () => subscriptions.filter((subscription) => subscription.enabled).length,
+    [subscriptions],
   );
 
   const todayNewCount = useMemo(
-    () =>
-      topics
-        .filter((t) => t.followed)
-        .reduce((sum, t) => sum + t.newToday, 0),
-    [topics],
+    () => (dailyDigest?.topics || []).reduce((sum, topic) => sum + topic.newCount, 0),
+    [dailyDigest?.topics],
   );
 
-  const toggleTopic = async (topicId) => {
-    const topic = topics.find((t) => t.id === topicId);
-    if (!topic) return;
+  const openSubscriptionEditor = (subscription = null) => {
+    setEditingSubscription(subscription);
+    subscriptionForm.setFieldsValue({
+      categories: subscription?.categories || [],
+      enabled: subscription?.enabled ?? true,
+      frequency: subscription?.frequency || 'daily',
+      keywords: subscription?.keywords || [],
+    });
+    setEditorOpen(true);
+  };
+
+  const handleSubscriptionSubmit = async () => {
+    const values = await subscriptionForm.validateFields();
+    setSubscriptionSaving(true);
     try {
-      const updatedTopic = await updateFollowedTopic(topicId, !topic.followed);
-      setTopics((currentTopics) => currentTopics.map((item) => (
-        item.id === topicId ? updatedTopic : item
-      )));
-      message.success(
-        topic.followed ? `已取消关注「${topic.name}」` : `已关注「${topic.name}」`,
-      );
+      if (editingSubscription) {
+        const updated = await updateSubscription(editingSubscription.id, values);
+        setSubscriptions((current) => current.map((subscription) => (
+          subscription.id === updated.id ? updated : subscription
+        )));
+        message.success('订阅已更新');
+      } else {
+        const created = await createSubscription(values);
+        setSubscriptions((current) => [created, ...current]);
+        message.success('订阅已创建');
+      }
+      setEditorOpen(false);
+      setEditingSubscription(null);
+      subscriptionForm.resetFields();
+      await feedResource.reload();
     } catch (error) {
-      message.error(error.message || '主题关注状态更新失败');
+      if (error?.errorFields) return;
+      message.error(error.message || '订阅保存失败');
+    } finally {
+      setSubscriptionSaving(false);
     }
   };
+
+  const handleSubscriptionToggle = async (subscription, enabled) => {
+    setUpdatingSubscriptionId(subscription.id);
+    try {
+      const updated = await updateSubscription(subscription.id, { ...subscription, enabled });
+      setSubscriptions((current) => current.map((item) => (
+        item.id === updated.id ? updated : item
+      )));
+      message.success(enabled ? '订阅已启用' : '订阅已暂停');
+      await feedResource.reload();
+    } catch (error) {
+      message.error(error.message || '订阅状态更新失败');
+    } finally {
+      setUpdatingSubscriptionId(null);
+    }
+  };
+
+  const handleSubscriptionDelete = (subscription) => {
+    Modal.confirm({
+      title: '删除订阅？',
+      content: `删除后将不再推送与「${subscription.name}」相关的论文摘要。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteSubscription(subscription.id);
+          setSubscriptions((current) => current.filter((item) => item.id !== subscription.id));
+          message.success('订阅已删除');
+          await feedResource.reload();
+        } catch (error) {
+          message.error(error.message || '订阅删除失败');
+          throw error;
+        }
+      },
+    });
+  };
+
+  const showSubscriptionManagement = () => {
+    setActiveTab('topics');
+    window.requestAnimationFrame(() => {
+      managementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleAddPaperToLibrary = async (paper) => {
+    setAddingPaperIds((current) => new Set(current).add(paper.id));
+    try {
+      const result = await addPaperToLibrary(paper.id);
+      setAddedPaperIds((current) => new Set(current).add(paper.id));
+      message.success(result.added ? '已加入论文列表' : '该论文已在论文列表中');
+    } catch (error) {
+      message.error(error.message || '加入论文列表失败');
+    } finally {
+      setAddingPaperIds((current) => {
+        const next = new Set(current);
+        next.delete(paper.id);
+        return next;
+      });
+    }
+  };
+
+  const isPaperInLibrary = (paper) => paper.inLibrary || addedPaperIds.has(paper.id);
 
   const handlePushTimeChange = async (value) => {
     setPushTime(value);
@@ -176,19 +272,22 @@ export default function Subscriptions() {
                       type="primary"
                       size="small"
                       icon={<ReadOutlined />}
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      href={paper.arxivUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      disabled={!paper.arxivUrl}
                     >
                       阅读
                     </Button>,
                     <Button
-                      key="arxiv"
-                      type="link"
+                      key="add"
                       size="small"
-                      icon={<LinkOutlined />}
-                      href={`https://arxiv.org/abs/${paper.id}`}
-                      target="_blank"
+                      icon={<BookOutlined />}
+                      loading={addingPaperIds.has(paper.id)}
+                      disabled={isPaperInLibrary(paper)}
+                      onClick={() => handleAddPaperToLibrary(paper)}
                     >
-                      arXiv
+                      {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                     </Button>,
                   ]}
                 >
@@ -198,7 +297,7 @@ export default function Subscriptions() {
                         <Text
                           strong
                           className="subscriptions-paper-link"
-                          onClick={() => navigate(`/papers/${paper.id}`)}
+                          onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                         >
                           {paper.title}
                         </Text>
@@ -233,12 +332,7 @@ export default function Subscriptions() {
 
   // ---- 主题推荐 ----
   const renderTopicRecommendations = () => {
-    const followedTopicIds = topics
-      .filter((t) => t.followed)
-      .map((t) => t.id);
-
     const allHighlightPapers = dailyDigest.topics
-      .filter((tg) => followedTopicIds.includes(tg.topicId))
       .flatMap((tg) =>
         tg.highlights.map((p) => ({
           ...p,
@@ -278,27 +372,22 @@ export default function Subscriptions() {
                       type="primary"
                       size="small"
                       icon={<ReadOutlined />}
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      href={paper.arxivUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      disabled={!paper.arxivUrl}
                     >
                       阅读
                     </Button>,
                     <Button
-                      key="save"
+                      key="add"
                       size="small"
                       icon={<BookOutlined />}
-                      onClick={() => message.success('已加入阅读队列')}
+                      loading={addingPaperIds.has(paper.id)}
+                      disabled={isPaperInLibrary(paper)}
+                      onClick={() => handleAddPaperToLibrary(paper)}
                     >
-                      加入队列
-                    </Button>,
-                    <Button
-                      key="arxiv"
-                      type="link"
-                      size="small"
-                      icon={<LinkOutlined />}
-                      href={`https://arxiv.org/abs/${paper.id}`}
-                      target="_blank"
-                    >
-                      arXiv
+                      {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                     </Button>,
                   ]}
                 >
@@ -323,7 +412,7 @@ export default function Subscriptions() {
                         <Text
                           strong
                           className="subscriptions-paper-link"
-                          onClick={() => navigate(`/papers/${paper.id}`)}
+                          onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                         >
                           {paper.title}
                         </Text>
@@ -352,7 +441,7 @@ export default function Subscriptions() {
 
   // ---- 订阅管理 ----
   const renderTopicManagement = () => (
-    <div className="subscriptions-section">
+    <div className="subscriptions-section" ref={managementRef}>
       <Card
         variant="borderless"
         title={
@@ -362,94 +451,79 @@ export default function Subscriptions() {
           </Space>
         }
         extra={
-          <Text type="secondary">
-            已关注 {followedCount} / {topics.length} 个主题
-          </Text>
+          <Space>
+            <Text type="secondary">
+              已启用 {followedCount} / {subscriptions.length} 个订阅
+            </Text>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openSubscriptionEditor()}
+            >
+              新增订阅
+            </Button>
+          </Space>
         }
       >
-        <Row gutter={[16, 16]} className="subscriptions-topic-grid">
-          {topics.map((topic) => (
-            <Col xs={24} md={12} key={topic.id}>
-              <Card
-                variant="borderless"
-                className={
-                  topic.followed
-                    ? 'subscriptions-topic-card subscriptions-topic-card--active'
-                    : 'subscriptions-topic-card'
-                }
-                size="small"
+        <List
+          dataSource={subscriptions}
+          locale={{ emptyText: <Empty description="暂无订阅主题，请先新增订阅" /> }}
+          renderItem={(subscription) => (
+            <List.Item
+              className="subscriptions-management-item"
+              actions={[
+                <Switch
+                  key="enabled"
+                  checked={subscription.enabled}
+                  checkedChildren="已启用"
+                  unCheckedChildren="已暂停"
+                  loading={updatingSubscriptionId === subscription.id}
+                  onChange={(enabled) => handleSubscriptionToggle(subscription, enabled)}
+                />,
+                <Button
+                  key="edit"
+                  type="text"
+                  icon={<EditOutlined />}
+                  title="编辑订阅"
+                  onClick={() => openSubscriptionEditor(subscription)}
+                />,
+                <Button
+                  key="delete"
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  title="删除订阅"
+                  onClick={() => handleSubscriptionDelete(subscription)}
+                />,
+              ]}
+            >
+              <List.Item.Meta
                 title={
-                  <Flex align="center" justify="space-between" gap={8}>
-                    <Text strong>{topic.name}</Text>
-                    <Switch
-                      checked={topic.followed}
-                      onChange={() => toggleTopic(topic.id)}
-                      checkedChildren="已关注"
-                      unCheckedChildren="未关注"
-                    />
-                  </Flex>
-                }
-              >
-                <Space orientation="vertical" size={10} className="subscriptions-topic-body">
-                  <Row gutter={[16, 8]}>
-                    <Col span={8}>
-                      <Statistic
-                        title="收录论文"
-                        value={topic.paperCount}
-                        suffix="篇"
-                        valueStyle={{ fontSize: '1.1rem' }}
-                      />
-                    </Col>
-                    <Col span={8}>
-                      <Statistic
-                        title="今日新增"
-                        value={topic.newToday}
-                        suffix="篇"
-                        valueStyle={{
-                          fontSize: '1.1rem',
-                          color: topic.newToday > 0 ? '#ff4d4f' : undefined,
-                        }}
-                      />
-                    </Col>
-                    <Col span={8}>
-                      <Statistic
-                        title="匹配度"
-                        value={topic.matchRate}
-                        suffix="%"
-                        valueStyle={{ fontSize: '1.1rem' }}
-                      />
-                    </Col>
-                  </Row>
-                  <div>
-                    <Text type="secondary">匹配度趋势</Text>
-                    <Progress
-                      percent={topic.matchRate}
-                      size="small"
-                      strokeColor={
-                        topic.matchRate >= 80
-                          ? '#52c41a'
-                          : topic.matchRate >= 60
-                            ? '#4f6ef7'
-                            : '#faad14'
-                      }
-                    />
-                  </div>
-                  <Flex align="center" gap={6}>
-                    <ScheduleOutlined />
-                    <Text type="secondary">推送频率：{topic.digestTime}</Text>
-                  </Flex>
-                  <Space size={[6, 6]} wrap>
-                    {topic.keywords.map((kw) => (
-                      <Tag key={kw} color={topic.followed ? 'blue' : 'default'}>
-                        {kw}
-                      </Tag>
-                    ))}
+                  <Space wrap>
+                    <Text strong>{subscription.name}</Text>
+                    <Tag color={subscription.frequency === 'daily' ? 'blue' : 'geekblue'}>
+                      {subscription.frequency === 'daily' ? '每日推送' : '每周推送'}
+                    </Tag>
                   </Space>
-                </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                }
+                description={
+                  <Space orientation="vertical" size={6}>
+                    <Space size={[6, 6]} wrap>
+                      {subscription.keywords.map((keyword) => (
+                        <Tag key={keyword}>{keyword}</Tag>
+                      ))}
+                    </Space>
+                    {subscription.categories.length > 0 && (
+                      <Text type="secondary">
+                        arXiv 分类：{subscription.categories.join(', ')}
+                      </Text>
+                    )}
+                  </Space>
+                }
+              />
+            </List.Item>
+          )}
+        />
       </Card>
     </div>
   );
@@ -483,17 +557,22 @@ export default function Subscriptions() {
                   type="primary"
                   size="small"
                   icon={<ReadOutlined />}
-                  onClick={() => navigate(`/papers/${paper.id}`)}
+                  href={paper.arxivUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  disabled={!paper.arxivUrl}
                 >
                   阅读
                 </Button>,
                 <Button
-                  key="save"
+                  key="add"
                   size="small"
                   icon={<BookOutlined />}
-                  onClick={() => message.success('已加入阅读队列')}
+                  loading={addingPaperIds.has(paper.id)}
+                  disabled={isPaperInLibrary(paper)}
+                  onClick={() => handleAddPaperToLibrary(paper)}
                 >
-                  加入队列
+                  {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
                 </Button>,
               ]}
             >
@@ -518,7 +597,7 @@ export default function Subscriptions() {
                     <Text
                       strong
                       className="subscriptions-paper-link"
-                      onClick={() => navigate(`/papers/${paper.id}`)}
+                      onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
                     >
                       {paper.title}
                     </Text>
@@ -607,15 +686,20 @@ export default function Subscriptions() {
     </div>
   );
 
-  if (resource.loading || resource.error || feedResource.loading || feedResource.error) {
+  if (
+    resource.loading || resource.error
+    || feedResource.loading || feedResource.error
+    || subscriptionsResource.loading || subscriptionsResource.error
+  ) {
     return (
       <main className="subscriptions-page">
         <AsyncPageState
-          loading={resource.loading || feedResource.loading}
-          error={resource.error || feedResource.error}
+          loading={resource.loading || feedResource.loading || subscriptionsResource.loading}
+          error={resource.error || feedResource.error || subscriptionsResource.error}
           onRetry={() => {
             resource.reload();
             feedResource.reload();
+            subscriptionsResource.reload();
           }}
         />
       </main>
@@ -646,7 +730,7 @@ export default function Subscriptions() {
           >
             立即推送
           </Button>
-          <Button icon={<ScheduleOutlined />} onClick={() => setActiveTab('topics')}>
+          <Button icon={<ScheduleOutlined />} onClick={showSubscriptionManagement}>
             管理订阅
           </Button>
         </Space>
@@ -659,7 +743,7 @@ export default function Subscriptions() {
             <Statistic
               title="已订阅主题"
               value={followedCount}
-              suffix={`/ ${topics.length}`}
+              suffix={`/ ${subscriptions.length}`}
               prefix={<TagsOutlined />}
             />
           </Card>
@@ -722,6 +806,51 @@ export default function Subscriptions() {
       {activeTab === 'topics' && renderTopicManagement()}
       {activeTab === 'history' && renderHistoryRecommendations()}
       {activeTab === 'timeline' && renderReadingTimeline()}
+
+      <Modal
+        title={editingSubscription ? '编辑订阅' : '新增订阅'}
+        open={editorOpen}
+        okText={editingSubscription ? '保存' : '创建'}
+        cancelText="取消"
+        confirmLoading={subscriptionSaving}
+        onOk={handleSubscriptionSubmit}
+        onCancel={() => {
+          setEditorOpen(false);
+          setEditingSubscription(null);
+          subscriptionForm.resetFields();
+        }}
+        forceRender
+      >
+        <Form form={subscriptionForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="keywords"
+            label="主题关键词"
+            rules={[{ required: true, type: 'array', min: 1, message: '请至少输入一个主题关键词' }]}
+          >
+            <Select
+              mode="tags"
+              tokenSeparators={[',']}
+              placeholder="例如：RAG、scientific question answering"
+            />
+          </Form.Item>
+          <Form.Item name="categories" label="arXiv 分类（可选）">
+            <Select
+              mode="tags"
+              tokenSeparators={[',']}
+              placeholder="例如：cs.AI、cs.CL"
+            />
+          </Form.Item>
+          <Form.Item name="frequency" label="推送频率" rules={[{ required: true }]}>
+            <Select options={[
+              { label: '每日推送', value: 'daily' },
+              { label: '每周推送', value: 'weekly' },
+            ]} />
+          </Form.Item>
+          <Form.Item name="enabled" label="订阅状态" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="暂停" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </main>
   );
 }

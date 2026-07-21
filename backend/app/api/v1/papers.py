@@ -12,7 +12,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.config import settings
 from app.core.embedding import EmbeddingProviderError, get_embedding_provider
 from app.core.exceptions import AppError
-from app.models.paper import Paper, PaperAnalysisRun, PaperChunk
+from app.models.paper import Paper, PaperAnalysisRun, PaperChunk, UserPaper
 from app.schemas.common import success
 from app.schemas.paper import (
     PaperBatchRequest,
@@ -93,7 +93,7 @@ async def list_papers(
         page=page,
         page_size=page_size,
     )
-    items, total = await paper_service.list_papers(db, params)
+    items, total = await paper_service.list_papers(db, user.id, params)
     resp = PaperListResponse(
         items=items,
         total=total,
@@ -103,14 +103,30 @@ async def list_papers(
     return success(resp.model_dump(by_alias=True))
 
 
+@router.post("/{paper_id}/library")
+async def add_paper_to_library(
+    paper_id: UUID,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    paper, added = await paper_service.add_paper_to_library(db, user.id, paper_id)
+    return success(
+        {
+            "added": added,
+            "paperId": str(paper.id),
+            "arxivId": paper.arxiv_id,
+        },
+        "Paper added to library" if added else "Paper already in library",
+    )
+
+
 @router.delete("/batch")
 async def delete_papers(
     body: PaperBatchRequest,
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    del user
-    deleted_ids = await paper_service.delete_papers(db, body.paper_ids)
+    deleted_ids = await paper_service.delete_papers(db, user.id, body.paper_ids)
     return success(
         {
             "deletedIds": [str(paper_id) for paper_id in deleted_ids],
@@ -123,6 +139,7 @@ async def delete_papers(
 @router.get("/search/semantic")
 async def semantic_search(
     db: DbSession,
+    user: CurrentUser,
     q: str = Query(min_length=1, max_length=2000),
     paper_id: UUID | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
@@ -143,8 +160,10 @@ async def semantic_search(
     statement = (
         select(PaperChunk, Paper, score)
         .join(Paper, Paper.id == PaperChunk.paper_id)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
         .where(
             PaperChunk.embedding.is_not(None),
+            UserPaper.user_id == user.id,
             or_(
                 Paper.active_analysis_run_id.is_(None),
                 PaperChunk.analysis_run_id == Paper.active_analysis_run_id,
@@ -172,8 +191,10 @@ async def semantic_search(
 
 
 @router.get("/{paper_id}/analysis")
-async def get_analysis(paper_id: UUID, db: DbSession) -> dict[str, Any]:
-    paper = await db.get(Paper, paper_id)
+async def get_analysis(paper_id: UUID, db: DbSession, user: CurrentUser) -> dict[str, Any]:
+    paper = await db.scalar(
+        select(Paper).join(UserPaper).where(Paper.id == paper_id, UserPaper.user_id == user.id)
+    )
     if paper is None:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
     run = await get_current_analysis_run(db, paper_id)
@@ -191,7 +212,6 @@ async def trigger_analysis(
     # compatibility branch keeps those tests useful; real AsyncSession always
     # takes the transactional outbox path below.
     if not hasattr(db, "add"):
-        del current_user
         paper = await db.scalar(select(Paper).where(Paper.id == paper_id).with_for_update())
         if paper is None:
             raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
@@ -221,7 +241,12 @@ async def trigger_analysis(
         await db.commit()
         return success(_analysis_view(paper), "analysis task queued")
 
-    paper = await db.scalar(select(Paper).where(Paper.id == paper_id).with_for_update())
+    paper = await db.scalar(
+        select(Paper)
+        .join(UserPaper)
+        .where(Paper.id == paper_id, UserPaper.user_id == current_user.id)
+        .with_for_update()
+    )
     if paper is None:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
     try:
@@ -276,7 +301,7 @@ async def get_paper_chunk(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    return success(await paper_service.get_paper_chunk(db, paper_id, chunk_index))
+    return success(await paper_service.get_paper_chunk(db, user.id, paper_id, chunk_index))
 
 
 @router.patch("/{paper_id}")
@@ -286,7 +311,7 @@ async def update_paper(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    detail = await paper_service.update_paper(db, paper_id, body)
+    detail = await paper_service.update_paper(db, user.id, paper_id, body)
     return success(detail.model_dump(mode="json"))
 
 
@@ -296,6 +321,5 @@ async def delete_paper(
     db: DbSession,
     user: CurrentUser,
 ) -> Response:
-    del user
-    await paper_service.delete_paper(db, paper_id)
+    await paper_service.delete_paper(db, user.id, paper_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -6,11 +6,12 @@ from uuid import UUID
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
 from app.models.learning import Bookmark
-from app.models.paper import Paper, PaperChunk
+from app.models.paper import Paper, PaperChunk, UserPaper
 from app.schemas.paper import PaperDetail, PaperFilterParams, PaperListItem, PaperUpdateRequest
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,16 @@ logger = logging.getLogger(__name__)
 
 async def list_papers(
     db: AsyncSession,
+    user_id: UUID,
     params: PaperFilterParams,
 ) -> tuple[list[PaperListItem], int]:
     """分页查询论文列表，支持关键词搜索、分类筛选、日期范围。"""
-    query = select(Paper).order_by(Paper.published_at.desc().nullslast())
+    query = (
+        select(Paper)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
+        .where(UserPaper.user_id == user_id)
+        .order_by(Paper.published_at.desc().nullslast())
+    )
 
     # 全文搜索：使用 pg_trgm 或 ilike
     if params.query:
@@ -65,35 +72,34 @@ async def list_papers(
     return items, total
 
 
-async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID | None = None) -> PaperDetail:
+async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID) -> PaperDetail:
     """获取论文详情（含结构化内容和元数据）。"""
     paper = await db.scalar(
         select(Paper)
         .options(selectinload(Paper.concepts))
-        .where(Paper.id == paper_id)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
+        .where(Paper.id == paper_id, UserPaper.user_id == user_id)
     )
     if not paper:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
 
     detail = PaperDetail.model_validate(paper)
-    if user_id:
-        bookmark = await db.scalar(
-            select(Bookmark).where(
-                Bookmark.user_id == user_id,
-                Bookmark.paper_id == paper_id,
-            )
-        )
-        detail.is_favorite = bookmark is not None
+    bookmark = await db.scalar(
+        select(Bookmark).where(Bookmark.user_id == user_id, Bookmark.paper_id == paper_id)
+    )
+    detail.is_favorite = bookmark is not None
     return detail
 
 
-async def get_paper_chunk(db: AsyncSession, paper_id: UUID, chunk_index: int) -> dict:
+async def get_paper_chunk(db: AsyncSession, user_id: UUID, paper_id: UUID, chunk_index: int) -> dict:
     chunk = await db.scalar(
         select(PaperChunk)
         .join(Paper, Paper.id == PaperChunk.paper_id)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
         .where(
             PaperChunk.paper_id == paper_id,
             PaperChunk.chunk_index == chunk_index,
+            UserPaper.user_id == user_id,
             or_(
                 Paper.active_analysis_run_id.is_(None),
                 PaperChunk.analysis_run_id == Paper.active_analysis_run_id,
@@ -112,6 +118,7 @@ async def get_paper_chunk(db: AsyncSession, paper_id: UUID, chunk_index: int) ->
 
 async def update_paper(
     db: AsyncSession,
+    user_id: UUID,
     paper_id: UUID,
     changes: PaperUpdateRequest,
 ) -> PaperDetail:
@@ -119,33 +126,71 @@ async def update_paper(
     update_data = changes.model_dump(exclude_none=True)
     if not update_data:
         # 不需要更新，直接返回当前详情
-        return await get_paper_detail(db, paper_id)
+        return await get_paper_detail(db, paper_id, user_id)
+
+    membership = await db.scalar(
+        select(UserPaper.id).where(UserPaper.user_id == user_id, UserPaper.paper_id == paper_id)
+    )
+    if membership is None:
+        raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
 
     await db.execute(update(Paper).where(Paper.id == paper_id).values(**update_data))
     await db.commit()
-    return await get_paper_detail(db, paper_id)
+    return await get_paper_detail(db, paper_id, user_id)
 
 
-async def delete_paper(db: AsyncSession, paper_id: UUID) -> None:
-    """Delete a paper and its database-managed dependent records."""
+async def delete_paper(db: AsyncSession, user_id: UUID, paper_id: UUID) -> None:
+    """Remove a paper from one user's library without deleting cached content."""
+    membership = await db.scalar(
+        select(UserPaper).where(UserPaper.user_id == user_id, UserPaper.paper_id == paper_id)
+    )
+    if membership is None:
+        raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+    await db.delete(membership)
+    await db.commit()
+
+
+async def delete_papers(db: AsyncSession, user_id: UUID, paper_ids: list[UUID]) -> list[UUID]:
+    """Remove up to 100 papers from one user's library."""
+    unique_ids = list(dict.fromkeys(paper_ids))
+    memberships = (
+        await db.scalars(
+            select(UserPaper).where(UserPaper.user_id == user_id, UserPaper.paper_id.in_(unique_ids))
+        )
+    ).all()
+
+    for membership in memberships:
+        await db.delete(membership)
+    await db.commit()
+    return [membership.paper_id for membership in memberships]
+
+
+async def add_paper_to_library(
+    db: AsyncSession,
+    user_id: UUID,
+    paper_id: UUID,
+) -> tuple[Paper, bool]:
+    """Idempotently add a globally cached paper to one user's library."""
     paper = await db.get(Paper, paper_id)
     if paper is None:
-        raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+        raise AppError("推荐论文不存在", code="PAPER_NOT_FOUND", status_code=404)
 
-    await db.delete(paper)
-    await db.commit()
+    membership = await db.scalar(
+        select(UserPaper.id).where(UserPaper.user_id == user_id, UserPaper.paper_id == paper_id)
+    )
+    if membership is not None:
+        return paper, False
 
-
-async def delete_papers(db: AsyncSession, paper_ids: list[UUID]) -> list[UUID]:
-    """Delete up to 100 papers in one transaction, ignoring missing IDs."""
-    unique_ids = list(dict.fromkeys(paper_ids))
-    result = await db.scalars(select(Paper).where(Paper.id.in_(unique_ids)))
-    papers = result.all()
-
-    for paper in papers:
-        await db.delete(paper)
-    await db.commit()
-    return [paper.id for paper in papers]
+    db.add(UserPaper(user_id=user_id, paper_id=paper_id))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        refreshed_paper = await db.get(Paper, paper_id)
+        if refreshed_paper is None:
+            raise AppError("推荐论文不存在", code="PAPER_NOT_FOUND", status_code=404)
+        return refreshed_paper, False
+    return paper, True
 
 
 async def upsert_arxiv_papers(

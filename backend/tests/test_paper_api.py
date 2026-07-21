@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -58,6 +59,7 @@ def test_reparse_requires_authentication() -> None:
 
 def test_analysis_not_found_uses_shared_error_shape() -> None:
     app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uuid4())
     try:
         with TestClient(app) as client:
             response = client.get(f"/api/papers/{uuid4()}/analysis")
@@ -79,7 +81,7 @@ def test_delete_paper_returns_no_content() -> None:
     paper = make_paper()
     db = FakeSession(paper)
     app.dependency_overrides[get_db_session] = lambda: db
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uuid4())
     try:
         with TestClient(app) as client:
             response = client.delete(f"/api/papers/{paper.id}")
@@ -93,7 +95,7 @@ def test_delete_paper_returns_no_content() -> None:
 
 def test_delete_missing_paper_uses_shared_error_shape() -> None:
     app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uuid4())
     try:
         with TestClient(app) as client:
             response = client.delete(f"/api/papers/{uuid4()}")
@@ -107,14 +109,17 @@ def test_delete_missing_paper_uses_shared_error_shape() -> None:
 def test_batch_delete_returns_deleted_ids(monkeypatch) -> None:
     paper_ids = [uuid4(), uuid4()]
 
-    async def fake_delete_papers(db, requested_ids):
+    user = SimpleNamespace(id=uuid4())
+
+    async def fake_delete_papers(db, user_id, requested_ids):
         del db
+        assert user_id == user.id
         assert requested_ids == paper_ids
         return requested_ids
 
     monkeypatch.setattr(papers_api.paper_service, "delete_papers", fake_delete_papers)
     app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: user
     try:
         with TestClient(app) as client:
             response = client.request(
@@ -132,7 +137,39 @@ def test_batch_delete_returns_deleted_ids(monkeypatch) -> None:
     }
 
 
+def test_add_recommended_paper_to_library(monkeypatch) -> None:
+    user = SimpleNamespace(id=uuid4())
+    paper = make_paper()
+
+    async def fake_add_paper_to_library(db, user_id, paper_id):
+        del db
+        assert user_id == user.id
+        assert paper_id == paper.id
+        return paper, True
+
+    monkeypatch.setattr(
+        papers_api.paper_service,
+        "add_paper_to_library",
+        fake_add_paper_to_library,
+    )
+    app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        with TestClient(app) as client:
+            response = client.post(f"/api/papers/{paper.id}/library")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "added": True,
+        "paperId": str(paper.id),
+        "arxivId": paper.arxiv_id,
+    }
+
+
 def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
+    user = SimpleNamespace(id=uuid4())
     paper = make_paper()
     db = FakeSession(paper)
     calls: list[tuple[tuple, dict]] = []
@@ -143,7 +180,7 @@ def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
 
     monkeypatch.setattr(papers_api.process_paper, "delay", fake_delay)
     app.dependency_overrides[get_db_session] = lambda: db
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: user
     try:
         with TestClient(app) as client:
             first = client.post(f"/api/papers/{paper.id}/analysis")

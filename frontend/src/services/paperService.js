@@ -86,6 +86,11 @@ export const listPapers = createEndpoint({
   },
 });
 
+export const addPaperToLibrary = createEndpoint({
+  mock: (paperId) => ({ added: false, paperId }),
+  http: (paperId) => request(`/papers/${paperId}/library`, { method: 'POST' }),
+});
+
 export const getPaperDetail = createEndpoint({
   mock: (paperId) => {
     const paper = paperStore.find((item) => item.id === paperId);

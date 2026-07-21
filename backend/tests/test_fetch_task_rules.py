@@ -22,6 +22,17 @@ def test_keyword_configuration_deduplicates_and_defaults_to_or() -> None:
     assert request.keywords == ["rag", "retrieval"]
     assert request.categories == ["cs.AI"]
     assert request.keyword_match_mode == "or"
+    assert request.auto_analyze is True
+
+
+def test_new_task_requires_auto_analysis() -> None:
+    with pytest.raises(ValueError, match="auto_analyze must be enabled"):
+        TaskCreateRequest(
+            name="No analysis",
+            task_type="keyword",
+            keywords=["rag"],
+            auto_analyze=False,
+        )
 
 
 def test_task_configuration_rejects_invalid_combinations() -> None:
