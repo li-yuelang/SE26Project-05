@@ -5,7 +5,12 @@ from typing import Any, Protocol
 import httpx
 
 from app.config import Settings, settings
-from app.core._debug_log import log_embedding_request, log_embedding_response
+
+try:
+    from app.core._debug_log import log_embedding_request, log_embedding_response  # type: ignore[unused-ignore]
+except ImportError:
+    def log_embedding_request(*args, **kwargs) -> None: pass
+    def log_embedding_response(*args, **kwargs) -> None: pass
 
 
 class EmbeddingProviderError(RuntimeError):

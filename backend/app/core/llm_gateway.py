@@ -6,7 +6,12 @@ from typing import Any, Protocol
 import httpx
 
 from app.config import Settings, settings
-from app.core._debug_log import log_llm_request, log_llm_response
+
+try:
+    from app.core._debug_log import log_llm_request, log_llm_response  # type: ignore[unused-ignore]
+except ImportError:
+    def log_llm_request(*args, **kwargs) -> None: pass
+    def log_llm_response(*args, **kwargs) -> None: pass
 
 
 class LLMProviderError(RuntimeError):
