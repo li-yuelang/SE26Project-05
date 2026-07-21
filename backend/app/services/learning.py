@@ -9,12 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.learning import Bookmark, Comment, FollowedTopic, Note, ReadingHistory
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.user import User
 
 
 class LearningService:
     """Stateless service for learning-related CRUD operations."""
+
+    @staticmethod
+    async def _get_owned_paper(db: AsyncSession, user_id: UUID, paper_id: UUID) -> Paper | None:
+        return await db.scalar(
+            select(Paper)
+            .join(UserPaper, UserPaper.paper_id == Paper.id)
+            .where(Paper.id == paper_id, UserPaper.user_id == user_id)
+        )
 
     # ------------------------------------------------------------------
     # Dashboard overview
@@ -55,7 +63,7 @@ class LearningService:
     # Bookmarks
     # ------------------------------------------------------------------
     async def add_bookmark(self, db: AsyncSession, user: User, paper_id: UUID, folder: str | None) -> dict:
-        paper = await db.get(Paper, paper_id)
+        paper = await self._get_owned_paper(db, user.id, paper_id)
         if paper is None:
             raise ValueError("Paper not found")
 
@@ -102,7 +110,7 @@ class LearningService:
         self, db: AsyncSession, user: User, paper_id: UUID, content: str,
         anchor: dict | None = None, is_public: bool = False,
     ) -> dict:
-        paper = await db.get(Paper, paper_id)
+        paper = await self._get_owned_paper(db, user.id, paper_id)
         if paper is None:
             raise ValueError("Paper not found")
         note = Note(user_id=user.id, paper_id=paper_id, content=content, anchor=anchor, is_public=is_public)
@@ -128,7 +136,7 @@ class LearningService:
             note.is_public = is_public
         await db.commit()
         await db.refresh(note)
-        paper = await db.get(Paper, note.paper_id)
+        paper = await self._get_owned_paper(db, user.id, note.paper_id)
         return self._serialise_note(note, paper)
 
     async def delete_note(self, db: AsyncSession, user: User, note_id: UUID) -> None:
@@ -155,7 +163,7 @@ class LearningService:
         self, db: AsyncSession, user: User, paper_id: UUID,
         content: str, anchor: dict | None = None,
     ) -> dict:
-        paper = await db.get(Paper, paper_id)
+        paper = await self._get_owned_paper(db, user.id, paper_id)
         if paper is None:
             raise ValueError("Paper not found")
         comment = Comment(user_id=user.id, paper_id=paper_id, content=content, anchor=anchor)
@@ -172,10 +180,10 @@ class LearningService:
         await db.commit()
 
     async def list_comments(
-        self, db: AsyncSession, paper_id: UUID | None = None,
+        self, db: AsyncSession, user: User, paper_id: UUID | None = None,
         page: int = 1, page_size: int = 20,
     ) -> tuple[list[dict], int]:
-        stmt = select(Comment)
+        stmt = select(Comment).where(Comment.user_id == user.id)
         if paper_id:
             stmt = stmt.where(Comment.paper_id == paper_id)
         stmt = stmt.order_by(Comment.created_at.desc())
@@ -187,7 +195,7 @@ class LearningService:
     async def record_reading(
         self, db: AsyncSession, user: User, paper_id: UUID, progress: int,
     ) -> dict:
-        paper = await db.get(Paper, paper_id)
+        paper = await self._get_owned_paper(db, user.id, paper_id)
         if paper is None:
             raise ValueError("Paper not found")
 

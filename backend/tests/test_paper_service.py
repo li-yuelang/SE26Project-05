@@ -89,7 +89,7 @@ def test_upsert_all_new_papers() -> None:
         return None
 
     db.scalar = fake_scalar
-    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, raw))
+    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, raw, uuid4()))
     assert inserted == 2
     assert skipped == 0
     assert db.commit_called
@@ -125,7 +125,7 @@ def test_upsert_duplicates_skipped() -> None:
 
     db.scalar = fake_scalar
     import asyncio
-    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, raw))
+    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, raw, uuid4()))
     assert inserted == 0
     assert skipped == 1
 
@@ -133,7 +133,7 @@ def test_upsert_duplicates_skipped() -> None:
 def test_upsert_empty_list() -> None:
     db = UpsertFakeSession()
     import asyncio
-    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, []))
+    inserted, skipped = asyncio.run(upsert_arxiv_papers(db, [], uuid4()))
     assert inserted == 0
     assert skipped == 0
     assert not db.commit_called

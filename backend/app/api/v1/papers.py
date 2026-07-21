@@ -12,7 +12,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.config import settings
 from app.core.embedding import EmbeddingProviderError, get_embedding_provider
 from app.core.exceptions import AppError
-from app.models.paper import Paper, PaperChunk
+from app.models.paper import Paper, PaperChunk, UserPaper
 from app.schemas.common import success
 from app.schemas.paper import PaperFilterParams, PaperListResponse, PaperUpdateRequest
 from app.services import paper_service
@@ -64,7 +64,7 @@ async def list_papers(
         page=page,
         page_size=page_size,
     )
-    items, total = await paper_service.list_papers(db, params)
+    items, total = await paper_service.list_papers(db, user.id, params)
     resp = PaperListResponse(
         items=items,
         total=total,
@@ -77,6 +77,7 @@ async def list_papers(
 @router.get("/search/semantic")
 async def semantic_search(
     db: DbSession,
+    user: CurrentUser,
     q: str = Query(min_length=1, max_length=2000),
     paper_id: UUID | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
@@ -97,7 +98,8 @@ async def semantic_search(
     statement = (
         select(PaperChunk, Paper, score)
         .join(Paper, Paper.id == PaperChunk.paper_id)
-        .where(PaperChunk.embedding.is_not(None))
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
+        .where(PaperChunk.embedding.is_not(None), UserPaper.user_id == user.id)
     )
     if paper_id:
         statement = statement.where(PaperChunk.paper_id == paper_id)
@@ -120,8 +122,10 @@ async def semantic_search(
 
 
 @router.get("/{paper_id}/analysis")
-async def get_analysis(paper_id: UUID, db: DbSession) -> dict[str, Any]:
-    paper = await db.get(Paper, paper_id)
+async def get_analysis(paper_id: UUID, db: DbSession, user: CurrentUser) -> dict[str, Any]:
+    paper = await db.scalar(
+        select(Paper).join(UserPaper).where(Paper.id == paper_id, UserPaper.user_id == user.id)
+    )
     if paper is None:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
     return success(_analysis_view(paper))
@@ -134,8 +138,12 @@ async def trigger_analysis(
     current_user: CurrentUser,
     force: bool = Query(default=False),
 ) -> dict[str, Any]:
-    del current_user
-    paper = await db.scalar(select(Paper).where(Paper.id == paper_id).with_for_update())
+    paper = await db.scalar(
+        select(Paper)
+        .join(UserPaper)
+        .where(Paper.id == paper_id, UserPaper.user_id == current_user.id)
+        .with_for_update()
+    )
     if paper is None:
         raise AppError("论文不存在", code="PAPER_NOT_FOUND", status_code=404)
 
@@ -165,7 +173,9 @@ async def trigger_analysis(
     try:
         async_result = process_paper.delay(str(paper.id), force=force)
         task_id = getattr(async_result, "id", None)
-        refreshed = await db.get(Paper, paper.id)
+        refreshed = await db.scalar(
+            select(Paper).join(UserPaper).where(Paper.id == paper.id, UserPaper.user_id == current_user.id)
+        )
         if refreshed is not None and refreshed.parsed_status == "processing":
             refreshed.metadata_extra = {
                 **(refreshed.metadata_extra or {}),
@@ -179,7 +189,9 @@ async def trigger_analysis(
         else:
             paper = refreshed or paper
     except Exception as exc:
-        paper = await db.get(Paper, paper.id)
+        paper = await db.scalar(
+            select(Paper).join(UserPaper).where(Paper.id == paper.id, UserPaper.user_id == current_user.id)
+        )
         if paper is not None:
             paper.parsed_status = "failed"
             paper.metadata_extra = {
@@ -208,7 +220,7 @@ async def get_paper_detail(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    detail = await paper_service.get_paper_detail(db, paper_id)
+    detail = await paper_service.get_paper_detail(db, user.id, paper_id)
     return success(detail.model_dump(mode="json"))
 
 
@@ -219,7 +231,7 @@ async def get_paper_chunk(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    return success(await paper_service.get_paper_chunk(db, paper_id, chunk_index))
+    return success(await paper_service.get_paper_chunk(db, user.id, paper_id, chunk_index))
 
 
 @router.patch("/{paper_id}")
@@ -229,5 +241,5 @@ async def update_paper(
     db: DbSession,
     user: CurrentUser,
 ) -> dict:
-    detail = await paper_service.update_paper(db, paper_id, body)
+    detail = await paper_service.update_paper(db, user.id, paper_id, body)
     return success(detail.model_dump(mode="json"))

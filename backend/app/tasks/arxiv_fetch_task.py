@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.models.paper import Paper
+from app.models.paper import Paper, UserPaper
 from app.models.task import FetchTask, FetchTaskRun, FetchTaskRunPaper
 from app.services.arxiv_fetch import ArxivFetchError, build_search_query, fetch_arxiv_window
 from app.services.task_service import (
@@ -120,6 +120,12 @@ async def _persist_candidates(
             unique_candidates.append(candidate)
 
         candidate_ids = [candidate["arxiv_id"] for candidate in unique_candidates]
+        owner_id = (
+            await db.scalar(select(FetchTask.creator_id).where(FetchTask.id == run.task_id))
+        )
+        if owner_id is None:
+            raise ValueError(f"FetchTask owner not found: {run.task_id}")
+
         existing_ids: set[str] = set()
         if candidate_ids:
             existing_ids = set(
@@ -164,7 +170,9 @@ async def _persist_candidates(
                 # non-Postgres test database; production uses the atomic PG
                 # upsert above.
                 for value in values:
-                    duplicate = await db.scalar(select(Paper).where(Paper.arxiv_id == value["arxiv_id"]))
+                    duplicate = await db.scalar(
+                        select(Paper).where(Paper.arxiv_id == value["arxiv_id"])
+                    )
                     if duplicate is None:
                         db.add(Paper(**value))
                         inserted_ids.add(value["arxiv_id"])
@@ -175,13 +183,27 @@ async def _persist_candidates(
             paper_rows = {
                 paper.arxiv_id: paper
                 for paper in (
-                    await db.scalars(select(Paper).where(Paper.arxiv_id.in_(candidate_ids)))
+                    await db.scalars(
+                        select(Paper).where(Paper.arxiv_id.in_(candidate_ids))
+                    )
                 ).all()
             }
         for candidate in unique_candidates:
             paper = paper_rows.get(candidate["arxiv_id"])
             if paper is None:
                 continue
+            if db.get_bind().dialect.name == "postgresql":
+                await db.execute(
+                    pg_insert(UserPaper)
+                    .values(user_id=owner_id, paper_id=paper.id)
+                    .on_conflict_do_nothing(index_elements=[UserPaper.user_id, UserPaper.paper_id])
+                )
+            else:
+                linked = await db.scalar(
+                    select(UserPaper.id).where(UserPaper.user_id == owner_id, UserPaper.paper_id == paper.id)
+                )
+                if linked is None:
+                    db.add(UserPaper(user_id=owner_id, paper_id=paper.id))
             db.add(
                 FetchTaskRunPaper(
                     run_id=run.id,

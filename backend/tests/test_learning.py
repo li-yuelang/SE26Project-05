@@ -74,7 +74,8 @@ class FakeDBSession:
         self.commit_called = False
 
     async def scalar(self, statement):
-        del statement
+        if "user_papers" in str(statement):
+            return self._get
         return self._scalar
 
     async def scalars(self, statement):

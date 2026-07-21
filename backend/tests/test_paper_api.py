@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -54,6 +55,7 @@ def test_reparse_requires_authentication() -> None:
 
 def test_analysis_not_found_uses_shared_error_shape() -> None:
     app.dependency_overrides[get_db_session] = lambda: FakeSession(None)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uuid4())
     try:
         with TestClient(app) as client:
             response = client.get(f"/api/papers/{uuid4()}/analysis")
@@ -65,6 +67,7 @@ def test_analysis_not_found_uses_shared_error_shape() -> None:
 
 
 def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
+    user = SimpleNamespace(id=uuid4())
     paper = make_paper()
     db = FakeSession(paper)
     calls: list[tuple[tuple, dict]] = []
@@ -75,7 +78,7 @@ def test_processing_analysis_request_is_idempotent(monkeypatch) -> None:
 
     monkeypatch.setattr(papers_api.process_paper, "delay", fake_delay)
     app.dependency_overrides[get_db_session] = lambda: db
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: user
     try:
         with TestClient(app) as client:
             first = client.post(f"/api/papers/{paper.id}/analysis")
