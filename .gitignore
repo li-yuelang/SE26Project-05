@@ -54,3 +54,5 @@ backend/*_output.txt
 backend/cancel_all_analysis.py
 backend/tests/test_extraction_standalone.py
 backend/tests/test_extraction_real_pdf.py
+backend/test_embedding.py
+backend/app/core/_debug_log.py
