@@ -33,6 +33,7 @@ def _make_paper(paper_id=None, **kwargs):
         primary_category=kwargs.get("primary_category", "cs.AI"),
         published_at=kwargs.get("published_at", datetime.now(timezone.utc)),
         structured_content=kwargs.get("structured_content", {}),
+        parsed_status=kwargs.get("parsed_status", "completed"),
     )
 
 
