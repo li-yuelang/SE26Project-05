@@ -50,6 +50,8 @@ CLAUDE.md
 celerybeat-schedule*
 
 # Test artifacts & utilities
+scripts/
+backend/scripts/
 backend/*.pdf
 backend/*_output.txt
 backend/cancel_all_analysis.py

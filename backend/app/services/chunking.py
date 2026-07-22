@@ -103,6 +103,7 @@ class SemanticChunker:
     @staticmethod
     def _make_chunk(index: int, section_title: str | None, paragraphs: list[str]) -> PaperTextChunk:
         content = "\n\n".join(paragraph for paragraph in paragraphs if paragraph).strip()
+        content = content.replace("\x00", "")
         return PaperTextChunk(
             chunk_index=index,
             section_title=section_title,
