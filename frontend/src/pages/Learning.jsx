@@ -431,7 +431,7 @@ export default function Learning() {
         columns={paperColumns}
         dataSource={visiblePapers}
         rowSelection={rowSelection}
-        pagination={{ pageSize: 5, showTotal: (total) => `共 ${total} 篇论文` }}
+        pagination={{ defaultPageSize: 5, pageSizeOptions: ['5', '10', '20', '50'], showTotal: (total) => `共 ${total} 篇论文`, showSizeChanger: true }}
         scroll={{ x: 980 }}
         locale={{ emptyText: <Empty description="没有找到匹配的论文" /> }}
       />
