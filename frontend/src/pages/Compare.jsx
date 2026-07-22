@@ -105,11 +105,7 @@ export default function Compare() {
     const initialPaperIds = location.state?.paperIds?.filter((paperId) =>
       papers.some((paper) => paper.id === paperId),
     );
-    setSelectedPaperIds(
-      initialPaperIds?.length >= 2
-        ? initialPaperIds.slice(0, 4)
-        : papers.slice(0, 3).map((paper) => paper.id),
-    );
+    setSelectedPaperIds(initialPaperIds?.length >= 2 ? initialPaperIds.slice(0, 4) : []);
     selectionInitialized.current = true;
   }, [location.state, papers]);
 
@@ -315,7 +311,7 @@ export default function Compare() {
   };
 
   const restoreDefaultSelection = () => {
-    setSelectedPaperIds(papers.slice(0, 3).map((paper) => paper.id));
+    setSelectedPaperIds([]);
     setComparisonId(null);
     setComparisonReport('');
   };
