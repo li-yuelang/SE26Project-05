@@ -360,7 +360,7 @@ async def persist_analysis(
     structured_content = dict(extraction.structured_content)
     structured_content["references"] = references
     structured_content["analysisVersion"] = analysis_version
-    paper.source_content = source_content
+    paper.source_content = source_content.replace("\x00", "")
     paper.structured_content = structured_content
     if analysis_run_id is None:
         paper.parsed_status = "completed"

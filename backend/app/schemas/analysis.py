@@ -11,12 +11,12 @@ def _as_text(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, str):
-        return value.strip()
+        return value.replace("\x00", "").strip()
     if isinstance(value, list):
         return "；".join(_as_text(item) for item in value if _as_text(item))
     if isinstance(value, dict):
         return "; ".join(f"{key}: {_as_text(item)}" for key, item in value.items() if _as_text(item))
-    return str(value).strip()
+    return str(value).replace("\x00", "").strip()
 
 
 class AnalysisModel(BaseModel):
