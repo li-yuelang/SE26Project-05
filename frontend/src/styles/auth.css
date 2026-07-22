@@ -4,19 +4,32 @@
   display: grid;
   place-items: center;
   padding: 24px;
+  background: var(--color-bg);
+  position: relative;
+}
+
+.auth-page::before,
+.auth-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(79, 110, 247, 0.2), transparent 34%),
-    linear-gradient(145deg, #eef1ff 0%, #f7f8fc 48%, #edf5f8 100%);
+    radial-gradient(ellipse 60% 50% at 50% 0%, var(--color-primary-muted), transparent),
+    radial-gradient(ellipse 40% 40% at 80% 80%, var(--color-surface-subtle), transparent);
+  pointer-events: none;
 }
 
 .auth-card {
-  width: min(100%, 440px);
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(31, 42, 88, 0.14);
+  width: min(100%, 420px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  box-shadow: var(--shadow-lg);
+  position: relative;
 }
 
 .auth-card .ant-card-body {
-  padding: 34px;
+  padding: 36px;
 }
 
 .auth-heading {
@@ -29,10 +42,11 @@
 }
 
 .auth-eyebrow {
-  color: var(--color-primary);
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  color: var(--color-primary-hover);
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  font-size: 0.72rem;
 }
 
 .auth-form {

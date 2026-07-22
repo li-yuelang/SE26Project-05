@@ -2,8 +2,9 @@
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: 32px;
+  padding: 32px 40px;
   min-height: 100vh;
+  background: var(--color-bg);
 }
 
 .page-stack {

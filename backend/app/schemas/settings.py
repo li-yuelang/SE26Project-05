@@ -1,6 +1,8 @@
 """Schemas for user settings."""
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -17,7 +19,7 @@ class NotificationSettings(BaseModel):
 
 
 class SystemSettings(BaseModel):
-    theme: str = "light"  # light, dark, auto
+    theme: Literal["light", "dark", "midnight", "graphite"] = "light"
     language: str = "zh-CN"
     default_page_size: int = Field(default=20, ge=5, le=100)
 

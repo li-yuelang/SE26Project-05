@@ -1,24 +1,53 @@
-import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import {
+  BellOutlined,
+  BookOutlined,
+  BranchesOutlined,
+  CloudDownloadOutlined,
+  DashboardOutlined,
+  DownOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+  MessageOutlined,
+  ReadOutlined,
+  SettingOutlined,
+  SwapOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Avatar, Dropdown, Typography } from 'antd';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const { Text } = Typography;
 
-const navItems = [
-  { to: '/dashboard', label: '首页', icon: '📊' },
-  { to: '/papers', label: '论文列表', icon: '📄' },
-  { to: '/chat', label: '智能问答', icon: '💬' },
-  { to: '/wiki', label: '知识 Wiki', icon: '📚' },
-  { to: '/learning', label: '学习中心', icon: '📝' },
-  { to: '/compare', label: '论文对比', icon: '⚖️' },
-  { to: '/tasks', label: '抓取任务', icon: '📥' },
-  { to: '/trends', label: '研究脉络', icon: '🔬' },
-  { to: '/subscriptions', label: '推荐与订阅', icon: '🔔' },
-  { to: '/settings', label: '用户设置', icon: '⚙️' },
+const navGroups = [
+  {
+    label: '工作区',
+    items: [
+      { to: '/dashboard', label: '首页', icon: <DashboardOutlined /> },
+      { to: '/papers', label: '论文列表', icon: <FileTextOutlined /> },
+      { to: '/chat', label: '智能问答', icon: <MessageOutlined /> },
+      { to: '/wiki', label: '知识 Wiki', icon: <BookOutlined /> },
+    ],
+  },
+  {
+    label: '研究工具',
+    items: [
+      { to: '/learning', label: '学习中心', icon: <ReadOutlined /> },
+      { to: '/compare', label: '论文对比', icon: <SwapOutlined /> },
+      { to: '/tasks', label: '抓取任务', icon: <CloudDownloadOutlined /> },
+      { to: '/trends', label: '研究脉络', icon: <BranchesOutlined /> },
+    ],
+  },
+  {
+    label: '个人',
+    items: [
+      { to: '/subscriptions', label: '推荐与订阅', icon: <BellOutlined /> },
+    ],
+  },
 ];
 
 export default function AppLayout() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
@@ -27,38 +56,77 @@ export default function AppLayout() {
     navigate('/login', { replace: true });
   };
 
+  const accountMenu = {
+    items: [
+      {
+        key: 'settings',
+        icon: <SettingOutlined />,
+        label: '用户设置',
+      },
+      { type: 'divider' },
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: '退出登录',
+        danger: true,
+      },
+    ],
+    onClick: ({ key }) => {
+      if (key === 'settings') {
+        navigate('/settings');
+      } else if (key === 'logout') {
+        handleLogout();
+      }
+    },
+  };
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <h1>PaperMate</h1>
-          <span className="sidebar-subtitle">ArXiv 论文阅读工具</span>
+          <span className="sidebar-logo-mark" aria-hidden="true">P</span>
+          <span className="sidebar-brand-copy">
+            <h1>PaperMate</h1>
+            <span className="sidebar-subtitle">Research workspace</span>
+          </span>
         </div>
         <nav className="sidebar-nav" aria-label="主导航">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `nav-item${isActive ? ' active' : ''}`
-              }
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
+          {navGroups.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <span className="nav-group-label">{group.label}</span>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  title={item.label}
+                  className={({ isActive }) =>
+                    `nav-item${isActive ? ' active' : ''}`
+                  }
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-account">
-          <div className="sidebar-user">
-            <UserOutlined />
-            <div className="sidebar-user-copy">
-              <Text>{user?.display_name || user?.username}</Text>
-              <Text>{user?.email}</Text>
-            </div>
-          </div>
-          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-            退出登录
-          </Button>
+          <Dropdown menu={accountMenu} trigger={['click']} placement="topLeft">
+            <button
+              type="button"
+              className={`sidebar-account-trigger${
+                location.pathname.startsWith('/settings') ? ' active' : ''
+              }`}
+              aria-label="打开账户菜单"
+            >
+              <Avatar size={30} icon={<UserOutlined />} />
+              <span className="sidebar-user-copy">
+                <Text>{user?.display_name || user?.username}</Text>
+                <Text>{user?.email}</Text>
+              </span>
+              <DownOutlined className="sidebar-account-chevron" />
+            </button>
+          </Dropdown>
         </div>
       </aside>
       <main className="main-content">

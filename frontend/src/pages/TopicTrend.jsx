@@ -4,13 +4,11 @@ import {
   Button,
   Card,
   Col,
-  Descriptions,
   Empty,
   Flex,
   Progress,
   Row,
   Space,
-  Table,
   Tag,
   Timeline,
   Typography,
@@ -48,11 +46,10 @@ export default function TopicTrend() {
 
     if (resource.data?.topicRank) return resource.data.topicRank;
 
-    return (
-      [...trendTopics]
-        .sort((left, right) => right.trend - left.trend)
-        .findIndex((item) => item.id === topic.id) + 1
-    );
+    const index = [...trendTopics]
+      .sort((left, right) => right.trend - left.trend)
+      .findIndex((item) => item.id === topic.id);
+    return index >= 0 ? index + 1 : null;
   }, [resource.data?.topicRank, topic, trendTopics]);
 
   if (resource.loading || resource.error) {
@@ -87,142 +84,72 @@ export default function TopicTrend() {
   const stages = resource.data.stages;
   const topicSignals = resource.data.signals;
 
-  const paperColumns = [
-    {
-      title: '论文',
-      dataIndex: 'title',
-      render: (_, paper) => (
-        <Space orientation="vertical" size={2}>
-          <Button type="link" onClick={() => navigate(`/papers/${paper.id}`)}>
-            {paper.title}
-          </Button>
-          <Text type="secondary">arXiv: {paper.arxivId}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: '年份',
-      dataIndex: 'year',
-      width: 96,
-    },
-    {
-      title: '研究作用',
-      dataIndex: 'role',
-      width: 190,
-      render: (role) => <Tag color="geekblue">{role}</Tag>,
-    },
-  ];
-
-  const relationColumns = [
-    {
-      title: '相关主题',
-      dataIndex: ['concept', 'name'],
-      render: (_, relation) =>
-        relation.exists ? (
-          <Button
-            type="link"
-            icon={<LinkOutlined />}
-            onClick={() => navigate(`/trends/${relation.concept.id}`)}
-          >
-            {relation.concept.name}
-          </Button>
-        ) : (
-          <Space>
-            <Text>{relation.concept.name}</Text>
-            <Tag>整理中</Tag>
-          </Space>
-        ),
-    },
-    {
-      title: '关系',
-      dataIndex: 'type',
-      width: 120,
-      render: (type) => <Tag>{type}</Tag>,
-    },
-    {
-      title: '强度',
-      dataIndex: 'strength',
-      width: 170,
-      render: (strength) => <Progress percent={strength} size="small" />,
-    },
-  ];
-
   return (
-    <main className="topic-trend-page">
-      <Space className="topic-trend-toolbar">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/trends')}>
+    <main className="topic-trend-page page-stack">
+      <Flex className="topic-trend-toolbar" align="center" justify="space-between" gap={12} wrap="wrap">
+        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/trends')}>
           返回研究脉络
         </Button>
         <Button icon={<TagsOutlined />} onClick={() => navigate('/wiki')}>
-          知识 Wiki
+          查看知识 Wiki
         </Button>
-      </Space>
+      </Flex>
 
       <Card variant="borderless" className="topic-trend-hero">
-        <Row gutter={[20, 20]} align="middle">
-          <Col xs={24} lg={16}>
-            <Space orientation="vertical" size={12}>
-              <Space size={[8, 8]} wrap>
-                <Tag color="blue">{topic.category}</Tag>
-                <Tag color={status.color}>{status.label}</Tag>
-                <Tag color="cyan">{topic.stage}</Tag>
-                <Text type="secondary">更新于 {topic.updatedAt}</Text>
-              </Space>
-              <Title level={2}>{topic.name}</Title>
-              <Paragraph>{topic.description}</Paragraph>
-              <Space size={[8, 8]} wrap>
-                {topic.aliases.map((alias) => (
-                  <Tag key={alias}>{alias}</Tag>
-                ))}
-              </Space>
+        <Space orientation="vertical" size={14} className="topic-trend-hero-copy">
+          <Flex align="center" justify="space-between" gap={12} wrap="wrap">
+            <Space size={[8, 8]} wrap>
+              <Tag color="blue">{topic.category}</Tag>
+              <Tag color={status.color}>{status.label}</Tag>
+              <Tag>{topic.stage}</Tag>
             </Space>
-          </Col>
-          <Col xs={24} lg={8}>
-            <Descriptions column={1} size="small" className="topic-trend-meta">
-              <Descriptions.Item label="热度排名">第 {topicRank} 位</Descriptions.Item>
-              <Descriptions.Item label="当前热度">
-                <Progress percent={topic.trend} size="small" />
-              </Descriptions.Item>
-              <Descriptions.Item label="近两月增长">
-                +{topic.momentum}
-              </Descriptions.Item>
-              <Descriptions.Item label="来源论文">
-                {topic.paperCount} 篇
-              </Descriptions.Item>
-            </Descriptions>
-          </Col>
-        </Row>
+            <Text type="secondary">更新于 {topic.updatedAt}</Text>
+          </Flex>
+          <div>
+            <Title level={2}>{topic.name}</Title>
+            <Paragraph>{topic.description}</Paragraph>
+          </div>
+          {topic.aliases.length > 0 && (
+            <Space size={[6, 6]} wrap>
+              <Text type="secondary">别名</Text>
+              {topic.aliases.map((alias) => (
+                <Tag key={alias}>{alias}</Tag>
+              ))}
+            </Space>
+          )}
+          <div className="topic-trend-kpi-grid">
+            <div className="topic-trend-kpi">
+              <Text>热度排名</Text>
+              <strong>{topicRank ? `#${topicRank}` : '—'}</strong>
+            </div>
+            <div className="topic-trend-kpi">
+              <Text>当前热度</Text>
+              <strong>{topic.trend}%</strong>
+            </div>
+            <div className="topic-trend-kpi">
+              <Text>近两月增长</Text>
+              <strong>{topic.momentum >= 0 ? '+' : ''}{topic.momentum}</strong>
+            </div>
+            <div className="topic-trend-kpi">
+              <Text>来源论文</Text>
+              <strong>{topic.paperCount} 篇</strong>
+            </div>
+          </div>
+        </Space>
       </Card>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
-          <Card variant="borderless">
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="提及次数">
-                {topic.mentions}
-              </Descriptions.Item>
-              <Descriptions.Item label="速度">
-                本月 +{topic.velocity}
-              </Descriptions.Item>
-              <Descriptions.Item label="关键词">
-                <Space size={[4, 4]} wrap>
-                  {topic.keywords.map((keyword) => (
-                    <Tag key={keyword}>{keyword}</Tag>
-                  ))}
-                </Space>
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-        <Col xs={24} md={16}>
+        <Col xs={24} lg={16}>
           <Card
             variant="borderless"
+            className="topic-trend-chart-card"
             title={
               <Space>
                 <LineChartOutlined />
                 热度走势
               </Space>
             }
+            extra={<Text type="secondary">近 7 个月</Text>}
           >
             <TrendLine
               id={`topic-detail-${topic.id}`}
@@ -233,37 +160,66 @@ export default function TopicTrend() {
             />
           </Card>
         </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={14}>
-          <Card
-            variant="borderless"
-            title={
-              <Space>
-                <BranchesOutlined />
-                研究阶段
-              </Space>
-            }
-          >
-            <div className="topic-trend-stage-list">
-              {stages.map((stage) => (
-                <div
-                  key={stage.key}
-                  className="topic-trend-stage"
-                  style={{ '--stage-color': stage.color }}
-                >
-                  <Text type="secondary">{stage.label}</Text>
-                  <Paragraph>{stage.value}</Paragraph>
-                  <Tag color="geekblue">{stage.metric}</Tag>
-                </div>
-              ))}
+        <Col xs={24} lg={8}>
+          <Card variant="borderless" title="主题摘要" className="topic-trend-summary-card">
+            <div className="topic-trend-summary-stats">
+              <div>
+                <Text type="secondary">提及次数</Text>
+                <strong>{topic.mentions}</strong>
+              </div>
+              <div>
+                <Text type="secondary">本月速度</Text>
+                <strong>{topic.velocity >= 0 ? '+' : ''}{topic.velocity}</strong>
+              </div>
             </div>
+            <Text strong>关键词</Text>
+            <Flex gap={6} wrap="wrap" className="topic-trend-keywords">
+              {topic.keywords.map((keyword) => (
+                <Tag key={keyword}>{keyword}</Tag>
+              ))}
+            </Flex>
+            {topic.summaryPoints?.length > 0 && (
+              <ul className="topic-trend-summary-list">
+                {topic.summaryPoints.slice(0, 3).map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            )}
           </Card>
         </Col>
+      </Row>
+
+      <Card
+        variant="borderless"
+        title={
+          <Space>
+            <BranchesOutlined />
+            研究阶段
+          </Space>
+        }
+      >
+        <div className="topic-trend-stage-list">
+          {stages.map((stage, index) => (
+            <div
+              key={stage.key}
+              className="topic-trend-stage"
+              style={{ '--stage-color': stage.color }}
+            >
+              <Flex align="center" justify="space-between" gap={8}>
+                <Text strong>{index + 1}. {stage.label}</Text>
+                <Tag>{stage.metric}</Tag>
+              </Flex>
+              <Paragraph>{stage.value}</Paragraph>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Row gutter={[16, 16]} align="stretch">
         <Col xs={24} lg={10}>
           <Card
             variant="borderless"
+            className="topic-trend-section-card"
             title={
               <Space>
                 <CalendarOutlined />
@@ -286,12 +242,42 @@ export default function TopicTrend() {
             />
           </Card>
         </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
         <Col xs={24} lg={14}>
           <Card
             variant="borderless"
+            className="topic-trend-section-card"
+            title={
+              <Space>
+                <LineChartOutlined />
+                主题信号
+              </Space>
+            }
+          >
+            {topicSignals.length > 0 ? (
+              <div className="topic-trend-signal-list">
+                {topicSignals.map((signal) => (
+                  <div className="topic-trend-signal" key={signal.id}>
+                    <Flex align="center" justify="space-between" gap={8} wrap="wrap">
+                      <Text strong>{signal.title}</Text>
+                      <Tag color={signal.color}>影响 {signal.impact}</Tag>
+                    </Flex>
+                    <Paragraph>{signal.description}</Paragraph>
+                    <Text type="secondary">{signal.time}</Text>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty description="暂无该主题的独立信号" />
+            )}
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} align="stretch">
+        <Col xs={24} lg={14}>
+          <Card
+            variant="borderless"
+            className="topic-trend-section-card"
             title={
               <Space>
                 <BookOutlined />
@@ -299,17 +285,33 @@ export default function TopicTrend() {
               </Space>
             }
           >
-            <Table
-              rowKey="id"
-              columns={paperColumns}
-              dataSource={topic.papers}
-              pagination={false}
-            />
+            {topic.papers.length > 0 ? (
+              <div className="topic-trend-paper-list">
+                {topic.papers.map((paper) => (
+                  <div className="topic-trend-paper-item" key={paper.id}>
+                    <Button
+                      type="link"
+                      onClick={() => navigate(`/papers/${paper.id}`)}
+                    >
+                      {paper.title}
+                    </Button>
+                    <Flex gap={10} wrap="wrap">
+                      <Text type="secondary">{paper.year}</Text>
+                      <Text type="secondary">arXiv: {paper.arxivId}</Text>
+                    </Flex>
+                    <Paragraph ellipsis={{ rows: 2 }}>{paper.role}</Paragraph>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty description="暂无来源论文" />
+            )}
           </Card>
         </Col>
         <Col xs={24} lg={10}>
           <Card
             variant="borderless"
+            className="topic-trend-section-card"
             title={
               <Space>
                 <FileTextOutlined />
@@ -317,44 +319,33 @@ export default function TopicTrend() {
               </Space>
             }
           >
-            <Table
-              rowKey="id"
-              columns={relationColumns}
-              dataSource={relatedConcepts}
-              pagination={false}
-            />
+            {relatedConcepts.length > 0 ? (
+              <div className="topic-trend-related-list">
+                {relatedConcepts.map((relation) => (
+                  <button
+                    type="button"
+                    key={relation.id}
+                    className="topic-trend-related-item"
+                    disabled={!relation.exists}
+                    onClick={() => navigate(`/trends/${relation.concept.id}`)}
+                  >
+                    <Flex align="center" justify="space-between" gap={8}>
+                      <Text strong>{relation.concept.name}</Text>
+                      <Tag>{relation.exists ? relation.type : '整理中'}</Tag>
+                    </Flex>
+                    <Progress percent={relation.strength} size="small" showInfo={false} />
+                    <Text type="secondary">
+                      <LinkOutlined /> {relation.strength}% 关联强度
+                    </Text>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <Empty description="暂无关联主题" />
+            )}
           </Card>
         </Col>
       </Row>
-
-      <Card
-        variant="borderless"
-        title={
-          <Space>
-            <LineChartOutlined />
-            主题信号
-          </Space>
-        }
-      >
-        {topicSignals.length > 0 ? (
-          <Row gutter={[16, 16]}>
-            {topicSignals.map((signal) => (
-              <Col xs={24} md={8} key={signal.id}>
-                <div className="topic-trend-signal">
-                  <Flex align="center" justify="space-between" gap={8}>
-                    <Text strong>{signal.title}</Text>
-                    <Tag color={signal.color}>影响 {signal.impact}</Tag>
-                  </Flex>
-                  <Paragraph>{signal.description}</Paragraph>
-                  <Text type="secondary">{signal.time}</Text>
-                </div>
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <Empty description="暂无该主题的独立信号" />
-        )}
-      </Card>
     </main>
   );
 }

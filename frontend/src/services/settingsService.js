@@ -23,7 +23,10 @@ export const saveNotificationPreferences = createEndpoint({
 });
 
 export const getSystemPreferences = createEndpoint({
-  mock: () => ({ theme: 'light', language: 'zh-CN', default_page_size: 20 }),
+  mock: () => ({
+    theme: window.localStorage.getItem('papermate:theme') || 'dark',
+    default_page_size: 20,
+  }),
   http: () => request('/settings/system'),
 });
 
@@ -31,8 +34,7 @@ export const saveSystemPreferences = createEndpoint({
   mock: (preferences) => preferences,
   http: (preferences) => request('/settings/system', {
     body: {
-      language: preferences.language,
-      theme: preferences.theme === 'system' ? 'auto' : preferences.theme,
+      theme: preferences.theme,
     },
     method: 'PUT',
   }),

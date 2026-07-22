@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   Avatar,
   Button,
@@ -9,50 +9,40 @@ import {
   Form,
   Input,
   message,
-  Radio,
-  Select,
   Space,
   Switch,
   Tabs,
   Typography,
-} from "antd";
+} from 'antd';
 import {
   BellOutlined,
+  CheckOutlined,
   KeyOutlined,
   SafetyOutlined,
   SettingOutlined,
   UserOutlined,
-} from "@ant-design/icons";
+} from '@ant-design/icons';
 import {
   changePassword,
   getNotificationPreferences,
-  getSystemPreferences,
   saveNotificationPreferences,
   saveProfile,
   saveSystemPreferences,
-} from "../services/settingsService";
-import { useAuth } from "../contexts/AuthContext";
+} from '../services/settingsService';
+import { useAuth } from '../contexts/AuthContext';
+import { useThemePreference } from '../contexts/ThemeContext';
+import { THEME_OPTIONS } from '../theme/themes';
 
 const { Text, Title } = Typography;
 
-const LANGUAGES = [
-  { label: "简体中文", value: "zh-CN" },
-  { label: "English", value: "en-US" },
-];
-
-const THEME_OPTIONS = [
-  { label: "浅色模式", value: "light" },
-  { label: "深色模式", value: "dark" },
-  { label: "跟随系统", value: "system" },
-];
-
 export default function Settings() {
   const { updateUser, user } = useAuth();
+  const { applyTheme, themeName } = useThemePreference();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
 
   // 个人资料
-  const [avatarColor, setAvatarColor] = useState("#4f6ef7");
+  const [avatarColor, setAvatarColor] = useState('#5e6ad2');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // 通知偏好
@@ -60,9 +50,8 @@ export default function Settings() {
   const [paperAlert, setPaperAlert] = useState(true);
   const [subscriptionAlert, setSubscriptionAlert] = useState(false);
 
-  // 系统设置
-  const [language, setLanguage] = useState("zh-CN");
-  const [theme, setTheme] = useState("light");
+  // 主题设置
+  const [savingTheme, setSavingTheme] = useState(false);
 
   // 修改密码
   const [changingPassword, setChangingPassword] = useState(false);
@@ -72,7 +61,7 @@ export default function Settings() {
     profileForm.setFieldsValue({
       username: user.username,
       email: user.email,
-      bio: user.bio || "",
+      bio: user.bio || '',
     });
 
     // 从后端加载通知偏好
@@ -80,12 +69,6 @@ export default function Settings() {
       if (data.email_digest !== undefined) setDailyDigest(data.email_digest);
       if (data.push_new_paper !== undefined) setPaperAlert(data.push_new_paper);
       if (data.push_recommendation !== undefined) setSubscriptionAlert(data.push_recommendation);
-    }).catch(() => {});
-
-    // 从后端加载系统设置
-    getSystemPreferences().then((data) => {
-      if (data.language) setLanguage(data.language);
-      if (data.theme) setTheme(data.theme === 'auto' ? 'system' : data.theme);
     }).catch(() => {});
   }, [profileForm, user]);
 
@@ -238,29 +221,60 @@ export default function Settings() {
 
   const systemTab = (
     <Card variant="borderless">
-      <Flex vertical gap={20}>
-        <Form layout="vertical" style={{ maxWidth: 400 }}>
-          <Form.Item label="界面语言">
-            <Select options={LANGUAGES} value={language} onChange={setLanguage} />
-          </Form.Item>
+      <Flex vertical gap={24}>
+        <div>
+          <Title level={4} style={{ marginBottom: 4 }}>界面主题</Title>
+          <Text type="secondary">选择主题后会立即预览，保存后同步到当前账户。</Text>
+        </div>
 
-          <Form.Item label="主题">
-            <Radio.Group
-              options={THEME_OPTIONS}
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-            />
-          </Form.Item>
-        </Form>
+        <div className="theme-picker" role="radiogroup" aria-label="界面主题">
+          {THEME_OPTIONS.map((option) => {
+            const selected = themeName === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`theme-option${selected ? ' active' : ''}`}
+                onClick={() => applyTheme(option.value)}
+              >
+                <span
+                  className="theme-option-preview"
+                  style={{ background: option.preview[0] }}
+                  aria-hidden="true"
+                >
+                  <span style={{ background: option.preview[1] }} />
+                  <i style={{ background: option.preview[2] }} />
+                </span>
+                <span className="theme-option-copy">
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                </span>
+                <span className="theme-option-check" aria-hidden="true">
+                  {selected && <CheckOutlined />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         <Button
           type="primary"
+          loading={savingTheme}
           onClick={async () => {
-            await saveSystemPreferences({ language, theme });
-            message.success("系统设置已保存");
+            try {
+              setSavingTheme(true);
+              await saveSystemPreferences({ theme: themeName });
+              message.success('主题设置已保存');
+            } catch (error) {
+              message.error(error.message || '主题设置保存失败');
+            } finally {
+              setSavingTheme(false);
+            }
           }}
         >
-          保存设置
+          保存主题
         </Button>
       </Flex>
     </Card>
@@ -328,7 +342,7 @@ export default function Settings() {
     },
     {
       key: "system",
-      label: "系统设置",
+      label: "主题外观",
       icon: <SettingOutlined />,
       children: systemTab,
     },

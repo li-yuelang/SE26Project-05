@@ -23,11 +23,13 @@ import {
   ArrowRightOutlined,
   BarChartOutlined,
   BranchesOutlined,
+  DownOutlined,
   FireOutlined,
   LineChartOutlined,
   SearchOutlined,
   TagsOutlined,
   ThunderboltOutlined,
+  UpOutlined,
 } from '@ant-design/icons';
 import TrendLine from '../components/TrendLine';
 import AsyncPageState from '../components/AsyncPageState';
@@ -50,11 +52,65 @@ export default function Trends() {
   const trendRangeOptions = resource.data?.rangeOptions || [];
   const trendSortOptions = resource.data?.sortOptions || [];
   const wikiCategoryOptions = resource.data?.categoryOptions || [];
+  const categoryFilters = useMemo(() => {
+    const counts = trendTopics.reduce((result, topic) => {
+      result.set(topic.category, (result.get(topic.category) || 0) + 1);
+      return result;
+    }, new Map());
+    const categories = [...new Set(
+      wikiCategoryOptions
+        .map((option) => (typeof option === 'string' ? option : option.value))
+        .filter((option) => option && option !== '全部'),
+    )];
+    const topCategories = [...categories]
+      .sort((left, right) => (counts.get(right) || 0) - (counts.get(left) || 0))
+      .slice(0, 3);
+
+    return {
+      featured: [
+        { label: '全部', value: '全部' },
+        ...topCategories.map((value) => ({
+          label: `${value} (${counts.get(value) || 0})`,
+          value,
+        })),
+      ],
+      featuredValues: new Set(['全部', ...topCategories]),
+      more: categories
+        .filter((value) => !topCategories.includes(value))
+        .map((value) => ({
+          label: `${value} (${counts.get(value) || 0})`,
+          value,
+        })),
+    };
+  }, [trendTopics, wikiCategoryOptions]);
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('全部');
   const [sortBy, setSortBy] = useState('momentum');
   const [range, setRange] = useState(6);
   const [activeTopicId, setActiveTopicId] = useState(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
+  const categoryDistribution = useMemo(() => {
+    const counts = trendTopics.reduce((result, topic) => {
+      result.set(topic.category, (result.get(topic.category) || 0) + 1);
+      return result;
+    }, new Map());
+    const categories = [...new Set(
+      wikiCategoryOptions
+        .map((option) => (typeof option === 'string' ? option : option.value))
+        .filter((option) => option && option !== '全部'),
+    )];
+
+    return categories
+      .map((name) => ({
+        count: counts.get(name) || 0,
+        name,
+        percent: trendTopics.length
+          ? Math.round(((counts.get(name) || 0) / trendTopics.length) * 100)
+          : 0,
+      }))
+      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+  }, [trendTopics, wikiCategoryOptions]);
 
   useEffect(() => {
     if (!activeTopicId && trendTopics.length > 0) {
@@ -179,7 +235,7 @@ export default function Trends() {
       </Row>
 
       <Card variant="borderless" className="trend-filter-card">
-        <Flex gap={12} align="center" wrap="wrap">
+        <Flex className="trend-filter-row" gap={12} align="center" wrap="wrap">
           <Search
             allowClear
             className="trend-search"
@@ -189,10 +245,27 @@ export default function Trends() {
             onSearch={setKeyword}
           />
           <Segmented
-            value={category}
+            className="trend-featured-categories"
+            value={categoryFilters.featuredValues.has(category) ? category : null}
             onChange={setCategory}
-            options={wikiCategoryOptions}
+            options={categoryFilters.featured}
           />
+          {categoryFilters.more.length > 0 && (
+            <Select
+              allowClear
+              showSearch
+              className="trend-more-categories"
+              placeholder="更多分类"
+              value={
+                categoryFilters.featuredValues.has(category) ? undefined : category
+              }
+              onChange={(value) => setCategory(value || '全部')}
+              options={categoryFilters.more}
+              optionFilterProp="label"
+              popupMatchSelectWidth={false}
+              aria-label="更多研究主题分类"
+            />
+          )}
           <Segmented
             value={range}
             onChange={setRange}
@@ -445,25 +518,32 @@ export default function Trends() {
               }
             >
               <Space orientation="vertical" size={12} className="trend-category-list">
-                {wikiCategoryOptions
-                  .filter((item) => item !== '全部')
-                  .map((item) => {
-                    const count = trendTopics.filter(
-                      (topic) => topic.category === item,
-                    ).length;
-                    const percent = Math.round((count / trendTopics.length) * 100);
-
-                    return (
-                      <div key={item}>
-                        <Flex justify="space-between" gap={8}>
-                          <Text>{item}</Text>
-                          <Text type="secondary">{count} 个</Text>
-                        </Flex>
-                        <Progress percent={percent} size="small" showInfo={false} />
-                      </div>
-                    );
-                  })}
+                {(showAllCategories
+                  ? categoryDistribution
+                  : categoryDistribution.slice(0, 3)
+                ).map((item) => (
+                  <div key={item.name}>
+                    <Flex justify="space-between" gap={8}>
+                      <Text ellipsis={{ tooltip: item.name }}>{item.name}</Text>
+                      <Text type="secondary">{item.count} 个</Text>
+                    </Flex>
+                    <Progress percent={item.percent} size="small" showInfo={false} />
+                  </div>
+                ))}
               </Space>
+              {categoryDistribution.length > 3 && (
+                <Button
+                  type="text"
+                  block
+                  className="trend-category-toggle"
+                  icon={showAllCategories ? <UpOutlined /> : <DownOutlined />}
+                  onClick={() => setShowAllCategories((visible) => !visible)}
+                >
+                  {showAllCategories
+                    ? '收起分类'
+                    : `展开其余 ${categoryDistribution.length - 3} 个分类`}
+                </Button>
+              )}
             </Card>
           </Space>
         </Col>

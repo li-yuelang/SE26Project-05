@@ -6,12 +6,20 @@
 }
 
 .dashboard-hero {
-  background: linear-gradient(135deg, #ffffff 0%, #eef4ff 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-hero-start) 0%,
+    var(--color-hero-middle) 50%,
+    var(--color-hero-end) 100%
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
 .dashboard-hero h1 {
   max-width: 760px;
   margin: 8px 0 12px;
+  letter-spacing: -0.03em;
 }
 
 .dashboard-hero p {
@@ -21,10 +29,11 @@
 }
 
 .dashboard-eyebrow {
-  color: var(--color-primary);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  color: var(--color-primary-hover);
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  font-size: 0.75rem;
 }
 
 .dashboard-search {
@@ -41,5 +50,10 @@
 }
 
 .dashboard-list-item {
+  width: 100%;
+}
+
+.dashboard-side-stack,
+.dashboard-side-stack > .ant-space-item {
   width: 100%;
 }

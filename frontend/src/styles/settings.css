@@ -1,0 +1,125 @@
+/* ========== Settings ========== */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 760px;
+}
+
+.theme-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 14px;
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.theme-option:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-card-hover);
+  transform: translateY(-1px);
+}
+
+.theme-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-option.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-muted);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.theme-option-preview {
+  position: relative;
+  width: 72px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.theme-option-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 20px;
+  background: rgba(127, 127, 127, 0.12);
+  border-right: 1px solid rgba(127, 127, 127, 0.14);
+}
+
+.theme-option-preview > span {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  width: 36px;
+  height: 27px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+}
+
+.theme-option-preview > i {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 24px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.theme-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.theme-option-copy strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.theme-option-copy small {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.theme-option-check {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  color: transparent;
+  font-size: 0.65rem;
+}
+
+.theme-option.active .theme-option-check {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+@media (max-width: 720px) {
+  .theme-picker {
+    grid-template-columns: 1fr;
+  }
+}

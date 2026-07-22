@@ -1,8 +1,10 @@
 @import './base.css';
+@import './antd-overrides.css';
 @import './app-layout.css';
 @import './sidebar.css';
 @import './main.css';
 @import './page.css';
+@import './settings.css';
 @import './papers.css';
 @import './dashboard.css';
 @import './wiki.css';

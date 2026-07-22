@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
@@ -5,6 +6,7 @@ import {
   Col,
   Descriptions,
   Empty,
+  List,
   Progress,
   Row,
   Space,
@@ -16,8 +18,10 @@ import {
   ArrowLeftOutlined,
   BookOutlined,
   BranchesOutlined,
+  DownOutlined,
   FileTextOutlined,
   TagsOutlined,
+  UpOutlined,
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
@@ -31,6 +35,7 @@ export default function ConceptDetail() {
   const resource = useAsyncResource(() => getConceptDetail(conceptId), [conceptId]);
   const concept = resource.data?.concept;
   const relatedConcepts = resource.data?.relatedConcepts || [];
+  const [showAllPapers, setShowAllPapers] = useState(false);
 
   if (resource.loading || resource.error) {
     return (
@@ -57,31 +62,6 @@ export default function ConceptDetail() {
       </div>
     );
   }
-
-  const paperColumns = [
-    {
-      title: '论文',
-      dataIndex: 'title',
-      render: (_, paper) => (
-        <Space orientation="vertical" size={2}>
-          <Button type="link" onClick={() => navigate(`/papers/${paper.id}`)}>
-            {paper.title}
-          </Button>
-          <Text type="secondary">arXiv: {paper.arxivId || paper.id}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: '年份',
-      dataIndex: 'year',
-      width: 100,
-    },
-    {
-      title: '知识作用',
-      dataIndex: 'role',
-      render: (role) => <Tag color="geekblue">{role}</Tag>,
-    },
-  ];
 
   const relationColumns = [
     {
@@ -191,12 +171,45 @@ export default function ConceptDetail() {
                 来源论文
               </Space>
             }
+            extra={
+              concept.papers.length > 3 && (
+                <Button
+                  type="link"
+                  size="small"
+                  icon={showAllPapers ? <UpOutlined /> : <DownOutlined />}
+                  onClick={() => setShowAllPapers((visible) => !visible)}
+                >
+                  {showAllPapers ? '收起' : `查看全部 ${concept.papers.length} 篇`}
+                </Button>
+              )
+            }
           >
-            <Table
+            <List
               rowKey="id"
-              columns={paperColumns}
-              dataSource={concept.papers}
-              pagination={false}
+              dataSource={showAllPapers ? concept.papers : concept.papers.slice(0, 3)}
+              split={false}
+              className="wiki-source-paper-list concept-source-paper-list"
+              locale={{ emptyText: <Empty description="暂无来源论文" /> }}
+              renderItem={(paper) => (
+                <List.Item className="wiki-source-paper-item">
+                  <Button
+                    type="link"
+                    className="wiki-paper-link"
+                    onClick={() => navigate(`/papers/${paper.id}`)}
+                  >
+                    {paper.title}
+                  </Button>
+                  <Space size={10} wrap className="wiki-source-paper-meta">
+                    <Text type="secondary">
+                      arXiv: {paper.arxivId || paper.id}
+                    </Text>
+                    <Text type="secondary">{paper.year}</Text>
+                  </Space>
+                  <Paragraph ellipsis={{ rows: 2 }} className="wiki-source-paper-role">
+                    {paper.role}
+                  </Paragraph>
+                </List.Item>
+              )}
             />
           </Card>
         </Col>

@@ -1,0 +1,183 @@
+/* ========== Ant Design Dark Overrides ========== */
+
+/* Card */
+.ant-card {
+  border-color: var(--color-border) !important;
+}
+
+.ant-card-bordered {
+  border-color: var(--color-border);
+}
+
+/* Table */
+.ant-table {
+  border-radius: var(--radius);
+}
+
+.ant-table-container {
+  border-color: var(--color-border) !important;
+}
+
+.ant-table-thead > tr > th {
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Descriptions */
+.ant-descriptions-bordered .ant-descriptions-item-label {
+  background: var(--color-surface-subtle);
+}
+
+/* Drawer */
+.ant-drawer-content {
+  border-left: 1px solid var(--color-border);
+}
+
+/* Modal */
+.ant-modal-content {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+/* List */
+.ant-list-item {
+  border-block-end-color: var(--color-border);
+}
+
+.ant-list-split .ant-list-item {
+  border-block-end-color: var(--color-border);
+}
+
+/* Divider */
+.ant-divider {
+  border-color: var(--color-border);
+}
+
+/* Tabs */
+.ant-tabs-nav::before {
+  border-color: var(--color-border);
+}
+
+/* Alert */
+.ant-alert {
+  border-radius: var(--radius);
+}
+
+/* Message / Notification */
+.ant-message-notice-content {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.ant-notification-notice {
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Popover / Tooltip */
+.ant-popover-inner {
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.ant-tooltip-inner {
+  border-radius: 6px;
+}
+
+/* Input / Select focus glow */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  box-shadow: 0 0 0 2px var(--color-primary-muted);
+}
+
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 2px var(--color-primary-muted) !important;
+}
+
+/* Button transitions */
+.ant-btn {
+  transition: all var(--transition);
+}
+
+/* Card hover effect for interactive cards */
+.ant-card-hoverable:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow);
+}
+
+/* Skeleton loading */
+.ant-skeleton-content .ant-skeleton-title,
+.ant-skeleton-content .ant-skeleton-paragraph > li {
+  background: var(--color-surface-subtle);
+}
+
+/* Empty state */
+.ant-empty-description {
+  color: var(--color-text-muted);
+}
+
+/* Spin */
+.ant-spin-dot-item {
+  background-color: var(--color-primary);
+}
+
+/* Badge */
+.ant-badge-count {
+  box-shadow: 0 0 0 1px var(--color-bg);
+}
+
+/* Avatar */
+.ant-avatar {
+  border: 1px solid var(--color-border);
+}
+
+/* Typography link */
+.ant-typography a {
+  color: var(--color-primary-hover);
+  transition: color var(--transition);
+}
+
+.ant-typography a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Form */
+.ant-form-item-label > label {
+  color: var(--color-text-light);
+  font-size: 0.85rem;
+}
+
+/* Statistic */
+.ant-statistic-title {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.ant-statistic-content {
+  color: var(--color-text);
+}
+
+/* Tag rounded */
+.ant-tag {
+  border-radius: 5px;
+}
+
+/* Segmented */
+.ant-segmented {
+  border-radius: var(--radius);
+}
+
+/* Progress bar */
+.ant-progress-bg {
+  border-radius: 4px;
+}
+
+/* Timeline */
+.ant-timeline-item-tail {
+  border-color: var(--color-border);
+}
