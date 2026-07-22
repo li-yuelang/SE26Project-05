@@ -4,12 +4,14 @@
     width: 60px;
   }
 
-  .sidebar-brand h1 {
-    font-size: 1rem;
+  .sidebar-brand-copy,
+  .nav-group-label {
+    display: none;
   }
 
-  .sidebar-subtitle {
-    display: none;
+  .sidebar-brand {
+    justify-content: center;
+    padding-inline: 8px;
   }
 
   .nav-label {
@@ -18,7 +20,11 @@
 
   .nav-item {
     justify-content: center;
-    padding: 12px;
+    padding: 10px;
+  }
+
+  .sidebar-nav {
+    gap: 10px;
   }
 
   .nav-icon {
@@ -26,16 +32,17 @@
   }
 
   .sidebar-user-copy,
-  .sidebar-account .ant-btn span:not(.anticon) {
+  .sidebar-account-chevron {
     display: none;
   }
 
   .sidebar-account {
-    padding: 12px 8px;
+    padding: 8px;
   }
 
-  .sidebar-user {
+  .sidebar-account-trigger {
     justify-content: center;
+    padding: 7px;
   }
 
   .main-content {
@@ -56,8 +63,18 @@
     flex-direction: column;
   }
 
-  .wiki-search {
+  .wiki-search,
+  .wiki-more-categories {
     width: 100%;
+  }
+
+  .wiki-featured-categories {
+    width: 100%;
+  }
+
+  .wiki-featured-categories .ant-segmented-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .trend-page-header {
@@ -65,18 +82,31 @@
   }
 
   .trend-search,
+  .trend-more-categories,
   .trend-sort-select {
     width: 100%;
   }
 
+  .trend-featured-categories {
+    width: 100%;
+  }
+
+  .trend-featured-categories .ant-segmented-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .trend-filter-card .ant-segmented {
     max-width: 100%;
-    overflow-x: auto;
   }
 
   .trend-metric-grid,
   .topic-trend-stage-list {
     grid-template-columns: 1fr;
+  }
+
+  .topic-trend-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .learning-search,

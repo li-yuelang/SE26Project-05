@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  Button,
   Card,
   Col,
   Empty,
@@ -21,7 +20,7 @@ import useAsyncResource from "../hooks/useAsyncResource";
 import { getDashboard } from "../services/dashboardService";
 
 const { Paragraph, Text, Title } = Typography;
-const { Search, TextArea } = Input;
+const { Search } = Input;
 
 export default function Dashboard() {
   const resource = useAsyncResource(getDashboard, []);
@@ -166,68 +165,43 @@ export default function Dashboard() {
         </Col>
 
         <Col xs={24} xl={8}>
-          <Card title="热门研究方向" variant="borderless">
-            <List
-              dataSource={topicList}
-              renderItem={(topic) => (
-                <List.Item>
-                  <Space orientation="vertical" className="dashboard-list-item">
-                    <Flex justify="space-between">
-                      <Text strong>{topic.name}</Text>
-                      <Text type="secondary">{topic.count} 篇</Text>
-                    </Flex>
-                    <Progress percent={topic.percent} showInfo={false} />
-                  </Space>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
+          <Space orientation="vertical" size={20} className="dashboard-side-stack">
+            <Card title="最近任务" variant="borderless">
+              <List
+                dataSource={recentTasks}
+                renderItem={(task) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      title={
+                        <Flex justify="space-between" gap={12}>
+                          <Text strong>{task.name}</Text>
+                          <Tag color={task.color}>{task.status}</Tag>
+                        </Flex>
+                      }
+                      description={task.description}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
 
-      <Row gutter={[20, 20]}>
-        <Col xs={24} lg={8}>
-          <Card title="论文知识 Wiki" variant="borderless">
-            <Paragraph type="secondary">
-              检索论文之间的引用关系、主题关联和概念关联，快速了解一个方向的研究脉络。
-            </Paragraph>
-            <Search placeholder="输入概念、方法、论文标题或作者" enterButton="检索 Wiki" />
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={8}>
-          <Card title="智能问答" variant="borderless">
-            <Paragraph type="secondary">
-              围绕论文内容、概念解释、研究方法或研究脉络进行提问。
-            </Paragraph>
-            <Space orientation="vertical" className="dashboard-list-item">
-              <TextArea rows={4} placeholder="例如：RAG 在论文阅读中通常怎么使用？" />
-              <Button type="primary" block>
-                开始提问
-              </Button>
-            </Space>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={8}>
-          <Card title="最近任务" variant="borderless">
-            <List
-              dataSource={recentTasks}
-              renderItem={(task) => (
-                <List.Item>
-                  <List.Item.Meta
-                    title={
-                      <Flex justify="space-between" gap={12}>
-                        <Text strong>{task.name}</Text>
-                        <Tag color={task.color}>{task.status}</Tag>
+            <Card title="热门研究方向" variant="borderless">
+              <List
+                dataSource={topicList}
+                renderItem={(topic) => (
+                  <List.Item>
+                    <Space orientation="vertical" className="dashboard-list-item">
+                      <Flex justify="space-between">
+                        <Text strong>{topic.name}</Text>
+                        <Text type="secondary">{topic.count} 篇</Text>
                       </Flex>
-                    }
-                    description={task.description}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
+                      <Progress percent={topic.percent} showInfo={false} />
+                    </Space>
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </Space>
         </Col>
       </Row>
     </main>

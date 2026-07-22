@@ -8,12 +8,13 @@ import {
   Empty,
   Flex,
   Input,
+  List,
   Progress,
   Row,
   Segmented,
+  Select,
   Space,
   Statistic,
-  Table,
   Tag,
   Timeline,
   Tooltip,
@@ -44,6 +45,36 @@ export default function Wiki() {
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('全部');
   const [activeConceptId, setActiveConceptId] = useState(null);
+
+  const categoryFilters = useMemo(() => {
+    const counts = wikiConcepts.reduce((result, concept) => {
+      result.set(concept.category, (result.get(concept.category) || 0) + 1);
+      return result;
+    }, new Map());
+    const categories = wikiCategoryOptions
+      .map((option) => (typeof option === 'string' ? option : option.value))
+      .filter((option) => option && option !== '全部');
+    const topCategories = [...categories]
+      .sort((left, right) => (counts.get(right) || 0) - (counts.get(left) || 0))
+      .slice(0, 3);
+
+    return {
+      featured: [
+        { label: '全部', value: '全部' },
+        ...topCategories.map((value) => ({
+          label: `${value} (${counts.get(value) || 0})`,
+          value,
+        })),
+      ],
+      featuredValues: new Set(['全部', ...topCategories]),
+      more: categories
+        .filter((value) => !topCategories.includes(value))
+        .map((value) => ({
+          label: `${value} (${counts.get(value) || 0})`,
+          value,
+        })),
+    };
+  }, [wikiCategoryOptions, wikiConcepts]);
 
   useEffect(() => {
     if (!activeConceptId && wikiConcepts.length > 0) {
@@ -80,36 +111,6 @@ export default function Wiki() {
   const relatedConcepts = activeConcept
     ? resource.data?.relatedConceptsById?.[activeConcept.id] || []
     : [];
-
-  const paperColumns = [
-    {
-      title: '论文',
-      dataIndex: 'title',
-      render: (_, paper) => (
-        <Space orientation="vertical" size={2}>
-          <Button
-            type="link"
-            className="wiki-paper-link"
-            onClick={() => navigate(`/papers/${paper.id}`)}
-          >
-            {paper.title}
-          </Button>
-          <Text type="secondary">arXiv: {paper.arxivId || paper.id}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: '年份',
-      dataIndex: 'year',
-      width: 88,
-    },
-    {
-      title: '知识作用',
-      dataIndex: 'role',
-      width: 180,
-      render: (role) => <Tag color="geekblue">{role}</Tag>,
-    },
-  ];
 
   const resetFilters = () => {
     setKeyword('');
@@ -178,7 +179,7 @@ export default function Wiki() {
       </Row>
 
       <Card variant="borderless" className="wiki-filter-card">
-        <Flex gap={12} align="center" wrap="wrap">
+        <Flex className="wiki-filter-row" gap={12} align="center" wrap="wrap">
           <Search
             allowClear
             className="wiki-search"
@@ -188,10 +189,27 @@ export default function Wiki() {
             onSearch={setKeyword}
           />
           <Segmented
-            value={category}
+            className="wiki-featured-categories"
+            value={categoryFilters.featuredValues.has(category) ? category : null}
             onChange={setCategory}
-            options={wikiCategoryOptions}
+            options={categoryFilters.featured}
           />
+          {categoryFilters.more.length > 0 && (
+            <Select
+              allowClear
+              showSearch
+              className="wiki-more-categories"
+              placeholder="更多分类"
+              value={
+                categoryFilters.featuredValues.has(category) ? undefined : category
+              }
+              onChange={(value) => setCategory(value || '全部')}
+              options={categoryFilters.more}
+              optionFilterProp="label"
+              popupMatchSelectWidth={false}
+              aria-label="更多 Wiki 分类"
+            />
+          )}
         </Flex>
       </Card>
 
@@ -303,13 +321,31 @@ export default function Wiki() {
 
                 <div>
                   <Text strong>来源论文</Text>
-                  <Table
+                  <List
                     rowKey="id"
-                    columns={paperColumns}
                     dataSource={activeConcept.papers}
-                    pagination={false}
-                    size="small"
-                    className="wiki-paper-table"
+                    split={false}
+                    className="wiki-source-paper-list"
+                    renderItem={(paper) => (
+                      <List.Item className="wiki-source-paper-item">
+                        <Button
+                          type="link"
+                          className="wiki-paper-link"
+                          onClick={() => navigate(`/papers/${paper.id}`)}
+                        >
+                          {paper.title}
+                        </Button>
+                        <Flex gap={10} wrap="wrap" className="wiki-source-paper-meta">
+                          <Text type="secondary">
+                            arXiv: {paper.arxivId || paper.id}
+                          </Text>
+                          <Text type="secondary">{paper.year}</Text>
+                        </Flex>
+                        <Paragraph ellipsis={{ rows: 2 }} className="wiki-source-paper-role">
+                          {paper.role}
+                        </Paragraph>
+                      </List.Item>
+                    )}
                   />
                 </div>
               </Space>
