@@ -19,15 +19,16 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPTS = {
     "concept": (
         "你是严谨的论文概念讲解助手。先给出定义，再说明机制、局限和适用条件。"
-        "只能依据给定论文片段作答；每个关键结论后标注 [编号]，不确定时明确说明证据不足。"
+        "请用中文详细回答。只能依据给定论文片段作答；每个关键结论后标注 [编号]，"
+        "不确定时明确说明证据不足。"
     ),
     "comparison": (
         "你是科研方法对比助手。按共同目标、核心差异、实验条件、优缺点和选择建议组织回答。"
-        "不得把不同论文的结论混为一谈；每个关键结论后标注 [编号]。"
+        "请用中文详细回答。不得把不同论文的结论混为一谈；每个关键结论后标注 [编号]。"
     ),
     "lineage": (
         "你是研究脉络梳理助手。按时间或依赖关系说明问题、代表方法、改进点和未决问题。"
-        "只能使用给定证据，并在关键结论后标注 [编号]。"
+        "请用中文详细回答。只能使用给定证据，并在关键结论后标注 [编号]。"
     ),
 }
 
@@ -165,11 +166,30 @@ async def retrieve(
     return sorted(ranked, key=lambda item: item.score, reverse=True)[:result_limit]
 
 
+GENERAL_SYSTEM_PROMPT = (
+    "你是 arxiv-PaperMate 智能助手，帮助研究者理解学术论文。"
+    "当用户的问题与论文内容相关且有检索到的论文证据时，请用中文详细回答，"
+    "基于证据充分展开，并在关键结论后标注 [编号]，末尾增加“证据边界”一节。\n"
+    "当问题与论文无关（如日常对话、问候等），请自然友好地回答，无需强行关联论文。"
+)
+
+
+def is_general_chat(question: str) -> bool:
+    """检测是否属于日常对话而非论文相关问题。"""
+    lowered = question.strip().lower()
+    general_patterns = {
+        "你好", "hello", "hi", "hey", "早上好", "下午好", "晚上好",
+        "你是谁", "你能做什么", "help", "感谢", "谢谢", "thanks",
+    }
+    if lowered in general_patterns or lowered.rstrip("！!。.？?") in general_patterns:
+        return True
+    return False
+
+
 def build_prompt(question: str, chunks: list[RetrievedChunk], scenario: str) -> tuple[str, str]:
     evidence_parts = []
     for index, item in enumerate(chunks, start=1):
         if item.chunk.chunk_index == -1:
-            # Synthetic chunk from paper metadata (no analysis)
             portion = "摘要"
         else:
             portion = f"章节：{item.chunk.section_title or '未标注'}；片段：{item.chunk.chunk_index}"
@@ -180,23 +200,18 @@ def build_prompt(question: str, chunks: list[RetrievedChunk], scenario: str) -> 
     evidence = "\n\n".join(evidence_parts)
     prompt = (
         f"问题：{question}\n\n可用论文证据：\n{evidence or '没有检索到可用证据。'}\n\n"
-        "请直接回答问题。末尾增加“证据边界”一节，简述哪些内容无法由片段确认。"
+        "请用中文详细回答，基于论文证据充分展开论述。"
+        "末尾增加“证据边界”一节，简述哪些内容无法由片段确认。"
     )
     return SYSTEM_PROMPTS[scenario], prompt
 
 
 def fallback_answer(question: str, chunks: list[RetrievedChunk], scenario: str) -> str:
     if not chunks:
-        return "当前论文库中没有检索到足以回答该问题的原文片段。请先导入并解析相关论文，或缩小问题范围。"
-    labels = {"concept": "概念解释", "comparison": "方法对比", "lineage": "研究脉络"}
-    lines = [f"基于论文库中的相关片段，以下是对“{question}”的{labels[scenario]}："]
-    for index, item in enumerate(chunks[:4], start=1):
-        excerpt = re.sub(r"\s+", " ", item.chunk.content).strip()
-        if len(excerpt) > 260:
-            excerpt = f"{excerpt[:260]}…"
-        lines.append(f"\n{index}. {excerpt} [{index}]")
-    lines.append("\n证据边界：当前回答仅归纳已入库片段；未在片段中出现的信息不作推断。")
-    return "".join(lines)
+        return (
+            "当前论文库中没有检索到与你的问题直接相关的原文片段。"
+            "请问你能提供更多背景信息，或者换个问题试试吗？"
+        )
 
 
 async def answer(
@@ -207,15 +222,49 @@ async def answer(
     paper_ids: list[UUID] | None = None,
     requested_scenario: str = "auto",
 ) -> tuple[str, list[RetrievedChunk], str]:
+    # 日常对话直接调 LLM 回答，不检索论文
+    if is_general_chat(question):
+        if settings.llm_api_key:
+            try:
+                content = await get_llm_gateway().generate(
+                    question,
+                    system_prompt="你是 arxiv-PaperMate 智能助手，友善、简洁地用中文回答用户的问题。",
+                )
+                return content, [], "general"
+            except Exception:
+                logger.warning("LLM unavailable for general chat", exc_info=True)
+        return _general_fallback(question), [], "general"
+
     scenario = detect_scenario(question, requested_scenario)
     chunks = await retrieve(db, question, user_id=user_id, paper_ids=paper_ids)
+
+    if not chunks and settings.llm_api_key:
+        # 没检索到论文证据，但让 LLM 用自己的知识回答
+        try:
+            content = await get_llm_gateway().generate(
+                f"用户的问题是：{question}\n\n"
+                "当前论文库中没有检索到相关论文证据。请基于你自己的知识用中文回答这个问题。"
+                "如果问题与学术论文相关但你不确定，请如实说明。",
+                system_prompt="你是 arxiv-PaperMate 智能助手，帮助研究者理解学术论文。用中文清晰回答。",
+            )
+            return content, [], scenario
+        except Exception:
+            logger.warning("LLM unavailable; using fallback answer", exc_info=True)
+
     if settings.llm_api_key and chunks:
         system_prompt, prompt = build_prompt(question, chunks, scenario)
         try:
             content = await get_llm_gateway().generate(prompt, system_prompt=system_prompt)
-        except Exception:
-            logger.warning("LLM generation unavailable; using grounded extractive answer", exc_info=True)
-            content = fallback_answer(question, chunks, scenario)
-    else:
-        content = fallback_answer(question, chunks, scenario)
+            return content, chunks, scenario
+        except Exception as exc:
+            logger.warning("LLM generation failed: %s; using fallback", exc, exc_info=True)
+
+    content = fallback_answer(question, chunks, scenario)
     return content, chunks, scenario
+
+
+def _general_fallback(question: str) -> str:
+    return (
+        "你好！我是 PaperMate 智能助手，帮你查询和理解学术论文。"
+        "你可以问我论文相关的问题，比如“Transformer 是什么？”或“对比 BERT 和 GPT”。"
+    )
