@@ -59,6 +59,7 @@ export function ChatRoom({ initialConversationId } = {}) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const suggestions = resource.data?.suggestions || [];
 
@@ -73,9 +74,14 @@ export function ChatRoom({ initialConversationId } = {}) {
     setActiveId(initialConversationId || null);
   }, [initialConversationId]);
 
-  // 滚动到底部
+  // 滚动到底部（直接设置 scrollTop，避免流式响应时 smooth 动画被频繁中断）
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messagesContainerRef.current;
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
+    }
   }, [messages, activeId]);
 
   const activeMessages = activeId && messages[activeId] ? messages[activeId] : [];
@@ -267,6 +273,7 @@ export function ChatRoom({ initialConversationId } = {}) {
                 return (
                   <List.Item
                     key={conv.id}
+                    className="chat-conversation-item"
                     onClick={() => selectConversation(conv.id)}
                     style={{
                       cursor: 'pointer',
@@ -318,7 +325,6 @@ export function ChatRoom({ initialConversationId } = {}) {
                               danger
                               icon={<DeleteOutlined />}
                               onClick={(e) => e.stopPropagation()}
-                              style={{ visibility: 'hidden' }}
                               className="conv-delete-btn"
                             />
                           </Popconfirm>
@@ -385,7 +391,7 @@ export function ChatRoom({ initialConversationId } = {}) {
             </Flex>
 
             {/* Messages Area */}
-            <div className="chat-messages" style={{ flex: 1 }}>
+            <div className="chat-messages" ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto' }}>
               {activeMessages.length === 0 ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                   <Flex vertical align="center" gap={16}>

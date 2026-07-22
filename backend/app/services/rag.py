@@ -213,6 +213,18 @@ def fallback_answer(question: str, chunks: list[RetrievedChunk], scenario: str) 
             "请问你能提供更多背景信息，或者换个问题试试吗？"
         )
 
+    # 有 chunks 但 LLM 不可用时，基于检索片段构造模板回答
+    parts: list[str] = []
+    for index, item in enumerate(chunks, start=1):
+        parts.append(f"[{index}] 论文《{item.paper.title}》（arXiv:{item.paper.arxiv_id}）中提到：{item.chunk.content}")
+    body = "\n\n".join(parts)
+
+    return (
+        f"以下是论文库中与你问题相关的原文片段（当前 LLM 服务不可用，仅展示检索结果）：\n\n{body}\n\n"
+        "证据边界：以上内容仅为检索到的论文片段原文，未经模型理解与整合。"
+        "回答的完整性和准确性可能存在局限，请以原文为准。"
+    )
+
 
 async def answer(
     db: AsyncSession,
