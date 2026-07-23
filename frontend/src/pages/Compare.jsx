@@ -8,6 +8,7 @@ import {
   Flex,
   Input,
   List,
+  Modal,
   Progress,
   Row,
   Segmented,
@@ -99,6 +100,8 @@ export default function Compare() {
   const [comparisonId, setComparisonId] = useState(null);
   const [comparisonReport, setComparisonReport] = useState('');
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [unparsedPapers, setUnparsedPapers] = useState([]);
+  const [showUnparsedModal, setShowUnparsedModal] = useState(false);
 
   useEffect(() => {
     if (selectionInitialized.current || papers.length === 0) return;
@@ -112,6 +115,11 @@ export default function Compare() {
   const selectedPapers = useMemo(
     () => papers.filter((paper) => selectedPaperIds.includes(paper.id)),
     [papers, selectedPaperIds],
+  );
+
+  const unparsedSelectedPapers = useMemo(
+    () => selectedPapers.filter((p) => p.parsedStatus !== 'completed'),
+    [selectedPapers],
   );
 
   const filteredOptions = useMemo(() => {
@@ -294,6 +302,15 @@ export default function Compare() {
       message.warning('请至少选择 2 篇论文');
       return;
     }
+    if (unparsedSelectedPapers.length > 0) {
+      setUnparsedPapers(unparsedSelectedPapers.map((p) => ({
+        paper_id: p.id,
+        title: p.title,
+        parsed_status: p.parsedStatus || 'pending',
+      })));
+      setShowUnparsedModal(true);
+      return;
+    }
     setGeneratingReport(true);
     try {
       const result = await exportComparison(selectedPaperIds, comparisonId);
@@ -357,7 +374,7 @@ export default function Compare() {
             type="primary"
             icon={<ExportOutlined />}
             loading={generatingReport}
-            disabled={selectedPapers.length < 2}
+            disabled={selectedPapers.length < 2 || unparsedSelectedPapers.length > 0}
             onClick={exportCompare}
           >
             生成 AI 对比报告
@@ -473,6 +490,47 @@ export default function Compare() {
       {selectedPapers.length < 2 ? (
         <Card variant="borderless">
           <Empty description="请选择至少 2 篇论文开始对比" />
+        </Card>
+      ) : unparsedSelectedPapers.length > 0 ? (
+        <Card
+          variant="borderless"
+          title={
+            <Space>
+              <FileTextOutlined />
+              论文尚未解析
+            </Space>
+          }
+        >
+          <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+            以下论文尚未完成解析，无法进行对比分析。请前往论文详情页手动解析后再试：
+          </Paragraph>
+          <List
+            size="small"
+            dataSource={unparsedSelectedPapers}
+            renderItem={(paper) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="parse"
+                    type="link"
+                    onClick={() => navigate(`/papers/${paper.id}`)}
+                  >
+                    去解析
+                  </Button>,
+                ]}
+              >
+                <Space direction="vertical" size={2}>
+                  <Text strong>{paper.title}</Text>
+                  <Text type="secondary">
+                    状态：
+                    <Tag color={paper.parsedStatus === 'failed' ? 'red' : 'default'}>
+                      {paper.parsedStatus === 'failed' ? '解析失败' : '未解析'}
+                    </Tag>
+                  </Text>
+                </Space>
+              </List.Item>
+            )}
+          />
         </Card>
       ) : (
         <>
@@ -643,6 +701,50 @@ export default function Compare() {
           )}
         </>
       )}
+
+      <Modal
+        title="论文尚未解析"
+        open={showUnparsedModal}
+        onCancel={() => setShowUnparsedModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowUnparsedModal(false)}>
+            知道了
+          </Button>,
+          <Button
+            key="go"
+            type="primary"
+            onClick={() => {
+              setShowUnparsedModal(false);
+              if (unparsedPapers.length > 0) {
+                navigate(`/papers/${unparsedPapers[0].paper_id}`);
+              }
+            }}
+          >
+            去解析
+          </Button>,
+        ]}
+      >
+        <Paragraph style={{ marginBottom: 16 }}>
+          以下论文尚未完成解析，无法进行对比分析。请先手动解析后再试：
+        </Paragraph>
+        <List
+          size="small"
+          dataSource={unparsedPapers}
+          renderItem={(paper) => (
+            <List.Item>
+              <Space direction="vertical" size={2}>
+                <Text strong>{paper.title}</Text>
+                <Text type="secondary">
+                  状态：
+                  <Tag color={paper.parsed_status === 'failed' ? 'red' : 'default'}>
+                    {paper.parsed_status === 'failed' ? '解析失败' : '未解析'}
+                  </Tag>
+                </Text>
+              </Space>
+            </List.Item>
+          )}
+        />
+      </Modal>
     </main>
   );
 }
