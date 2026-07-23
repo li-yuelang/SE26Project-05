@@ -206,6 +206,7 @@ class TestGenerateReport:
 
     def test_generate_report_calls_llm(self, monkeypatch):
         import asyncio
+        import json
 
         class FakeLLM:
             def __init__(self):
@@ -213,18 +214,18 @@ class TestGenerateReport:
 
             async def generate(self, prompt, *, system_prompt=None):
                 self.calls.append((prompt, system_prompt))
-                return "# AI 对比报告"
+                return json.dumps({"report": "# AI 对比报告", "matrix": {}})
 
         llm = FakeLLM()
         monkeypatch.setattr("app.core.get_llm_gateway", lambda: llm)
         papers = [
-            {"title": "A", "authors": ["X"], "primary_category": "cs.AI", "abstract": "a", "methods": "", "experiments": ""},
-            {"title": "B", "authors": ["Y"], "primary_category": "cs.AI", "abstract": "b", "methods": "", "experiments": ""},
+            {"paper_id": "pid-1", "title": "A", "authors": ["X"], "primary_category": "cs.AI", "abstract": "a", "methods": "", "experiments": ""},
+            {"paper_id": "pid-2", "title": "B", "authors": ["Y"], "primary_category": "cs.AI", "abstract": "b", "methods": "", "experiments": ""},
         ]
 
         result = asyncio.run(CompareService._generate_report(papers, "对比"))
 
-        assert result == "# AI 对比报告"
+        assert result == {"report": "# AI 对比报告", "matrix": {}}
         assert len(llm.calls) == 1
         assert "论文 1: A" in llm.calls[0][0]
         assert "论文 2: B" in llm.calls[0][0]
@@ -247,7 +248,7 @@ class TestCompareExport:
         async def fake_generate(papers_data, title):
             assert len(papers_data) == 2
             assert title == "AI 对比"
-            return "# 已生成"
+            return {"report": "# 已生成"}
 
         monkeypatch.setattr(CompareService, "_generate_report", staticmethod(fake_generate))
 
