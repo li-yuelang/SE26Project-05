@@ -120,7 +120,7 @@ export default function Wiki() {
 
   if (resource.loading || resource.error) {
     return (
-      <main className="wiki-page">
+      <main className="page-stack wiki-page">
         <AsyncPageState
           loading={resource.loading}
           error={resource.error}
@@ -131,9 +131,9 @@ export default function Wiki() {
   }
 
   return (
-    <main className="wiki-page">
+    <main className="page-stack wiki-page">
       <Flex
-        className="wiki-page-header"
+        className="page-header"
         align="flex-start"
         justify="space-between"
         gap={16}
@@ -155,7 +155,7 @@ export default function Wiki() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="概念节点" value={stats.concepts} suffix="个" />
@@ -178,7 +178,7 @@ export default function Wiki() {
         </Col>
       </Row>
 
-      <Card variant="borderless" className="wiki-filter-card">
+      <Card variant="borderless" className="filter-panel">
         <Flex className="wiki-filter-row" gap={12} align="center" wrap="wrap">
           <Search
             allowClear

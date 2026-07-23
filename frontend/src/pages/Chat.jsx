@@ -29,6 +29,7 @@ import {
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
 import ReactMarkdown from 'react-markdown';
+import { formatConversationDate, getLocalDateString } from '../utils/date';
 import {
   createConversation,
   deleteConversation,
@@ -171,6 +172,7 @@ export function ChatRoom({ initialConversationId } = {}) {
               title: ['新对话', 'New conversation'].includes(conversation.title)
                 ? trimmed.slice(0, 40)
                 : conversation.title,
+              date: getLocalDateString(),
               preview: reply.content.slice(0, 80),
             }
           : conversation
@@ -232,6 +234,7 @@ export function ChatRoom({ initialConversationId } = {}) {
           <Flex
             align="center"
             justify="space-between"
+            className="chat-panel-header"
             style={{
               padding: '12px 16px',
               borderBottom: `1px solid ${token.colorBorderSecondary}`,
@@ -302,7 +305,7 @@ export function ChatRoom({ initialConversationId } = {}) {
                         </Text>
                         <Flex align="center" gap={4} style={{ flexShrink: 0, marginLeft: 8 }}>
                           <Text type="secondary" style={{ fontSize: 11 }}>
-                            {conv.date}
+                            {formatConversationDate(conv.date)}
                           </Text>
                           <Popconfirm
                             title="确定删除该对话？"
@@ -370,6 +373,7 @@ export function ChatRoom({ initialConversationId } = {}) {
             <Flex
               align="center"
               justify="space-between"
+              className="chat-panel-header"
               style={{
                 padding: '12px 20px',
                 borderBottom: `1px solid ${token.colorBorderSecondary}`,
@@ -383,7 +387,7 @@ export function ChatRoom({ initialConversationId } = {}) {
                 </Title>
               </Flex>
               <Text type="secondary" style={{ fontSize: 13 }}>
-                {activeConv.date}
+                {formatConversationDate(activeConv.date)}
               </Text>
             </Flex>
 
@@ -425,14 +429,16 @@ export function ChatRoom({ initialConversationId } = {}) {
             <Flex
               align="flex-end"
               gap={10}
+              className="chat-composer-region"
               style={{
-                padding: '14px 20px',
+                padding: '18px 28px 20px',
                 borderTop: `1px solid ${token.colorBorderSecondary}`,
                 flexShrink: 0,
                 background: token.colorBgContainer,
               }}
             >
               <TextArea
+                className="chat-composer-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onPressEnter={(e) => {
@@ -490,7 +496,7 @@ function MessageBubble({ msg, token, navigate }) {
     <Flex
       gap={10}
       style={{
-        maxWidth: '80%',
+        maxWidth: '92%',
         alignSelf: isUser ? 'flex-end' : 'flex-start',
         flexDirection: isUser ? 'row-reverse' : 'row',
       }}
@@ -508,10 +514,10 @@ function MessageBubble({ msg, token, navigate }) {
         <div
           className={`chat-msg-content-bubble ${isUser ? 'user' : 'assistant'}`}
           style={{
-            padding: '10px 14px',
+            padding: '16px 22px',
             borderRadius: 12,
-            fontSize: 14,
-            lineHeight: 1.65,
+            fontSize: 15,
+            lineHeight: 1.75,
             wordBreak: 'break-word',
             background: isUser ? token.colorPrimary : token.colorFillContent,
             color: isUser ? '#fff' : token.colorText,

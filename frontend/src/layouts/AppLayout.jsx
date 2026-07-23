@@ -129,7 +129,11 @@ export default function AppLayout() {
           </Dropdown>
         </div>
       </aside>
-      <main className="main-content">
+      <main
+        className={`main-content${
+          location.pathname.startsWith('/chat') ? ' chat-main-content' : ''
+        }`}
+      >
         <Outlet />
       </main>
     </div>

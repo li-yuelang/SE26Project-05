@@ -2,9 +2,25 @@
 .chat-page {
   position: relative;
   height: 100vh;
-  margin: -32px -40px;
   overflow: hidden;
   background: var(--color-bg);
+}
+
+.main-content.chat-main-content {
+  padding: 0;
+}
+
+.main-content.chat-main-content > .chat-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* Keep the two chat header separators on the same baseline. */
+.chat-page .chat-panel-header {
+  height: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
 }
 
 /* -- Conversation panel -- */
@@ -232,13 +248,13 @@
 }
 
 .chat-messages {
-  width: min(100% - 40px, 860px);
+  width: min(100% - 64px, 1100px);
   min-height: 0;
   display: flex;
   margin: 0 auto;
-  padding: 32px 0;
+  padding: 36px 0 48px;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .chat-messages.is-empty {
@@ -363,12 +379,12 @@
 }
 
 .chat-composer-input.ant-input {
-  min-height: 38px;
-  padding: 5px 2px 8px;
+  min-height: 44px;
+  padding: 9px 4px 10px;
   resize: none;
   background: transparent;
   box-shadow: none;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.55;
 }
 
@@ -418,6 +434,28 @@
   word-break: break-word;
 }
 
+.chat-msg-content-bubble p {
+  margin: 0 0 0.9em;
+}
+
+.chat-msg-content-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-msg-content-bubble ul,
+.chat-msg-content-bubble ol {
+  margin: 0.8em 0;
+  padding-inline-start: 1.7em;
+}
+
+.chat-msg-content-bubble li {
+  padding-inline-start: 0.15em;
+}
+
+.chat-msg-content-bubble pre {
+  margin: 1em 0;
+}
+
 .chat-message-sources {
   padding: 0 4px;
 }
@@ -459,7 +497,6 @@
 @media (max-width: 768px) {
   .chat-page {
     height: 100vh;
-    margin: -20px;
   }
 
   .chat-thread-header {
@@ -467,7 +504,7 @@
   }
 
   .chat-messages {
-    width: min(100% - 28px, 860px);
+    width: min(100% - 32px, 1100px);
     padding: 24px 0;
   }
 
@@ -481,11 +518,6 @@
 }
 
 @media (max-width: 480px) {
-  .chat-page {
-    height: 100vh;
-    margin: -16px;
-  }
-
   .chat-page .chat-conversation-sider:not(.ant-layout-sider-collapsed) {
     width: calc(100vw - 60px) !important;
     min-width: calc(100vw - 60px) !important;

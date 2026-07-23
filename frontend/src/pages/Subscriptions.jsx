@@ -692,7 +692,7 @@ export default function Subscriptions() {
     || subscriptionsResource.loading || subscriptionsResource.error
   ) {
     return (
-      <main className="subscriptions-page">
+      <main className="page-stack subscriptions-page">
         <AsyncPageState
           loading={resource.loading || feedResource.loading || subscriptionsResource.loading}
           error={resource.error || feedResource.error || subscriptionsResource.error}
@@ -707,10 +707,10 @@ export default function Subscriptions() {
   }
 
   return (
-    <main className="subscriptions-page">
+    <main className="page-stack subscriptions-page">
       {/* ---- 头部 ---- */}
       <Flex
-        className="subscriptions-header"
+        className="page-header"
         align="flex-start"
         justify="space-between"
         gap={16}
@@ -737,7 +737,7 @@ export default function Subscriptions() {
       </Flex>
 
       {/* ---- 统计卡片 ---- */}
-      <Row gutter={[16, 16]} className="subscriptions-stats">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic

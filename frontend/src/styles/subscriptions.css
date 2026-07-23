@@ -1,25 +1,4 @@
 /* ========== Subscriptions ========== */
-.subscriptions-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.subscriptions-header h2 {
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-}
-
-.subscriptions-header p {
-  max-width: 800px;
-  margin-bottom: 0;
-  color: var(--color-text-light);
-}
-
-.subscriptions-stats .ant-card {
-  border-radius: var(--radius);
-}
-
 .subscriptions-tab-card {
   border-radius: var(--radius);
 }
@@ -192,10 +171,6 @@
 }
 
 @media (max-width: 480px) {
-  .subscriptions-header {
-    flex-direction: column;
-  }
-
   .subscriptions-tab-card .ant-segmented {
     flex-wrap: wrap;
   }

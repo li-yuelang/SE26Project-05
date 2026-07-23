@@ -239,14 +239,14 @@ export default function TaskDetail() {
   ];
 
   if (resource.loading && !resource.data) {
-    return <div className="page task-page"><AsyncPageState loading error={null} onRetry={resource.reload} /></div>;
+    return <div className="page page-stack task-page"><AsyncPageState loading error={null} onRetry={resource.reload} /></div>;
   }
   if (resource.error && !resource.data) {
-    return <div className="page task-page"><AsyncPageState loading={false} error={resource.error} onRetry={resource.reload} /></div>;
+    return <div className="page page-stack task-page"><AsyncPageState loading={false} error={resource.error} onRetry={resource.reload} /></div>;
   }
   if (!task) {
     return (
-      <div className="page task-page">
+      <div className="page page-stack task-page">
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/tasks')}>返回任务列表</Button>
         <Empty className="task-detail-empty" description={`未找到任务：${taskId}`} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </div>
@@ -254,7 +254,7 @@ export default function TaskDetail() {
   }
 
   return (
-    <div className="page task-page">
+    <div className="page page-stack task-page">
       <div className="task-detail-toolbar">
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/tasks')}>返回</Button>
         <Space wrap>
@@ -292,7 +292,7 @@ export default function TaskDetail() {
         <Alert className="task-alert" type="warning" showIcon message="本次运行成功但有警告" description={run.errorMessage || '部分新增论文未能加入自动解析队列。'} />
       )}
 
-      <Row gutter={[16, 16]} className="task-stat-row">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={3}><Card><Statistic title="候选论文" value={run?.candidateCount ?? task.candidateCount ?? 0} prefix={<FileSearchOutlined />} /></Card></Col>
         <Col xs={12} md={3}><Card><Statistic title="新增入库" value={run?.newCount ?? task.newCount ?? 0} /></Card></Col>
         <Col xs={12} md={3}><Card><Statistic title="重复过滤" value={run?.duplicateCount ?? task.duplicateCount ?? 0} /></Card></Col>

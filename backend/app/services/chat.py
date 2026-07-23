@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timezone
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,12 +21,19 @@ SUGGESTIONS = [
     "对比 BERT 与 GPT 的预训练方法",
     "梳理检索增强生成的发展脉络",
 ]
+CHAT_TIMEZONE = ZoneInfo("Asia/Shanghai")
+
+
+def _local_time(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(CHAT_TIMEZONE)
 
 
 def _time(value) -> str:
     if value is None:
         return ""
-    return value.astimezone(timezone.utc).strftime("%H:%M")
+    return _local_time(value).strftime("%H:%M")
 
 
 def _conversation_view(
@@ -37,7 +45,7 @@ def _conversation_view(
     return {
         "id": str(conversation.id),
         "title": conversation.title,
-        "date": conversation.updated_at.date().isoformat(),
+        "date": _local_time(conversation.updated_at).date().isoformat(),
         "preview": preview,
     }
 

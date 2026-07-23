@@ -384,7 +384,7 @@ export default function Learning() {
 
   const renderPaperTable = () => (
     <>
-      <Card variant="borderless" className="learning-filter-card">
+      <Card variant="borderless" className="filter-panel">
         <Flex align="center" gap={12} wrap="wrap">
           <Search
             allowClear
@@ -566,7 +566,7 @@ export default function Learning() {
   return (
     <main className="page-stack learning-page">
       <Flex
-        className="learning-header"
+        className="page-header"
         align="flex-start"
         justify="space-between"
         gap={16}
@@ -588,7 +588,7 @@ export default function Learning() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]} className="metric-card-row">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="收藏论文" value={stats.favorites} suffix="篇" />

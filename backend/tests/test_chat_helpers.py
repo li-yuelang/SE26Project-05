@@ -23,9 +23,9 @@ def test_time_returns_empty_for_none() -> None:
     assert _time(None) == ""
 
 
-def test_time_returns_utc_formatted() -> None:
+def test_time_returns_app_timezone_formatted() -> None:
     dt = datetime(2026, 7, 10, 14, 30, tzinfo=timezone.utc)
-    assert _time(dt) == "14:30"
+    assert _time(dt) == "22:30"
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +66,12 @@ def test_conversation_view_empty_messages() -> None:
     conv = _make_conversation(messages=[])
     result = _conversation_view(conv, messages=[])
     assert result["preview"] == ""
+
+
+def test_conversation_view_uses_app_timezone_date() -> None:
+    conv = _make_conversation(messages=[])
+    conv.updated_at = datetime(2026, 7, 9, 18, 30, tzinfo=timezone.utc)
+    assert _conversation_view(conv, messages=[])["date"] == "2026-07-10"
 
 
 # ---------------------------------------------------------------------------

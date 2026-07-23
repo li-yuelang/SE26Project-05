@@ -1,0 +1,89 @@
+/* ========== Tasks ========== */
+.task-detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.task-detail-hero p {
+  margin-bottom: 0;
+}
+
+.task-detail-hero,
+.task-log-card {
+  border-radius: var(--radius);
+}
+
+.task-cell {
+  min-width: 0;
+}
+
+.task-title-button {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-hover);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition);
+}
+
+.task-title-button:hover {
+  color: var(--color-primary-hover);
+  text-decoration: none;
+}
+
+.task-query {
+  display: block;
+  max-width: 560px;
+  color: var(--color-text-light);
+}
+
+.task-detail-hero .ant-progress {
+  display: flex;
+  justify-content: center;
+}
+
+.task-detail-tags {
+  margin-bottom: 8px;
+}
+
+.task-alert {
+  border-radius: var(--radius);
+}
+
+.task-side-stack {
+  width: 100%;
+}
+
+.task-detail-empty {
+  margin-top: 96px;
+}
+
+.task-form-alert {
+  margin-bottom: 20px;
+}
+
+.task-form-inline {
+  width: 100%;
+}
+
+.task-form-inline .ant-form-item {
+  flex: 0 0 auto;
+}
+
+.task-form-drawer .ant-drawer-body {
+  padding-bottom: 96px;
+}
+
+.task-detail-hero .ant-typography-copy {
+  max-width: 100%;
+}
