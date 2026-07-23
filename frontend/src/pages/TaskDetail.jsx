@@ -63,6 +63,20 @@ function formatDate(value, fallback = '暂无') {
   return date.toLocaleString('zh-CN', { hour12: false });
 }
 
+function formatPublicationDate(value, fallback = '—') {
+  if (!value) return fallback;
+
+  // arXiv's <published> value is a UTC source timestamp. Treat its calendar
+  // date as source metadata instead of converting it to the browser timezone,
+  // which can incorrectly move evening submissions to the following day.
+  const sourceDate = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (sourceDate) return sourceDate[1];
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().slice(0, 10);
+}
+
 function statusTag(status, meta = {}) {
   const item = meta[status] || runStatusMeta[status] || { label: status, tagColor: 'default', color: 'default' };
   return <Tag color={item.tagColor || item.color}>{item.label || status}</Tag>;
@@ -213,7 +227,7 @@ export default function TaskDetail() {
       dataIndex: 'published',
       key: 'published',
       width: 150,
-      render: (value) => formatDate(value, '—'),
+      render: (value) => formatPublicationDate(value),
     },
     {
       title: '解析状态',
