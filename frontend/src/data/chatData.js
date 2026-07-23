@@ -1,9 +1,11 @@
+import { getDateDaysAgo } from '../utils/date';
+
 export const chatConversations = [
-  { id: '1', title: 'Transformer 架构讨论', date: '2026-07-07', preview: '关于注意力机制的深入探讨…' },
-  { id: '2', title: 'BERT 预训练方法对比', date: '2026-07-06', preview: 'MLM 与 NSP 任务的区别与应用…' },
-  { id: '3', title: '大模型微调技术', date: '2026-07-05', preview: 'LoRA 和 P-Tuning 的效率对比…' },
-  { id: '4', title: '图神经网络综述', date: '2026-07-04', preview: 'GCN、GAT、GraphSAGE 的关系…' },
-  { id: '5', title: '扩散模型原理', date: '2026-07-03', preview: 'DDPM 与 Score-based 统一视角…' },
+  { id: '1', title: 'Transformer 架构讨论', date: getDateDaysAgo(0), preview: '关于注意力机制的深入探讨…' },
+  { id: '2', title: 'BERT 预训练方法对比', date: getDateDaysAgo(1), preview: 'MLM 与 NSP 任务的区别与应用…' },
+  { id: '3', title: '大模型微调技术', date: getDateDaysAgo(2), preview: 'LoRA 和 P-Tuning 的效率对比…' },
+  { id: '4', title: '图神经网络综述', date: getDateDaysAgo(3), preview: 'GCN、GAT、GraphSAGE 的关系…' },
+  { id: '5', title: '扩散模型原理', date: getDateDaysAgo(4), preview: 'DDPM 与 Score-based 统一视角…' },
 ];
 
 export const chatMessages = {

@@ -1,7 +1,17 @@
 /* ========== Responsive ========== */
+@media (max-width: 1100px) {
+  .main-content {
+    padding-inline: 32px;
+  }
+}
+
 @media (max-width: 768px) {
+  :root {
+    --sidebar-width: 60px;
+  }
+
   .sidebar {
-    width: 60px;
+    width: var(--sidebar-width);
   }
 
   .sidebar-brand-copy,
@@ -10,6 +20,7 @@
   }
 
   .sidebar-brand {
+    min-height: 68px;
     justify-content: center;
     padding-inline: 8px;
   }
@@ -46,8 +57,14 @@
   }
 
   .main-content {
-    margin-left: 60px;
-    padding: 20px;
+    margin-left: var(--sidebar-width);
+    padding: 24px 20px 48px;
+  }
+
+  .page-header {
+    min-height: auto;
+    padding-bottom: 18px;
+    flex-direction: column;
   }
 
   .dashboard-search {
@@ -57,10 +74,6 @@
 
   .dashboard-search .ant-select {
     width: 100%;
-  }
-
-  .wiki-page-header {
-    flex-direction: column;
   }
 
   .wiki-search,
@@ -75,10 +88,6 @@
   .wiki-featured-categories .ant-segmented-group {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .trend-page-header {
-    flex-direction: column;
   }
 
   .trend-search,
@@ -96,7 +105,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .trend-filter-card .ant-segmented {
+  .filter-panel .ant-segmented {
     max-width: 100%;
   }
 
@@ -117,17 +126,16 @@
     min-width: 100%;
   }
 
-  .task-page-header,
   .task-detail-toolbar {
     flex-direction: column;
   }
 
-  .task-filter-card .ant-row > .ant-col {
+  .filter-panel .ant-row > .ant-col {
     width: 100%;
   }
 
-  .task-filter-card .ant-select,
-  .task-filter-card .ant-input-search {
+  .filter-panel .ant-select,
+  .filter-panel .ant-input-search {
     width: 100% !important;
   }
 
@@ -149,6 +157,6 @@
 
 @media (max-width: 480px) {
   .main-content {
-    padding: 16px;
+    padding: 20px 16px 40px;
   }
 }

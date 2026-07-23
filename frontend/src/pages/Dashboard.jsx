@@ -153,8 +153,13 @@ export default function Dashboard() {
 
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={16}>
-          <Card title="最新论文" variant="borderless">
+          <Card
+            title="最新论文"
+            variant="borderless"
+            className="dashboard-papers-card"
+          >
             <Table
+              className="dashboard-papers-table"
               rowKey="id"
               columns={paperColumns}
               dataSource={filteredPapers}

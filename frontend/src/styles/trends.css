@@ -1,33 +1,20 @@
 /* ========== Trends ========== */
-/* ========== Learning & Compare ========== */
-/* ========== Tasks ========== */
-.task-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.trend-page-header h2,
 .topic-trend-hero h2 {
   margin-bottom: 8px;
   letter-spacing: -0.02em;
 }
 
-.trend-page-header p,
 .topic-trend-hero p {
   max-width: 780px;
   color: var(--color-text-light);
   margin-bottom: 0;
 }
 
-.trend-filter-card,
 .trend-panel {
   border-radius: var(--radius);
 }
 
 .trend-page,
-.trend-filter-card,
-.trend-filter-card .ant-card-body,
 .trend-filter-row {
   min-width: 0;
   max-width: 100%;
@@ -430,63 +417,4 @@
 
 .topic-trend-related-item .ant-progress {
   margin: 8px 0 3px;
-}
-
-.learning-header h2,
-.compare-header h2 {
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-}
-
-.learning-header p,
-.compare-header p {
-  max-width: 800px;
-  margin-bottom: 0;
-  color: var(--color-text-light);
-}
-
-.learning-filter-card,
-.learning-view-card,
-.compare-selector-card,
-.compare-view-card {
-  border-radius: var(--radius);
-}
-
-.learning-search,
-.compare-search {
-  width: min(100%, 380px);
-}
-
-.learning-select {
-  width: 150px;
-}
-
-.learning-paper-cell {
-  max-width: 560px;
-}
-
-.learning-paper-title,
-.compare-paper-title {
-  height: auto;
-  padding: 0;
-  text-align: left;
-  white-space: normal;
-}
-
-.learning-star {
-  color: #fbbf24;
-}
-
-.learning-note-text {
-  margin-bottom: 0;
-}
-
-.learning-topic-card {
-  height: 100%;
-}
-
-.learning-topic-body,
-.learning-topic-summary,
-.learning-note-modal {
-  width: 100%;
 }

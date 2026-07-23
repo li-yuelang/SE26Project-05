@@ -1,15 +1,4 @@
 /* ========== PaperList ========== */
-.paper-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-}
-
-.paper-filter-card {
-  margin-bottom: 16px;
-  border-radius: var(--radius);
-}
 
 .paper-list-stats {
   margin-bottom: 12px;
@@ -30,7 +19,6 @@
 }
 
 @media (max-width: 720px) {
-  .paper-list-header,
   .paper-batch-toolbar {
     align-items: stretch;
     flex-direction: column;

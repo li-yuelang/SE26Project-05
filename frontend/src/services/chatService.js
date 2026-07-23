@@ -12,6 +12,7 @@ import {
   getMockUserScope,
   request,
 } from './apiClient';
+import { getLocalDateString } from '../utils/date';
 
 const chatStores = new Map();
 
@@ -40,7 +41,7 @@ export const createConversation = createEndpoint({
     const conversation = {
       id: String(Date.now()),
       title: '新对话',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateString(),
       preview: '',
     };
     const store = getChatStore();

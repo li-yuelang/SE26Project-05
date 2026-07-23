@@ -379,9 +379,9 @@ export default function PaperList() {
   ];
 
   return (
-    <div className="page">
+    <div className="page page-stack">
       {/* 页面标题 */}
-      <div className="paper-list-header">
+      <div className="page-header">
         <div>
           <h2>论文列表</h2>
           <p>浏览与检索 ArXiv 论文</p>
@@ -406,7 +406,7 @@ export default function PaperList() {
       </div>
 
       {/* 搜索与筛选 */}
-      <Card className="paper-filter-card" size="small">
+      <Card className="filter-panel" size="small">
         <Row gutter={[16, 12]} align="middle">
           <Col flex="auto">
             <Search

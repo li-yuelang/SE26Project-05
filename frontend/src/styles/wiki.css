@@ -1,31 +1,22 @@
 /* ========== Wiki ========== */
-.wiki-page,
 .concept-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.wiki-page-header h2,
 .concept-hero h2 {
   margin-bottom: 8px;
   letter-spacing: -0.02em;
 }
 
-.wiki-page-header p,
 .concept-hero p {
   max-width: 760px;
   color: var(--color-text-light);
   margin-bottom: 0;
 }
 
-.wiki-filter-card {
-  border-radius: var(--radius);
-}
-
 .wiki-page,
-.wiki-filter-card,
-.wiki-filter-card .ant-card-body,
 .wiki-filter-row {
   min-width: 0;
   max-width: 100%;

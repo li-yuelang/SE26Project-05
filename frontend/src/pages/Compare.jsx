@@ -354,7 +354,7 @@ export default function Compare() {
   return (
     <main className="page-stack compare-page">
       <Flex
-        className="compare-header"
+        className="page-header"
         align="flex-start"
         justify="space-between"
         gap={16}
@@ -382,7 +382,7 @@ export default function Compare() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]} className="metric-card-row">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="已选论文" value={selectedPapers.length} suffix="篇" />
@@ -420,7 +420,7 @@ export default function Compare() {
         </Col>
       </Row>
 
-      <Card variant="borderless" className="compare-selector-card">
+      <Card variant="borderless" className="filter-panel">
         <Flex gap={12} align="center" wrap="wrap">
           <Search
             allowClear

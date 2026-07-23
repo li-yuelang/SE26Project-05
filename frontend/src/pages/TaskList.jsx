@@ -272,15 +272,15 @@ export default function TaskList() {
   ];
 
   if (resource.loading && !resource.data) {
-    return <div className="page task-page"><AsyncPageState loading error={null} onRetry={resource.reload} /></div>;
+    return <div className="page page-stack task-page"><AsyncPageState loading error={null} onRetry={resource.reload} /></div>;
   }
   if (resource.error && !resource.data) {
-    return <div className="page task-page"><AsyncPageState loading={false} error={resource.error} onRetry={resource.reload} /></div>;
+    return <div className="page page-stack task-page"><AsyncPageState loading={false} error={resource.error} onRetry={resource.reload} /></div>;
   }
 
   return (
-    <div className="page task-page">
-      <div className="task-page-header">
+    <div className="page page-stack task-page">
+      <div className="page-header">
         <div>
           <h2>抓取任务管理</h2>
           <p>管理 arXiv 自动抓取、去重、解析和入库任务。</p>
@@ -291,14 +291,14 @@ export default function TaskList() {
         </Space>
       </div>
 
-      <Row gutter={[16, 16]} className="task-stat-row">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} lg={6}><Card><Statistic title="运行中" value={totals.running} prefix={<SyncOutlined />} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="累计新增" value={totals.newPapers} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="最近失败" value={totals.failed} styles={{ content: { color: '#cf1322' } }} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="已计划" value={totals.scheduled} /></Card></Col>
       </Row>
 
-      <Card className="task-filter-card" size="small">
+      <Card className="filter-panel" size="small">
         <Row gutter={[16, 12]} align="middle">
           <Col flex="auto">
             <Search

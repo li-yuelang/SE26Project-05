@@ -189,7 +189,7 @@ export default function Trends() {
   return (
     <main className="page-stack trend-page">
       <Flex
-        className="trend-page-header"
+        className="page-header"
         align="flex-start"
         justify="space-between"
         gap={16}
@@ -211,7 +211,7 @@ export default function Trends() {
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]} className="metric-card-row">
+      <Row gutter={[16, 16]} className="stats-strip">
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic title="追踪主题" value={stats.topics} suffix="个" />
@@ -234,7 +234,7 @@ export default function Trends() {
         </Col>
       </Row>
 
-      <Card variant="borderless" className="trend-filter-card">
+      <Card variant="borderless" className="filter-panel">
         <Flex className="trend-filter-row" gap={12} align="center" wrap="wrap">
           <Search
             allowClear
