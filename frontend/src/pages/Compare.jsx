@@ -8,10 +8,7 @@ import {
   Flex,
   Input,
   List,
-  Modal,
-  Progress,
   Row,
-  Segmented,
   Select,
   Space,
   Statistic,
@@ -22,15 +19,8 @@ import {
 } from 'antd';
 import {
   ArrowLeftOutlined,
-  BarChartOutlined,
   BookOutlined,
-  BranchesOutlined,
-  CheckCircleOutlined,
-  ExportOutlined,
-  ExperimentOutlined,
   FileTextOutlined,
-  LinkOutlined,
-  PartitionOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
@@ -43,48 +33,14 @@ import {
 const { Paragraph, Text, Title } = Typography;
 const { Search } = Input;
 
-const compareDimensions = [
-  {
-    key: 'question',
-    label: '研究问题',
-    render: (paper) => paper.researchQuestion,
-  },
-  {
-    key: 'method',
-    label: '核心方法',
-    render: (paper) => (
-      <Space size={[6, 6]} wrap>
-        {paper.methods.map((method) => (
-          <Tag key={method}>{method}</Tag>
-        ))}
-      </Space>
-    ),
-  },
-  {
-    key: 'dataset',
-    label: '数据与实验',
-    render: (paper) => (
-      <Space orientation="vertical" size={4}>
-        <Text>{paper.datasets.join('、')}</Text>
-        <Text type="secondary">{paper.experiment}</Text>
-      </Space>
-    ),
-  },
-  {
-    key: 'conclusion',
-    label: '主要结论',
-    render: (paper) => paper.conclusion,
-  },
-  {
-    key: 'limitations',
-    label: '局限性',
-    render: (paper) => paper.limitations,
-  },
-  {
-    key: 'bestFor',
-    label: '适合参考',
-    render: (paper) => paper.bestFor,
-  },
+/** 矩阵维度定义 */
+const MATRIX_DIMENSIONS = [
+  { key: 'question', label: '研究问题' },
+  { key: 'method', label: '核心方法' },
+  { key: 'dataset', label: '数据与实验' },
+  { key: 'conclusion', label: '主要结论' },
+  { key: 'limitations', label: '局限性' },
+  { key: 'bestFor', label: '适合参考' },
 ];
 
 export default function Compare() {
@@ -92,17 +48,14 @@ export default function Compare() {
   const navigate = useNavigate();
   const resource = useAsyncResource(getLearningCenter, []);
   const selectionInitialized = useRef(false);
+  const exportTriggered = useRef(false);
   const papers = resource.data?.papers || [];
-  const statusMeta = resource.data?.statusMeta || {};
   const [selectedPaperIds, setSelectedPaperIds] = useState([]);
   const [keyword, setKeyword] = useState('');
-  const [activeView, setActiveView] = useState('matrix');
-  const [comparisonId, setComparisonId] = useState(null);
-  const [comparisonReport, setComparisonReport] = useState('');
-  const [generatingReport, setGeneratingReport] = useState(false);
-  const [unparsedPapers, setUnparsedPapers] = useState([]);
-  const [showUnparsedModal, setShowUnparsedModal] = useState(false);
+  const [matrixData, setMatrixData] = useState(null); // { "研究问题": {"paperId": "content", ...}, ... }
+  const [loadingMatrix, setLoadingMatrix] = useState(false);
 
+  // 从学习中心跳转来时自动选中论文
   useEffect(() => {
     if (selectionInitialized.current || papers.length === 0) return;
     const initialPaperIds = location.state?.paperIds?.filter((paperId) =>
@@ -117,10 +70,35 @@ export default function Compare() {
     [papers, selectedPaperIds],
   );
 
-  const unparsedSelectedPapers = useMemo(
-    () => selectedPapers.filter((p) => p.parsedStatus !== 'completed'),
-    [selectedPapers],
-  );
+  // 选中论文后自动触发 AI 对比，用返回的 matrix 填充表格
+  useEffect(() => {
+    if (selectedPaperIds.length < 2) return;
+    if (exportTriggered.current) return;
+    if (selectedPapers.some((p) => p.parsedStatus !== 'completed')) return;
+    exportTriggered.current = true;
+    fetchComparison();
+  }, [selectedPaperIds]);
+
+  const fetchComparison = async () => {
+    setLoadingMatrix(true);
+    try {
+      const result = await exportComparison(selectedPaperIds, null);
+      if (result.matrix) {
+        setMatrixData(result.matrix);
+      }
+    } catch (error) {
+      // fallback to individual paper data if comparison fails
+      message.error(error.message || 'AI 对比生成失败，使用本地数据填充');
+    } finally {
+      setLoadingMatrix(false);
+    }
+  };
+
+  // ---- 当选中论文变化时重置 matrix ----
+  useEffect(() => {
+    setMatrixData(null);
+    exportTriggered.current = false;
+  }, [selectedPaperIds]);
 
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -151,7 +129,7 @@ export default function Compare() {
 
     const tagCounts = new Map();
     selectedPapers.forEach((paper) => {
-      paper.tags.forEach((tag) => {
+      (paper.tags || []).forEach((tag) => {
         tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       });
     });
@@ -164,12 +142,31 @@ export default function Compare() {
       id: paper.id,
       title: paper.title,
       direction: paper.direction,
-      tags: paper.tags,
-      uniqueTags: paper.tags.filter((tag) => tagCounts.get(tag) === 1),
+      tags: paper.tags || [],
+      uniqueTags: (paper.tags || []).filter((tag) => tagCounts.get(tag) === 1),
     }));
 
     return { common, byPaper };
   }, [selectedPapers]);
+
+  // 获取某篇论文在某个维度的内容（优先使用 AI matrix，fallback 到论文自身字段）
+  const getCellValue = useMemo(() => {
+    const fieldMap = {
+      '研究问题': 'researchQuestion',
+      '核心方法': 'methods',
+      '数据与实验': 'experiment',
+      '主要结论': 'conclusion',
+      '局限性': 'limitations',
+      '适合参考': 'bestFor',
+    };
+
+    return (dimLabel, paper) => {
+      if (matrixData && matrixData[dimLabel] && matrixData[dimLabel][paper.id]) {
+        return matrixData[dimLabel][paper.id];
+      }
+      return paper[fieldMap[dimLabel]];
+    };
+  }, [matrixData]);
 
   const matrixColumns = useMemo(
     () => [
@@ -188,7 +185,7 @@ export default function Compare() {
           </Space>
         ),
         dataIndex: paper.id,
-        minWidth: 260,
+        minWidth: 280,
       })),
     ],
     [selectedPapers],
@@ -196,96 +193,34 @@ export default function Compare() {
 
   const matrixRows = useMemo(
     () =>
-      compareDimensions.map((dimension) => {
-        const row = {
-          key: dimension.key,
-          label: dimension.label,
-        };
+      MATRIX_DIMENSIONS.map((dim) => {
+        const row = { key: dim.key, label: dim.label };
 
         selectedPapers.forEach((paper) => {
-          row[paper.id] = dimension.render(paper);
+          const val = getCellValue(dim.label, paper);
+          if (dim.key === 'method' && Array.isArray(val)) {
+            row[paper.id] = (
+              <Space size={[6, 6]} wrap>
+                {val.map((m) => (
+                  <Tag key={m}>{m}</Tag>
+                ))}
+              </Space>
+            );
+          } else if (dim.key === 'dataset' && Array.isArray(val)) {
+            row[paper.id] = (
+              <Space orientation="vertical" size={4}>
+                <Text>{val.join('、')}</Text>
+              </Space>
+            );
+          } else {
+            row[paper.id] = val || <Text type="secondary">—</Text>;
+          }
         });
 
         return row;
       }),
-    [selectedPapers],
+    [selectedPapers, getCellValue],
   );
-
-  const overviewColumns = [
-    {
-      title: '论文',
-      dataIndex: 'title',
-      render: (_, paper) => (
-        <Space orientation="vertical" size={4}>
-          <Button
-            type="link"
-            className="compare-paper-title"
-            onClick={() => navigate(`/papers/${paper.id}`)}
-          >
-            {paper.title}
-          </Button>
-          <Text type="secondary">{paper.authors.join(', ')}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: '方向',
-      dataIndex: 'direction',
-      width: 120,
-      render: (direction) => <Tag color="geekblue">{direction}</Tag>,
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 110,
-      render: (status) => (
-        <Tag color={statusMeta[status].color === 'success' ? 'green' : 'blue'}>
-          {statusMeta[status].text}
-        </Tag>
-      ),
-    },
-    {
-      title: '阅读进度',
-      dataIndex: 'progress',
-      width: 150,
-      render: (progress) => <Progress percent={progress} size="small" />,
-    },
-    {
-      title: '笔记',
-      dataIndex: 'notesCount',
-      width: 90,
-      render: (count) => `${count} 条`,
-    },
-  ];
-
-  const methodColumns = [
-    {
-      title: '论文',
-      dataIndex: 'title',
-      width: 260,
-      render: (title) => <Text strong>{title}</Text>,
-    },
-    {
-      title: '方法组合',
-      dataIndex: 'methods',
-      render: (methods) => (
-        <Space size={[6, 6]} wrap>
-          {methods.map((method) => (
-            <Tag key={method}>{method}</Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: '数据集',
-      dataIndex: 'datasets',
-      render: (datasets) => datasets.join('、'),
-    },
-    {
-      title: '实验结论',
-      dataIndex: 'experiment',
-    },
-  ];
 
   const handleSelectChange = (paperIds) => {
     if (paperIds.length > 4) {
@@ -293,50 +228,14 @@ export default function Compare() {
       return;
     }
     setSelectedPaperIds(paperIds);
-    setComparisonId(null);
-    setComparisonReport('');
-  };
-
-  const exportCompare = async () => {
-    if (selectedPaperIds.length < 2) {
-      message.warning('请至少选择 2 篇论文');
-      return;
-    }
-    if (unparsedSelectedPapers.length > 0) {
-      setUnparsedPapers(unparsedSelectedPapers.map((p) => ({
-        paper_id: p.id,
-        title: p.title,
-        parsed_status: p.parsedStatus || 'pending',
-      })));
-      setShowUnparsedModal(true);
-      return;
-    }
-    setGeneratingReport(true);
-    try {
-      const result = await exportComparison(selectedPaperIds, comparisonId);
-      if (!result?.report_content) {
-        throw new Error('AI 未返回对比报告，请检查后端的大模型配置与日志');
-      }
-      setComparisonId(result.comparison_id);
-      setComparisonReport(result.report_content);
-      message.success('AI 对比报告已生成');
-    } catch (error) {
-      message.error(error.message || 'AI 对比报告生成失败');
-    } finally {
-      setGeneratingReport(false);
-    }
   };
 
   const restoreDefaultSelection = () => {
     setSelectedPaperIds([]);
-    setComparisonId(null);
-    setComparisonReport('');
   };
 
   const removePaper = (paperId) => {
-    setSelectedPaperIds((paperIds) => paperIds.filter((id) => id !== paperId));
-    setComparisonId(null);
-    setComparisonReport('');
+    setSelectedPaperIds((ids) => ids.filter((id) => id !== paperId));
   };
 
   if (resource.loading || resource.error) {
@@ -350,6 +249,8 @@ export default function Compare() {
       </main>
     );
   }
+
+  const hasUnparsed = selectedPapers.some((p) => p.parsedStatus !== 'completed');
 
   return (
     <main className="page-stack compare-page">
@@ -370,15 +271,6 @@ export default function Compare() {
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/learning')}>
             返回学习中心
           </Button>
-          <Button
-            type="primary"
-            icon={<ExportOutlined />}
-            loading={generatingReport}
-            disabled={selectedPapers.length < 2 || unparsedSelectedPapers.length > 0}
-            onClick={exportCompare}
-          >
-            生成 AI 对比报告
-          </Button>
         </Space>
       </Flex>
 
@@ -395,7 +287,7 @@ export default function Compare() {
               value={
                 selectedPapers.length
                   ? Math.round(
-                      selectedPapers.reduce((sum, paper) => sum + paper.progress, 0) /
+                      selectedPapers.reduce((sum, paper) => sum + (paper.progress || 0), 0) /
                         selectedPapers.length,
                     )
                   : 0
@@ -446,52 +338,11 @@ export default function Compare() {
         </Flex>
       </Card>
 
-      {comparisonReport && (
-        <Card
-          variant="borderless"
-          className="compare-ai-report-card"
-          title={
-            <Space>
-              <FileTextOutlined />
-              AI 对比报告
-            </Space>
-          }
-        >
-          <div className="compare-ai-report">{comparisonReport}</div>
-        </Card>
-      )}
-
-      <Card variant="borderless" className="compare-view-card">
-        <Flex align="center" justify="space-between" gap={12} wrap="wrap">
-          <Segmented
-            value={activeView}
-            onChange={setActiveView}
-            options={[
-              { label: '总览矩阵', value: 'matrix', icon: <BarChartOutlined /> },
-              { label: '方法实验', value: 'methods', icon: <ExperimentOutlined /> },
-              { label: '概念关联', value: 'concepts', icon: <BranchesOutlined /> },
-              { label: '阅读决策', value: 'decision', icon: <CheckCircleOutlined /> },
-            ]}
-          />
-          <Space size={[6, 6]} wrap>
-            {selectedPapers.map((paper) => (
-              <Tag
-                key={paper.id}
-                closable
-                onClose={() => removePaper(paper.id)}
-              >
-                {paper.id}
-              </Tag>
-            ))}
-          </Space>
-        </Flex>
-      </Card>
-
       {selectedPapers.length < 2 ? (
         <Card variant="borderless">
           <Empty description="请选择至少 2 篇论文开始对比" />
         </Card>
-      ) : unparsedSelectedPapers.length > 0 ? (
+      ) : hasUnparsed ? (
         <Card
           variant="borderless"
           title={
@@ -506,7 +357,7 @@ export default function Compare() {
           </Paragraph>
           <List
             size="small"
-            dataSource={unparsedSelectedPapers}
+            dataSource={selectedPapers.filter((p) => p.parsedStatus !== 'completed')}
             renderItem={(paper) => (
               <List.Item
                 actions={[
@@ -534,217 +385,118 @@ export default function Compare() {
         </Card>
       ) : (
         <>
-          {activeView === 'matrix' && (
-            <Card
-              variant="borderless"
-              title={
-                <Space>
-                  <FileTextOutlined />
-                  结构化对比矩阵
-                </Space>
-              }
-            >
-              <Table
-                rowKey="key"
-                columns={matrixColumns}
-                dataSource={matrixRows}
-                pagination={false}
-                scroll={{ x: 900 }}
-                bordered
-              />
-            </Card>
-          )}
+          {/* 已选论文标签 */}
+          <Flex wrap="wrap" gap={8} style={{ marginBottom: 12 }}>
+            {selectedPapers.map((paper) => (
+              <Tag
+                key={paper.id}
+                closable
+                onClose={() => removePaper(paper.id)}
+                style={{ fontSize: 13, padding: '2px 8px' }}
+              >
+                <BookOutlined style={{ marginRight: 4 }} />
+                {paper.title.slice(0, 30)}…
+              </Tag>
+            ))}
+          </Flex>
 
-          {activeView === 'methods' && (
-            <Card
-              variant="borderless"
-              title={
-                <Space>
-                  <ExperimentOutlined />
-                  方法与实验对比
-                </Space>
-              }
-            >
-              <Table
-                rowKey="id"
-                columns={methodColumns}
-                dataSource={selectedPapers}
-                pagination={false}
-                scroll={{ x: 900 }}
-              />
-            </Card>
-          )}
-
-          {activeView === 'concepts' && (
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={8}>
-                <Card
-                  variant="borderless"
-                  title={
-                    <Space>
-                      <PartitionOutlined />
-                      共同概念
-                    </Space>
-                  }
-                >
-                  {tagStats.common.length > 0 ? (
-                    <Space size={[6, 6]} wrap>
-                      {tagStats.common.map((tag) => (
-                        <Tag color="blue" key={tag}>
-                          {tag}
-                        </Tag>
-                      ))}
-                    </Space>
-                  ) : (
-                    <Empty description="暂无完全重叠标签" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  )}
-                </Card>
-              </Col>
-              <Col xs={24} lg={16}>
-                <Card
-                  variant="borderless"
-                  title={
-                    <Space>
-                      <TagsOutlined />
-                      差异标签
-                    </Space>
-                  }
-                >
-                  <List
-                    dataSource={tagStats.byPaper}
-                    renderItem={(paper) => (
-                      <List.Item>
-                        <List.Item.Meta
-                          title={
-                            <Space wrap>
-                              <Text strong>{paper.title}</Text>
-                              <Tag color="geekblue">{paper.direction}</Tag>
-                            </Space>
-                          }
-                          description={
-                            <Space size={[6, 6]} wrap>
-                              {(paper.uniqueTags.length ? paper.uniqueTags : paper.tags).map((tag) => (
-                                <Tag key={tag}>{tag}</Tag>
-                              ))}
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
+          {/* 总览矩阵 */}
+          <Card
+            variant="borderless"
+            title={
+              <Space>
+                <FileTextOutlined />
+                结构化对比矩阵
+                {loadingMatrix && <Text type="secondary" style={{ fontSize: 13 }}>（AI 对比生成中…）</Text>}
+                {matrixData && !loadingMatrix && (
+                  <Tag color="green" style={{ marginLeft: 8 }}>AI 对比</Tag>
+                )}
+              </Space>
+            }
+          >
+            <Table
+              rowKey="key"
+              columns={matrixColumns}
+              dataSource={matrixRows}
+              pagination={false}
+              scroll={{ x: 900 }}
+              bordered
+              loading={loadingMatrix}
+              locale={{
+                emptyText: (
+                  <Empty
+                    description="暂无对比数据"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
                   />
-                </Card>
-              </Col>
-            </Row>
-          )}
+                ),
+              }}
+            />
+          </Card>
 
-          {activeView === 'decision' && (
-            <Row gutter={[16, 16]}>
-              <Col xs={24} xl={15}>
-                <Card
-                  variant="borderless"
-                  title={
-                    <Space>
-                      <BookOutlined />
-                      阅读优先级
-                    </Space>
-                  }
-                >
-                  <Table
-                    rowKey="id"
-                    columns={overviewColumns}
-                    dataSource={[...selectedPapers].sort((a, b) => {
-                      const priorityScore = { 高: 3, 中: 2, 低: 1 };
-                      return priorityScore[b.priority] - priorityScore[a.priority];
-                    })}
-                    pagination={false}
-                    scroll={{ x: 780 }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} xl={9}>
-                <Card
-                  variant="borderless"
-                  title={
-                    <Space>
-                      <LinkOutlined />
-                      适用场景建议
-                    </Space>
-                  }
-                >
-                  <List
-                    dataSource={selectedPapers}
-                    renderItem={(paper) => (
-                      <List.Item>
-                        <Space orientation="vertical" size={6}>
-                          <Text strong>{paper.title}</Text>
-                          <Text type="secondary">{paper.bestFor}</Text>
-                          <Space size={[6, 6]} wrap>
-                            <Tag color={paper.priority === '高' ? 'red' : 'gold'}>
-                              {paper.priority}优先级
-                            </Tag>
-                            <Button
-                              type="link"
-                              className="compare-inline-link"
-                              href={paper.arxivUrl}
-                              target="_blank"
-                            >
-                              arXiv
-                            </Button>
+          {/* 标签对比总览 */}
+          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            <Col xs={24} lg={8}>
+              <Card
+                variant="borderless"
+                size="small"
+                title={
+                  <Space>
+                    <TagsOutlined />
+                    共同标签
+                  </Space>
+                }
+              >
+                {tagStats.common.length > 0 ? (
+                  <Space size={[6, 6]} wrap>
+                    {tagStats.common.map((tag) => (
+                      <Tag color="blue" key={tag}>
+                        {tag}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  <Empty description="暂无" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                )}
+              </Card>
+            </Col>
+            <Col xs={24} lg={16}>
+              <Card
+                variant="borderless"
+                size="small"
+                title={
+                  <Space>
+                    <TagsOutlined />
+                    各论文标签
+                  </Space>
+                }
+              >
+                <List
+                  dataSource={tagStats.byPaper}
+                  renderItem={(paper) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        title={
+                          <Space wrap>
+                            <Text strong>{paper.title}</Text>
+                            <Tag color="geekblue">{paper.direction}</Tag>
                           </Space>
-                        </Space>
-                      </List.Item>
-                    )}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          )}
+                        }
+                        description={
+                          <Space size={[6, 6]} wrap>
+                            {(paper.uniqueTags.length ? paper.uniqueTags : paper.tags).map((tag) => (
+                              <Tag key={tag}>{tag}</Tag>
+                            ))}
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </Col>
+          </Row>
         </>
       )}
-
-      <Modal
-        title="论文尚未解析"
-        open={showUnparsedModal}
-        onCancel={() => setShowUnparsedModal(false)}
-        footer={[
-          <Button key="close" onClick={() => setShowUnparsedModal(false)}>
-            知道了
-          </Button>,
-          <Button
-            key="go"
-            type="primary"
-            onClick={() => {
-              setShowUnparsedModal(false);
-              if (unparsedPapers.length > 0) {
-                navigate(`/papers/${unparsedPapers[0].paper_id}`);
-              }
-            }}
-          >
-            去解析
-          </Button>,
-        ]}
-      >
-        <Paragraph style={{ marginBottom: 16 }}>
-          以下论文尚未完成解析，无法进行对比分析。请先手动解析后再试：
-        </Paragraph>
-        <List
-          size="small"
-          dataSource={unparsedPapers}
-          renderItem={(paper) => (
-            <List.Item>
-              <Space direction="vertical" size={2}>
-                <Text strong>{paper.title}</Text>
-                <Text type="secondary">
-                  状态：
-                  <Tag color={paper.parsed_status === 'failed' ? 'red' : 'default'}>
-                    {paper.parsed_status === 'failed' ? '解析失败' : '未解析'}
-                  </Tag>
-                </Text>
-              </Space>
-            </List.Item>
-          )}
-        />
-      </Modal>
     </main>
   );
 }
