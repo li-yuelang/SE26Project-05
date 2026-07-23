@@ -124,17 +124,32 @@ class CompareService:
 
         # If a report hasn't been generated yet and LLM is configured, generate one
         report_content = comparison.report_content
+        matrix_data = None
         if not report_content:
-            report_content = await self._generate_report(papers_data, comparison.title)
-            if report_content:
-                comparison.report_content = report_content
-                await db.commit()
+            result = await self._generate_report(papers_data, comparison.title)
+            if result:
+                report_content = result.get("report", "")
+                matrix_data = result.get("matrix")
+                if report_content:
+                    comparison.report_content = report_content
+                    await db.commit()
+        else:
+            # Try to parse existing report_content as JSON to extract matrix
+            try:
+                parsed = json.loads(report_content)
+                if isinstance(parsed, dict) and "matrix" in parsed:
+                    report_content = parsed.get("report", report_content)
+                    matrix_data = parsed.get("matrix")
+            except (json.JSONDecodeError, TypeError):
+                # Old format (plain markdown), keep as-is
+                pass
 
         return {
             "comparison_id": str(comparison.id),
             "title": comparison.title,
             "papers": papers_data,
             "report_content": report_content,
+            "matrix": matrix_data,
             "created_at": comparison.created_at.isoformat(),
         }
 
@@ -153,8 +168,8 @@ class CompareService:
         }
 
     @staticmethod
-    async def _generate_report(papers_data: list[dict], title: str) -> str | None:
-        """Use LLM to generate a comparative analysis report."""
+    async def _generate_report(papers_data: list[dict], title: str) -> dict | None:
+        """Use LLM to generate a comparative analysis report with structured matrix."""
         if len(papers_data) < 2:
             return None
 
@@ -166,11 +181,17 @@ class CompareService:
             logger.warning("Unable to initialise the LLM for comparison %r", title, exc_info=True)
             return None
 
+        # Assign paper labels for the matrix
+        paper_labels = {}
+        for i, p in enumerate(papers_data, 1):
+            paper_labels[p["paper_id"]] = f"论文{i}"
+
         # Build a structured prompt with paper information
         papers_text = ""
         for i, p in enumerate(papers_data, 1):
             papers_text += f"""
 论文 {i}: {p['title']}
+论文ID: {p['paper_id']}
 作者: {', '.join(p['authors'][:5]) if p['authors'] else '未知'}
 类别: {p['primary_category']}
 摘要: {p['abstract'][:600]}
@@ -178,24 +199,53 @@ class CompareService:
 结论: {p.get('experiments', '无')[:400]}
 """
 
-        system_prompt = "你是一个学术论文分析专家，请用中文撰写分析报告。"
+        dimensions = ["研究问题", "核心方法", "数据与实验", "主要结论", "局限性", "适合参考"]
+
+        system_prompt = """你是一个学术论文分析专家。你的输出必须是严格的 JSON 格式，不要包含任何 markdown 标记或额外文字。"""
         prompt = f"""请对以下 {len(papers_data)} 篇论文进行对比分析，主题: {title}
 
 {papers_text}
 
-请从以下几个维度撰写一份结构化的对比报告（使用 Markdown 格式）:
-1. **研究问题对比** — 各论文解决的核心问题有何异同
-2. **方法对比** — 采用的技术路线和方法论对比矩阵
-3. **实验与结论** — 各论文的实验设置和主要结论
-4. **优劣分析** — 各论文的优势与局限
-5. **研究趋势** — 从这些论文看出的研究发展方向
+请从以下 6 个维度对每篇论文进行分析，并以严格的 JSON 格式返回:
+{json.dumps(dimensions, ensure_ascii=False)}
 
-请控制在 1200 字以内，使用中文。
-"""
+返回格式:
+{{
+  "report": "markdown 格式的完整对比分析报告（包含各维度的对比分析）",
+  "matrix": {{
+    "研究问题": {{"<paper_id>": "该论文研究问题的描述", ...}},
+    "核心方法": {{"<paper_id>": "该论文核心方法的描述", ...}},
+    "数据与实验": {{"<paper_id>": "该论文数据与实验的描述", ...}},
+    "主要结论": {{"<paper_id>": "该论文主要结论的描述", ...}},
+    "局限性": {{"<paper_id>": "该论文局限性的描述", ...}},
+    "适合参考": {{"<paper_id>": "该论文适合参考的描述", ...}}
+  }}
+}}
+
+每个维度的值应该是对比视角下的分析（而非简单复制论文原文摘要），突出各论文在该维度上的差异和特点。
+控制在 1200 字以内，使用中文。确保返回有效的 JSON。"""
         try:
             logger.info("Generating AI comparison report for %d papers", len(papers_data))
-            report = await llm.generate(prompt, system_prompt=system_prompt)
-            return report if report else None
+            raw = await llm.generate(prompt, system_prompt=system_prompt)
+            if not raw:
+                return None
+
+            # Parse JSON from response (handle possible markdown fences)
+            cleaned = raw.strip()
+            if cleaned.startswith("```"):
+                # Remove markdown code fences
+                lines = cleaned.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned = "\n".join(lines).strip()
+
+            result = json.loads(cleaned)
+            return result
+        except (json.JSONDecodeError, TypeError):
+            logger.warning("Failed to parse JSON from LLM response", exc_info=True)
+            return None
         except Exception:
             logger.warning("AI comparison report generation failed", exc_info=True)
             return None

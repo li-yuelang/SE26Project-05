@@ -347,17 +347,51 @@ export const updateFollowedTopic = createEndpoint({
 });
 
 export const exportComparison = createEndpoint({
-  mock: (paperIds, comparisonId) => ({
-    comparison_id: comparisonId || `mock-comparison-${Date.now()}`,
-    paperIds,
-    report_content: [
-      '# AI 论文对比报告',
-      '',
-      `已基于所选 ${paperIds.length} 篇论文生成对比分析。`,
-      '',
-      '> Mock 模式不会请求真实大模型；切换到 HTTP 模式后将展示模型生成的完整报告。',
-    ].join('\n'),
-  }),
+  mock: (paperIds, comparisonId) => {
+    const selectedPapers = paperStore.filter((p) => paperIds.includes(p.id));
+    const matrix = {};
+    const dims = ['研究问题', '核心方法', '数据与实验', '主要结论', '局限性', '适合参考'];
+    const fieldMap = {
+      '研究问题': 'researchQuestion',
+      '核心方法': 'methods',
+      '数据与实验': 'experiment',
+      '主要结论': 'conclusion',
+      '局限性': 'limitations',
+      '适合参考': 'bestFor',
+    };
+    dims.forEach((dim) => {
+      matrix[dim] = {};
+      selectedPapers.forEach((p) => {
+        matrix[dim][p.id] = p[fieldMap[dim]] || '';
+      });
+    });
+    return {
+      comparison_id: comparisonId || `mock-comparison-${Date.now()}`,
+      paperIds,
+      report_content: [
+        '# AI 论文对比报告',
+        '',
+        `已基于所选 ${paperIds.length} 篇论文生成对比分析。`,
+        '',
+        '> Mock 模式不会请求真实大模型；切换到 HTTP 模式后将展示模型生成的完整报告。',
+      ].join('\n'),
+      matrix,
+      papers: selectedPapers.map((p) => ({
+        paper_id: p.id,
+        title: p.title,
+        authors: p.authors,
+        summary: p.summary,
+        research_question: p.researchQuestion || '',
+        methods: p.methods || [],
+        datasets: p.datasets || [],
+        experiment: p.experiment || '',
+        conclusion: p.conclusion || '',
+        limitations: p.limitations || '',
+        best_for: p.bestFor || '',
+        concepts: p.concepts || [],
+      })),
+    };
+  },
   http: async (paperIds, comparisonId) => {
     let id = comparisonId;
     if (!id) {
