@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -145,9 +146,7 @@ export default function PaperDetail() {
       ),
       children: (
         <Card>
-          <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {paper.structuredContent.summary}
-          </Paragraph>
+          <ReactMarkdown>{paper.structuredContent.summary}</ReactMarkdown>
         </Card>
       ),
     },
@@ -158,9 +157,7 @@ export default function PaperDetail() {
       ),
       children: (
         <Card>
-          <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {paper.structuredContent.concept}
-          </Paragraph>
+          <ReactMarkdown>{paper.structuredContent.concept}</ReactMarkdown>
         </Card>
       ),
     },
@@ -171,9 +168,7 @@ export default function PaperDetail() {
       ),
       children: (
         <Card>
-          <Paragraph style={{ whiteSpace: 'pre-wrap', fontSize: 15 }}>
-            {paper.structuredContent.methods}
-          </Paragraph>
+          <ReactMarkdown>{paper.structuredContent.methods}</ReactMarkdown>
         </Card>
       ),
     },
