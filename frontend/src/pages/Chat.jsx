@@ -11,7 +11,6 @@ import {
   Empty,
   Flex,
   Space,
-  Tooltip,
   Popconfirm,
   theme,
   message,
@@ -244,22 +243,20 @@ export function ChatRoom({ initialConversationId } = {}) {
               对话列表
             </Title>
             <Space size={4}>
-              <Tooltip title="关闭侧栏">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<MenuFoldOutlined />}
-                  onClick={() => setSidebarCollapsed(true)}
-                />
-              </Tooltip>
-              <Tooltip title="新建对话">
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={handleNewConversation}
-                />
-              </Tooltip>
+              <Button
+                type="text"
+                size="small"
+                aria-label="关闭侧栏"
+                icon={<MenuFoldOutlined />}
+                onClick={() => setSidebarCollapsed(true)}
+              />
+              <Button
+                type="primary"
+                size="small"
+                aria-label="新建对话"
+                icon={<PlusOutlined />}
+                onClick={handleNewConversation}
+              />
             </Space>
           </Flex>
 
@@ -553,21 +550,19 @@ function MessageBubble({ msg, token, navigate }) {
           <Flex align="center" gap={4} wrap="wrap" style={{ padding: '0 4px' }}>
             <FileTextOutlined style={{ fontSize: 11, color: token.colorTextQuaternary }} />
             {msg.sources.map((s, j) => (
-              <Tooltip
+              <Tag
                 key={`${s.paperId}-${s.chunkIndex ?? j}`}
-                title={s.excerpt || `arXiv: ${s.arxivId || s.paperId}`}
+                color="processing"
+                role="link"
+                aria-label={`查看引用：${s.title}${s.chunkIndex == null ? '' : `，片段 ${s.chunkIndex}`}`}
+                style={{ cursor: 'pointer', fontSize: 11, margin: 0 }}
+                onClick={() => navigate(
+                  `/papers/${s.paperId}${s.chunkIndex == null ? '' : `?chunk=${s.chunkIndex}`}`,
+                )}
               >
-                <Tag
-                  color="processing"
-                  style={{ cursor: 'pointer', fontSize: 11, margin: 0 }}
-                  onClick={() => navigate(
-                    `/papers/${s.paperId}${s.chunkIndex == null ? '' : `?chunk=${s.chunkIndex}`}`,
-                  )}
-                >
-                  [{j + 1}] {s.title}
-                  {s.chunkIndex == null ? '' : ` · 片段 ${s.chunkIndex}`}
-                </Tag>
-              </Tooltip>
+                [{j + 1}] {s.title}
+                {s.chunkIndex == null ? '' : ` · 片段 ${s.chunkIndex}`}
+              </Tag>
             ))}
           </Flex>
         )}
