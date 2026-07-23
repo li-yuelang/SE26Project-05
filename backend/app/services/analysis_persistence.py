@@ -23,6 +23,17 @@ from app.services.analysis_extractor import ExtractionResult
 from app.services.chunking import PaperTextChunk
 
 
+def _sanitize_text(value: Any) -> Any:
+    """Recursively remove null bytes from strings in nested structures."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, dict):
+        return {key: _sanitize_text(val) for key, val in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_text(item) for item in value]
+    return value
+
+
 def normalize_concept_name(value: str) -> str:
     """Return a stable, case-insensitive graph key for an English concept name."""
 
@@ -355,7 +366,7 @@ async def persist_analysis(
             )
         )
 
-    structured_content = dict(extraction.structured_content)
+    structured_content = _sanitize_text(dict(extraction.structured_content))
     structured_content["references"] = references
     structured_content["analysisVersion"] = analysis_version
     paper.source_content = source_content.replace("\x00", "")

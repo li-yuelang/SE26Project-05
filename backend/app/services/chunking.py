@@ -104,9 +104,10 @@ class SemanticChunker:
     def _make_chunk(index: int, section_title: str | None, paragraphs: list[str]) -> PaperTextChunk:
         content = "\n\n".join(paragraph for paragraph in paragraphs if paragraph).strip()
         content = content.replace("\x00", "")
+        safe_title = section_title.replace("\x00", "") if section_title else section_title
         return PaperTextChunk(
             chunk_index=index,
-            section_title=section_title,
+            section_title=safe_title,
             content=content,
             token_count=token_count(content),
         )
