@@ -1,6 +1,7 @@
 """Paper comparison API endpoints."""
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -56,4 +57,14 @@ async def export_comparison(comparison_id: UUID, user: CurrentUser, db: DbSessio
         result = await compare_service.export_comparison(db, user, comparison_id)
         return success(result)
     except ValueError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+        error_msg = str(e)
+        try:
+            detail = json.loads(error_msg)
+            if isinstance(detail, dict) and "unparsed_papers" in detail:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    detail=detail,
+                ) from e
+        except (json.JSONDecodeError, TypeError):
+            pass
+        raise HTTPException(status.HTTP_404_NOT_FOUND, error_msg)

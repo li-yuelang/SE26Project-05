@@ -1,6 +1,7 @@
 """Business logic for paper comparison."""
 from __future__ import annotations
 
+import json
 import logging
 from uuid import UUID
 
@@ -109,9 +110,17 @@ class CompareService:
             if p.parsed_status not in ("completed", "processing"):
                 unanalysed_ids.append(p.id)
 
-        # Trigger on-demand analysis for unanalysed papers (non-blocking)
+        # Block comparison if any paper is not yet parsed
         if unanalysed_ids:
-            await self._trigger_analysis(db, unanalysed_ids)
+            unparsed_info = []
+            for p in papers:
+                if p.id in unanalysed_ids:
+                    unparsed_info.append({
+                        "paper_id": str(p.id),
+                        "title": p.title,
+                        "parsed_status": p.parsed_status or "pending",
+                    })
+            raise ValueError(json.dumps({"unparsed_papers": unparsed_info}))
 
         # If a report hasn't been generated yet and LLM is configured, generate one
         report_content = comparison.report_content
@@ -132,19 +141,6 @@ class CompareService:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-    @staticmethod
-    async def _trigger_analysis(db: AsyncSession, paper_ids: list[UUID]) -> None:
-        """Enqueue analysis for papers that haven't been analysed yet (non-blocking)."""
-        try:
-            from app.services.analysis_runs import create_analysis_run
-            for pid in paper_ids:
-                try:
-                    await create_analysis_run(db, str(pid), force=False)
-                except Exception:
-                    logger.debug("Skipping analysis trigger for paper %s", pid)
-        except Exception:
-            logger.warning("Failed to trigger on-demand analysis", exc_info=True)
-
     @staticmethod
     def _serialise(comparison: PaperComparison) -> dict:
         return {
