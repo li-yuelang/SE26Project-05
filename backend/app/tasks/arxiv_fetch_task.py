@@ -55,6 +55,23 @@ def _query_from_snapshot(snapshot: dict[str, Any]) -> str:
     )
 
 
+def _sync_arxiv_source_dates(paper: Paper, candidate: dict[str, Any]) -> bool:
+    """Refresh source-owned dates without ever substituting the fetch time."""
+
+    changed = False
+    published_at = candidate.get("published_at")
+    if published_at is not None and paper.published_at != published_at:
+        paper.published_at = published_at
+        changed = True
+
+    updated_at_source = candidate.get("updated_at_source")
+    if updated_at_source is not None and paper.updated_at_source != updated_at_source:
+        paper.updated_at_source = updated_at_source
+        changed = True
+
+    return changed
+
+
 async def _set_run_retry_pending(run_id: UUID, message: str) -> None:
     async with AsyncSessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id)
@@ -193,6 +210,10 @@ async def _persist_candidates(
             paper = paper_rows.get(candidate["arxiv_id"])
             if paper is None:
                 continue
+            # A duplicate may have been inserted by an older version that used
+            # its fetch timestamp as ``published_at``. Re-reading the same
+            # arXiv entry must repair that value from Atom source metadata.
+            _sync_arxiv_source_dates(paper, candidate)
             if db.get_bind().dialect.name == "postgresql":
                 await db.execute(
                     pg_insert(UserPaper)

@@ -1,6 +1,31 @@
 """Tests for arXiv fetch service — no network calls, pure XML parsing."""
 
-from app.services.arxiv_fetch import build_search_query
+from datetime import datetime, timezone
+import xml.etree.ElementTree as ET
+
+from app.services.arxiv_fetch import _parse_entry, build_search_query
+
+
+def test_entry_uses_arxiv_published_timestamp_not_updated_or_fetch_time():
+    entry = ET.fromstring(
+        """
+        <entry xmlns="http://www.w3.org/2005/Atom">
+          <id>http://arxiv.org/abs/2401.01234v3</id>
+          <title>Publication date regression</title>
+          <summary>Metadata must retain the original publication date.</summary>
+          <published>2024-01-03T23:45:00Z</published>
+          <updated>2026-07-22T08:30:00Z</updated>
+          <author><name>Ada Lovelace</name></author>
+          <category term="cs.SE" />
+        </entry>
+        """
+    )
+
+    paper = _parse_entry(entry)
+
+    assert paper["published_at"] == datetime(2024, 1, 3, 23, 45, tzinfo=timezone.utc)
+    assert paper["updated_at_source"] == datetime(2026, 7, 22, 8, 30, tzinfo=timezone.utc)
+    assert paper["published_at"] != paper["updated_at_source"]
 
 
 class TestBuildSearchQuery:
