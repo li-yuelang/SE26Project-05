@@ -4,16 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from uuid import UUID
+
+# Windows Python 3.13 defaults to ProactorEventLoop which crashes asyncpg.
+# Celery workers don't go through main.py, so set the policy here.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
-from app.database import AsyncSessionLocal
+from app.database import CelerySessionLocal
 from app.models.paper import Paper, UserPaper
 from app.models.task import FetchTask, FetchTaskRun, FetchTaskRunPaper
 from app.services.arxiv_fetch import ArxivFetchError, build_search_query, fetch_arxiv_window
@@ -28,6 +35,30 @@ from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Persistent event loop for Celery async tasks
+# ---------------------------------------------------------------------------
+_LOOP_LOCK = threading.Lock()
+_LOOP: asyncio.AbstractEventLoop | None = None
+_LOOP_THREAD: threading.Thread | None = None
+
+
+def _get_or_start_loop() -> asyncio.AbstractEventLoop:
+    global _LOOP, _LOOP_THREAD
+    if _LOOP is None or _LOOP.is_closed():
+        with _LOOP_LOCK:
+            if _LOOP is None or _LOOP.is_closed():
+                if sys.platform == "win32":
+                    _LOOP = asyncio.SelectorEventLoop()
+                else:
+                    _LOOP = asyncio.new_event_loop()
+                asyncio.set_event_loop(_LOOP)
+                _LOOP_THREAD = threading.Thread(
+                    target=_LOOP.run_forever, daemon=True, name="celery-async-loop",
+                )
+                _LOOP_THREAD.start()
+    return _LOOP
+
 
 def _run_async(coroutine: Any) -> Any:
     """Run async worker code in normal Celery and eager/test execution."""
@@ -35,7 +66,9 @@ def _run_async(coroutine: Any) -> Any:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(coroutine)
+        loop = _get_or_start_loop()
+        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
+        return future.result(timeout=600)
     with ThreadPoolExecutor(max_workers=1) as executor:
         return executor.submit(asyncio.run, coroutine).result()
 
@@ -73,7 +106,7 @@ def _sync_arxiv_source_dates(paper: Paper, candidate: dict[str, Any]) -> bool:
 
 
 async def _set_run_retry_pending(run_id: UUID, message: str) -> None:
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id)
         if run is None:
             return
@@ -84,7 +117,7 @@ async def _set_run_retry_pending(run_id: UUID, message: str) -> None:
 
 
 async def _set_run_failed(run_id: UUID, message: str) -> None:
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id)
         if run is None:
             return
@@ -96,7 +129,7 @@ async def _set_run_failed(run_id: UUID, message: str) -> None:
 
 
 async def _mark_run_running(run_id: UUID) -> tuple[FetchTaskRun, FetchTask] | None:
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         row = await db.execute(
             select(FetchTaskRun, FetchTask)
             .join(FetchTask, FetchTask.id == FetchTaskRun.task_id)
@@ -123,7 +156,7 @@ async def _persist_candidates(
 ) -> tuple[list[UUID], int, int, int]:
     """Persist papers and run links atomically in one database transaction."""
 
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id, with_for_update=True)
         if run is None:
             raise ValueError(f"FetchTaskRun not found: {run_id}")
@@ -255,7 +288,7 @@ async def _enqueue_analysis(paper_ids: list[UUID]) -> tuple[int, int]:
         last_error: Exception | None = None
         for attempt in range(3):
             try:
-                async with AsyncSessionLocal() as db:
+                async with CelerySessionLocal() as db:
                     _, created = await create_analysis_run(db, paper_id, force=False)
                     await db.commit()
                 if created:
@@ -278,7 +311,7 @@ async def _execute_run(run_id: UUID) -> dict[str, Any]:
         return {"status": "skipped", "run_id": str(run_id), "reason": "run is not queued"}
     _, task = marked
 
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id)
         if run is None:
             raise ValueError(f"FetchTaskRun not found: {run_id}")
@@ -303,7 +336,7 @@ async def _execute_run(run_id: UUID) -> dict[str, Any]:
     else:
         analysis_queued, analysis_failed = 0, 0
 
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         run = await db.get(FetchTaskRun, run_id, with_for_update=True)
         task = await db.get(FetchTask, run.task_id) if run else None
         if run is None or task is None:
@@ -368,7 +401,7 @@ def run_fetch_task(self: Any, run_id: str) -> dict[str, Any]:
 async def _dispatch_due_runs() -> int:
     dispatched = 0
     now = utc_now()
-    async with AsyncSessionLocal() as db:
+    async with CelerySessionLocal() as db:
         tasks = (
             await db.scalars(
                 select(FetchTask)

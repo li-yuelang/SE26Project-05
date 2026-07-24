@@ -41,6 +41,7 @@ import {
   StarOutlined,
   TagsOutlined,
   ExperimentOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import {
   getLearningCenter,
@@ -344,7 +345,7 @@ export default function Learning() {
     {
       title: '操作',
       key: 'actions',
-      width: 210,
+      width: 270,
       render: (_, paper) => (
         <Space>
           <Button
@@ -359,6 +360,17 @@ export default function Learning() {
           >
             笔记
           </Button>
+          {paper.parsedStatus === 'completed' && (
+            <Button
+              size="small"
+              type="primary"
+              ghost
+              icon={<FileTextOutlined />}
+              onClick={() => navigate(`/papers/${paper.id}/analysis`)}
+            >
+              解析结果
+            </Button>
+          )}
           <Button
             size="small"
             icon={<CheckCircleOutlined />}

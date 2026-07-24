@@ -23,17 +23,12 @@ async def list_papers(
     params: PaperFilterParams,
 ) -> tuple[list[PaperListItem], int]:
     """分页查询论文列表，支持关键词搜索、分类筛选、日期范围。"""
-    query = (
-        select(Paper)
-        .join(UserPaper, UserPaper.paper_id == Paper.id)
-        .where(UserPaper.user_id == user_id)
-        .order_by(Paper.published_at.desc().nullslast())
-    )
+    filters = [UserPaper.user_id == user_id]
 
     # 全文搜索：使用 pg_trgm 或 ilike
     if params.query:
         like_pattern = f"%{params.query}%"
-        query = query.where(
+        filters.append(
             or_(
                 Paper.title.ilike(like_pattern),
                 Paper.abstract.ilike(like_pattern),
@@ -41,31 +36,42 @@ async def list_papers(
             )
         )
     if params.category:
-        query = query.where(Paper.primary_category == params.category)
+        filters.append(Paper.primary_category == params.category)
     if params.author:
-        query = query.where(Paper.authors.any(params.author))
+        filters.append(Paper.authors.any(params.author))
     if params.parsed_status:
-        query = query.where(Paper.parsed_status == params.parsed_status)
+        filters.append(Paper.parsed_status == params.parsed_status)
     if params.date_from:
         try:
             dt_from = datetime.strptime(params.date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            query = query.where(Paper.published_at >= dt_from)
+            filters.append(Paper.published_at >= dt_from)
         except ValueError:
             pass
     if params.date_to:
         try:
             dt_to = datetime.strptime(params.date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
-            query = query.where(Paper.published_at <= dt_to)
+            filters.append(Paper.published_at <= dt_to)
         except ValueError:
             pass
 
-    # 总数
-    count_q = select(func.count()).select_from(query.subquery())
+    # Count – direct join so PostgreSQL can use index-only scans
+    count_q = (
+        select(func.count(Paper.id))
+        .select_from(Paper)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
+        .where(*filters)
+    )
     total = (await db.scalar(count_q)) or 0
 
-    # 分页
-    offset = (params.page - 1) * params.page_size
-    query = query.offset(offset).limit(params.page_size)
+    # Data page
+    query = (
+        select(Paper)
+        .join(UserPaper, UserPaper.paper_id == Paper.id)
+        .where(*filters)
+        .order_by(Paper.published_at.desc().nullslast())
+        .offset((params.page - 1) * params.page_size)
+        .limit(params.page_size)
+    )
     rows = (await db.execute(query)).scalars().all()
 
     items = [PaperListItem.model_validate(r) for r in rows]

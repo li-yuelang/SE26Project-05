@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from app.api.deps import CurrentUser, DbSession
 from app.config import settings
@@ -101,6 +101,29 @@ async def list_papers(
         page_size=page_size,
     )
     return success(resp.model_dump(by_alias=True))
+
+
+@router.get("/discover")
+async def discover_papers(
+    db: DbSession,
+    user: CurrentUser,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+) -> dict:
+    """Return papers from the global pool (not user-library scoped)."""
+    count_q = select(func.count()).select_from(Paper)
+    total = (await db.execute(count_q)).scalar_one()
+    items_q = (
+        select(Paper.id, Paper.arxiv_id, Paper.title)
+        .order_by(Paper.published_at.desc().nullslast())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    rows = (await db.execute(items_q)).all()
+    return success({
+        "total": total,
+        "items": [{"id": str(r[0]), "arxivId": r[1], "title": r[2]} for r in rows],
+    })
 
 
 @router.post("/{paper_id}/library")

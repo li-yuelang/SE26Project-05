@@ -28,32 +28,44 @@ class LearningService:
     # Dashboard overview
     # ------------------------------------------------------------------
     async def get_overview(self, db: AsyncSession, user: User) -> dict:
-        bookmark_count = await db.scalar(
-            select(func.count(Bookmark.id)).where(Bookmark.user_id == user.id)
-        )
-        note_count = await db.scalar(
-            select(func.count(Note.id)).where(Note.user_id == user.id)
-        )
-        comment_count = await db.scalar(
-            select(func.count(Comment.id)).where(Comment.user_id == user.id)
-        )
-        history_count = await db.scalar(
-            select(func.count(ReadingHistory.id)).where(ReadingHistory.user_id == user.id)
-        )
-        topic_count = await db.scalar(
-            select(func.count(FollowedTopic.id)).where(FollowedTopic.user_id == user.id)
-        )
+        """Dashboard overview — single count query + data queries."""
+        # Batch all 5 counts into one round-trip
+        uid = user.id
+        counts_row = (
+            await db.execute(
+                select(
+                    func.count(func.distinct(Bookmark.id)).label("bk"),
+                    func.count(func.distinct(Note.id)).label("nt"),
+                    func.count(func.distinct(Comment.id)).label("cm"),
+                    func.count(func.distinct(ReadingHistory.id)).label("rh"),
+                    func.count(func.distinct(FollowedTopic.id)).label("ft"),
+                )
+                .select_from(User)
+                .outerjoin(Bookmark, Bookmark.user_id == User.id)
+                .outerjoin(Note, Note.user_id == User.id)
+                .outerjoin(Comment, Comment.user_id == User.id)
+                .outerjoin(ReadingHistory, ReadingHistory.user_id == User.id)
+                .outerjoin(FollowedTopic, FollowedTopic.user_id == User.id)
+                .where(User.id == uid)
+            )
+        ).one()
+        counts = counts_row._mapping
+        bookmark_count = counts["bk"] or 0
+        note_count = counts["nt"] or 0
+        comment_count = counts["cm"] or 0
+        history_count = counts["rh"] or 0
+        topic_count = counts["ft"] or 0
 
         recent_reading = await self._query_reading_history(db, user.id, limit=5)
         recent_notes = await self._query_notes(db, user.id, limit=5)
         followed_topics = await self._query_followed_topics(db, user.id)
 
         return {
-            "bookmark_count": bookmark_count or 0,
-            "note_count": note_count or 0,
-            "comment_count": comment_count or 0,
-            "reading_history_count": history_count or 0,
-            "followed_topic_count": topic_count or 0,
+            "bookmark_count": bookmark_count,
+            "note_count": note_count,
+            "comment_count": comment_count,
+            "reading_history_count": history_count,
+            "followed_topic_count": topic_count,
             "recent_reading": recent_reading,
             "recent_notes": recent_notes,
             "followed_topics": followed_topics,

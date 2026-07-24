@@ -7,6 +7,7 @@ import { useAuth } from './contexts/AuthContext';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PaperList = lazy(() => import('./pages/PaperList'));
 const PaperDetail = lazy(() => import('./pages/PaperDetail'));
+const AnalysisResult = lazy(() => import('./pages/AnalysisResult'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Wiki = lazy(() => import('./pages/Wiki'));
 const ConceptDetail = lazy(() => import('./pages/ConceptDetail'));
@@ -44,6 +45,7 @@ export default function App() {
             {/* 论文 */}
             <Route path="papers" element={<PaperList />} />
             <Route path="papers/:paperId" element={<PaperDetail />} />
+            <Route path="papers/:paperId/analysis" element={<AnalysisResult />} />
 
             {/* 智能问答 */}
             <Route path="chat/:conversationId?" element={<Chat />} />
