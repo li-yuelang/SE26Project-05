@@ -1,0 +1,292 @@
+/* ========== Ant Design component refinements ========== */
+
+/* Cards are treated as open content sections by default. */
+.main-content .ant-card:not(.auth-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.main-content .ant-card:not(.auth-card) > .ant-card-head {
+  min-height: 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.main-content .ant-card:not(.auth-card) > .ant-card-body {
+  padding-inline: 0;
+  padding-top: 20px;
+}
+
+.main-content .ant-card:not(.auth-card) .ant-card-head-title {
+  font-size: 0.9rem;
+  font-weight: 570;
+  letter-spacing: -0.015em;
+}
+
+.main-content .ant-card-hoverable:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow);
+}
+
+/* Tables use rules and spacing instead of an inner container. */
+.main-content .ant-table-wrapper .ant-table,
+.main-content .ant-table-wrapper .ant-table-container {
+  border-radius: 0;
+  background: transparent;
+}
+
+.main-content .ant-table-wrapper .ant-table-container {
+  border-color: var(--color-border);
+}
+
+.main-content .ant-table-wrapper .ant-table-thead > tr > th {
+  padding-block: 12px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 560;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  border-bottom-color: var(--color-border-strong);
+}
+
+.main-content .ant-table-wrapper .ant-table-tbody > tr > td {
+  padding-block: 16px;
+  border-bottom-color: var(--color-border);
+  background: transparent;
+}
+
+.main-content .ant-table-wrapper .ant-table-tbody > tr:last-child > td {
+  border-bottom-color: transparent;
+}
+
+.main-content .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: var(--color-surface-subtle);
+}
+
+/* Form controls */
+.ant-btn {
+  min-height: 38px;
+  border-radius: var(--radius);
+  box-shadow: none;
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.ant-btn-sm {
+  min-height: 30px;
+  border-radius: 8px;
+}
+
+.ant-btn-lg {
+  min-height: 44px;
+}
+
+.ant-btn-default {
+  background: transparent;
+}
+
+.ant-btn-primary {
+  border-color: transparent;
+}
+
+:is(.main-content, .auth-page) .ant-input,
+:is(.main-content, .auth-page) .ant-input-affix-wrapper,
+.main-content .ant-picker,
+.main-content .ant-input-number,
+.main-content .ant-select-selector {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+:is(.main-content, .auth-page) .ant-input,
+:is(.main-content, .auth-page) .ant-input-affix-wrapper,
+.main-content .ant-picker,
+.main-content .ant-input-number {
+  border-radius: var(--radius);
+}
+
+:is(.main-content, .auth-page) .ant-input:hover,
+:is(.main-content, .auth-page) .ant-input-affix-wrapper:hover,
+.main-content .ant-picker:hover,
+.main-content .ant-input-number:hover,
+.main-content .ant-select:hover .ant-select-selector {
+  border-color: var(--color-border-strong);
+}
+
+:is(.main-content, .auth-page) .ant-input:focus,
+:is(.main-content, .auth-page) .ant-input-focused,
+:is(.main-content, .auth-page) .ant-input-affix-wrapper:focus,
+:is(.main-content, .auth-page) .ant-input-affix-wrapper-focused,
+.main-content .ant-picker-focused,
+.main-content .ant-select-focused .ant-select-selector {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.ant-form-item-label > label {
+  color: var(--color-text-light);
+  font-size: 0.85rem;
+}
+
+/* Compact navigation and status components */
+.main-content .ant-segmented {
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface-subtle);
+}
+
+.main-content .ant-segmented-item {
+  border-radius: 7px;
+}
+
+.main-content .ant-segmented-item-selected {
+  box-shadow: var(--shadow);
+}
+
+.main-content .ant-tag {
+  margin-inline-end: 0;
+  padding-inline: 8px;
+  border-color: var(--color-border);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.main-content .ant-progress-inner,
+.main-content .ant-progress-bg {
+  border-radius: 2px;
+}
+
+.main-content .ant-progress-line {
+  margin: 0;
+}
+
+.main-content .ant-statistic-title {
+  margin-bottom: 7px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 520;
+  letter-spacing: 0.035em;
+}
+
+.main-content .ant-statistic-content {
+  color: var(--color-text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 540;
+  letter-spacing: -0.035em;
+}
+
+/* Lists, tabs, and supporting surfaces */
+.main-content .ant-list,
+.main-content .ant-list-item {
+  background: transparent;
+}
+
+.main-content .ant-list-item {
+  padding-block: 15px;
+  border-block-end-color: var(--color-border);
+}
+
+.main-content .ant-divider {
+  margin-block: 24px;
+  border-color: var(--color-border);
+}
+
+.main-content .ant-tabs .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+.main-content .ant-tabs-nav::before {
+  border-color: var(--color-border);
+}
+
+.main-content .ant-tabs-tab {
+  padding: 10px 2px;
+  font-weight: 520;
+}
+
+.ant-descriptions-bordered .ant-descriptions-item-label {
+  background: var(--color-surface-subtle);
+}
+
+.ant-drawer-content {
+  border-left: 1px solid var(--color-border);
+}
+
+.ant-modal-content {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.ant-modal-content,
+.ant-drawer-content,
+.ant-dropdown-menu,
+.ant-popover-inner {
+  box-shadow: var(--shadow-lg);
+}
+
+.ant-alert {
+  border-radius: var(--radius);
+}
+
+.ant-message-notice-content {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.ant-notification-notice {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.ant-popover-inner {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.ant-tooltip-inner {
+  border-radius: 6px;
+}
+
+.ant-skeleton-content .ant-skeleton-title,
+.ant-skeleton-content .ant-skeleton-paragraph > li {
+  background: var(--color-surface-subtle);
+}
+
+.ant-empty-description {
+  color: var(--color-text-muted);
+}
+
+.ant-spin-dot-item {
+  background-color: var(--color-primary);
+}
+
+.ant-badge-count {
+  box-shadow: 0 0 0 1px var(--color-bg);
+}
+
+.ant-avatar {
+  border: 1px solid var(--color-border);
+}
+
+.ant-typography a {
+  color: var(--color-primary-hover);
+  transition: color var(--transition);
+}
+
+.ant-typography a:hover {
+  color: var(--color-primary-hover);
+}
+
+.ant-timeline-item-tail {
+  border-color: var(--color-border);
+}
