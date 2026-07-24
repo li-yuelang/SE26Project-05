@@ -13,35 +13,23 @@ SE26Project-05/
 
 ## 本地启动
 
-需要提前安装 Node.js、Python 3.11+、`uv` 和 Docker（或 OrbStack）。
+需要提前安装 Node.js、Python 3.11+、`uv` 和 Docker Desktop。
 
-### 1. 启动后端依赖
+### 1. 启动后端依赖（PostgreSQL + Redis）
 
-**本地**运行 SSH 端口转发，将云端 PostgreSQL 和 Redis 映射到本地：
-
-```bash
-# PostgreSQL 端口映射（映射到本地 15432）
-ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 15432:127.0.0.1:5432 root@10.119.4.37
-
-# Redis 端口映射（映射到本地 6379）
-ssh -o ControlPath=none -o ControlMaster=no -o ControlPersist=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N -L 6379:127.0.0.1:6379 root@10.119.4.37
-```
-
-> 以上两条 SSH 隧道会保持前台运行，请分别在独立终端中执行，或加 `-f` 参数后台运行。
-
-**云端**执行以下步骤启动后端服务：
+在 `backend/` 目录下通过 Docker Compose 启动数据库和缓存：
 
 ```bash
 cd backend
 cp .env.example .env
 uv sync
-docker compose up -d postgres
+docker compose up -d postgres redis
 uv run alembic upgrade head
 ```
 
-> 确保 `backend/.env` 中配置了正确的连接地址：
-> - `REDIS_URL=redis://localhost:6379/0`
-> - PostgreSQL 连接地址需指向 `localhost:15432`
+`.env.example` 中的默认连接地址已指向本地 Docker 服务，复制为 `.env` 后可直接使用：
+- `DATABASE_URL=postgresql+asyncpg://papermate:papermate@localhost:5432/papermate`
+- `REDIS_URL=redis://localhost:6379/0`
 
 如需论文分析和智能问答，在 `backend/.env` 中配置大模型及嵌入模型：
 
@@ -108,11 +96,11 @@ VITE_BACKEND_TARGET=http://远程服务器地址:8080
 
 ### 一键启动脚本
 
-项目根目录下提供了跨平台启动脚本，可自动打开多个终端窗口并行启动所有服务（SSH 隧道、后端、Celery、前端）：
+项目根目录下提供了跨平台启动脚本，可自动启动 Docker 依赖并打开多个终端窗口运行所有服务：
 
 | 平台 | 脚本 | 执行方式 |
 |------|------|----------|
-| Windows | `start.ps1` | 在项目目录下右键 "Open in Terminal"，执行 `.\start.ps1` |
+| Windows | `start-local.ps1` | 在项目目录下右键 "Open in Terminal"，执行 `.\start-local.ps1` |
 | macOS | `start-mac.sh` | `chmod +x start-mac.sh && ./start-mac.sh` |
 | Linux | `start-linux.sh` | `chmod +x start-linux.sh && ./start-linux.sh` |
 
@@ -120,15 +108,13 @@ VITE_BACKEND_TARGET=http://远程服务器地址:8080
 >
 > **Linux 注意**：脚本会自动检测 gnome-terminal / konsole / xfce4-terminal / lxterminal / xterm，未安装则需先安装其一。
 
-脚本会自动启动以下 7 个窗口：
+`start-local.ps1` 会先通过 Docker Compose 启动 PostgreSQL 和 Redis，然后打开以下窗口：
 
-1. **PostgreSQL SSH 隧道** — `ssh ... -L 15432:127.0.0.1:5432 root@10.119.4.37`
-2. **Redis SSH 隧道** — `ssh ... -L 6379:127.0.0.1:6379 root@10.119.4.37`
-3. **FastAPI 后端** — `uv run uvicorn app.main:app --reload --port 8080`
-4. **Celery Analysis Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q analysis --concurrency=2`
-5. **Celery arXiv Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q arxiv --concurrency=1`
-6. **Celery Beat** — `uv run celery ... beat --loglevel=info`
-7. **前端 Vite** — `npm run dev`
+1. **FastAPI 后端** — `uv run uvicorn app.main:app --workers 2 --port 8080`
+2. **Celery Analysis Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q analysis --concurrency=2`
+3. **Celery arXiv Worker** — `uv run celery ... worker --loglevel=info --pool=solo -Q arxiv --concurrency=1`
+4. **Celery Beat** — `uv run celery ... beat --loglevel=info`
+5. **前端 Vite** — `npm run dev`
 
 ## 前端
 
