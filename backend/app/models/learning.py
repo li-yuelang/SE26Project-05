@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,19 +50,6 @@ class Comment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     user: Mapped[User] = relationship(back_populates="comments")
     paper: Mapped[Paper] = relationship(back_populates="comments")
-
-
-class ReadingHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    __tablename__ = "reading_history"
-    __table_args__ = (UniqueConstraint("user_id", "paper_id", name="uq_user_reading_history"),)
-
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    paper_id: Mapped[UUID] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
-    progress: Mapped[int] = mapped_column(default=0)
-    last_read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-
-    user: Mapped[User] = relationship(back_populates="reading_history")
-    paper: Mapped[Paper] = relationship(back_populates="readers")
 
 
 class FollowedTopic(UUIDPrimaryKeyMixin, TimestampMixin, Base):

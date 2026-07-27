@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.learning import Bookmark, ReadingHistory
-from app.models.concept import PaperConcept
+from app.models.learning import Bookmark
 from app.models.paper import Paper, UserPaper
+from app.models.task import Subscription
 from app.models.user import User
 from app.services.paper_retrieval import paper_hybrid_retriever
 
@@ -17,11 +17,9 @@ class RecommendationService:
     """Stateless service for content-based and collaborative recommendations."""
 
     async def get_recommendations(self, db: AsyncSession, user: User) -> dict:
-        history_based = await self._recommend_by_history(db, user)
         content_based = await self._recommend_by_content(db, user)
         collaborative = await self._recommend_collaborative(db, user)
         result = {
-            "history_based": history_based,
             "content_based": content_based,
             "collaborative": collaborative,
         }
@@ -45,37 +43,69 @@ class RecommendationService:
             items[:] = unique_items
         return result
 
-    async def _recommend_by_history(self, db: AsyncSession, user: User) -> list[dict]:
-        """Recommend global papers from a semantic profile of recent reading."""
-        recent = (await db.scalars(
-            select(ReadingHistory.paper_id)
-            .where(ReadingHistory.user_id == user.id)
-            .order_by(ReadingHistory.last_read_at.desc())
-            .limit(20)
-        )).all()
+    async def _recommend_by_content(self, db: AsyncSession, user: User) -> list[dict]:
+        """Recommend with bookmark semantics and subscription metadata."""
+        bookmarked_ids = list((await db.scalars(
+            select(Bookmark.paper_id).where(Bookmark.user_id == user.id)
+        )).all())
+        bookmarked_papers = (
+            list(
+                (
+                    await db.scalars(
+                        select(Paper).where(Paper.id.in_(bookmarked_ids))
+                    )
+                ).all()
+            )
+            if bookmarked_ids
+            else []
+        )
+        subscriptions = list(
+            (
+                await db.scalars(
+                    select(Subscription).where(
+                        Subscription.user_id == user.id,
+                        Subscription.enabled.is_(True),
+                    )
+                )
+            ).all()
+        )
 
-        if not recent:
+        terms = list(
+            dict.fromkeys(
+                keyword.strip()
+                for subscription in subscriptions
+                for keyword in (subscription.topic_keywords or [])
+                if keyword.strip()
+            )
+        )
+        categories = list(
+            dict.fromkeys(
+                [
+                    *(
+                        category.strip()
+                        for subscription in subscriptions
+                        for category in (subscription.categories or [])
+                        if category.strip()
+                    ),
+                    *(
+                        paper.primary_category
+                        for paper in bookmarked_papers
+                        if paper.primary_category
+                    ),
+                ]
+            )
+        )
+        if not bookmarked_papers and not terms and not categories:
             return []
 
-        recent_papers = list(
-            (await db.scalars(select(Paper).where(Paper.id.in_(recent)))).all()
-        )
-        if not recent_papers:
-            return []
-
-        categories = sorted(
-            {
-                paper.primary_category
-                for paper in recent_papers
-                if paper.primary_category
-            }
-        )
-        profile_text = "\n".join(
+        profile_parts = [
             f"{paper.title}. {(paper.abstract or '')[:500]}"
-            for paper in recent_papers[:5]
-        )
+            for paper in bookmarked_papers[:5]
+        ]
+        if terms:
+            profile_parts.append("Subscribed topics: " + ", ".join(terms))
         query_embedding = (
-            await paper_hybrid_retriever.embed_queries([profile_text])
+            await paper_hybrid_retriever.embed_queries(["\n".join(profile_parts)])
         )[0]
         library_ids = set(
             (
@@ -86,73 +116,17 @@ class RecommendationService:
         )
         recommendations = await paper_hybrid_retriever.search(
             db,
-            terms=[],
+            terms=terms,
             categories=categories,
             query_embedding=query_embedding,
             since=datetime.now(timezone.utc) - timedelta(days=730),
             exclude_ids=library_ids,
             result_limit=10,
-            reason_prefix="基于你最近阅读的论文",
+            reason_prefix="基于你的收藏论文与订阅主题",
         )
         return [
-            self._serialise_recommendation(
-                item.paper,
-                item.score,
-                item.reason,
-            )
+            self._serialise_recommendation(item.paper, item.score, item.reason)
             for item in recommendations
-        ]
-
-    async def _recommend_by_content(self, db: AsyncSession, user: User) -> list[dict]:
-        """Content-based recommendation using bookmarked paper concepts."""
-        bookmarked_papers = (await db.scalars(
-            select(Bookmark.paper_id).where(Bookmark.user_id == user.id)
-        )).all()
-
-        if not bookmarked_papers:
-            return []
-
-        # Get concepts from bookmarked papers
-        pc_rows = (await db.scalars(
-            select(PaperConcept.concept_id)
-            .join(Paper, Paper.id == PaperConcept.paper_id)
-            .where(PaperConcept.paper_id.in_(bookmarked_papers))
-            .where(
-                or_(
-                    Paper.active_analysis_run_id.is_(None),
-                    PaperConcept.analysis_run_id == Paper.active_analysis_run_id,
-                )
-            )
-        )).all()
-        concept_ids = list(set(pc_rows))
-
-        if not concept_ids:
-            return []
-
-        # Find papers sharing those concepts, excluding already bookmarked ones
-        candidate_paper_ids = (await db.scalars(
-            select(PaperConcept.paper_id)
-            .join(Paper, Paper.id == PaperConcept.paper_id)
-            .where(
-                PaperConcept.concept_id.in_(concept_ids),
-                PaperConcept.paper_id.not_in(bookmarked_papers),
-                or_(
-                    Paper.active_analysis_run_id.is_(None),
-                    PaperConcept.analysis_run_id == Paper.active_analysis_run_id,
-                ),
-            )
-            .group_by(PaperConcept.paper_id)
-            .order_by(func.count(PaperConcept.concept_id).desc())
-            .limit(10)
-        )).all()
-
-        if not candidate_paper_ids:
-            return []
-
-        papers = (await db.scalars(select(Paper).where(Paper.id.in_(candidate_paper_ids)))).all()
-        return [
-            self._serialise_recommendation(p, 0.75, "基于你收藏论文的概念关联推荐")
-            for p in papers
         ]
 
     async def _recommend_collaborative(self, db: AsyncSession, user: User) -> list[dict]:

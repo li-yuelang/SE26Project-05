@@ -11,13 +11,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2406.01234',
     parsed_status: 'completed',
     tags: ['RAG', 'Agent', 'Literature Review'],
-    status: 'reading',
-    progress: 68,
     priority: '高',
     favorite: true,
     rating: 4,
-    lastReadAt: '2026-07-08 21:10',
-    readMinutes: 96,
     notesCount: 4,
     commentsCount: 2,
     summary:
@@ -46,13 +42,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2406.05678',
     parsed_status: 'completed',
     tags: ['Concept Graph', 'Information Extraction', 'NLP'],
-    status: 'reading',
-    progress: 52,
     priority: '高',
     favorite: true,
     rating: 5,
-    lastReadAt: '2026-07-08 18:30',
-    readMinutes: 74,
     notesCount: 6,
     commentsCount: 3,
     summary:
@@ -81,13 +73,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2406.09123',
     parsed_status: 'completed',
     tags: ['Paper Classification', 'Embedding', 'Search'],
-    status: 'todo',
-    progress: 18,
     priority: '中',
     favorite: false,
     rating: 3,
-    lastReadAt: '2026-07-06 10:15',
-    readMinutes: 28,
     notesCount: 1,
     commentsCount: 0,
     summary:
@@ -116,13 +104,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2405.11890',
     parsed_status: 'completed',
     tags: ['Long Context', 'Citation Grounding', 'QA'],
-    status: 'done',
-    progress: 100,
     priority: '中',
     favorite: true,
     rating: 4,
-    lastReadAt: '2026-07-05 22:05',
-    readMinutes: 130,
     notesCount: 5,
     commentsCount: 4,
     summary:
@@ -151,13 +135,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2405.08777',
     parsed_status: 'completed',
     tags: ['LoRA', 'Fine-tuning', 'LLM'],
-    status: 'todo',
-    progress: 35,
     priority: '低',
     favorite: false,
     rating: 3,
-    lastReadAt: '2026-07-03 16:40',
-    readMinutes: 45,
     notesCount: 2,
     commentsCount: 1,
     summary:
@@ -186,13 +166,9 @@ export const learningPapers = [
     pdfUrl: 'https://arxiv.org/pdf/2404.06543',
     parsed_status: 'completed',
     tags: ['Recommendation', 'Reading History', 'User Modeling'],
-    status: 'done',
-    progress: 100,
     priority: '中',
     favorite: false,
     rating: 4,
-    lastReadAt: '2026-07-02 09:20',
-    readMinutes: 88,
     notesCount: 3,
     commentsCount: 2,
     summary:
@@ -206,8 +182,8 @@ export const learningPapers = [
     conclusion:
       '学习管理数据可以直接反哺订阅推送和个性化推荐。',
     limitations: '冷启动用户仍需要显式主题订阅作为补充。',
-    bestFor: '设计阅读历史、关注主题和每日推送推荐策略。',
-    userNote: '与学习中心强相关，阅读行为字段要从一开始就设计好。',
+    bestFor: '设计收藏主题、关注方向和每日推送推荐策略。',
+    userNote: '与学习中心强相关，收藏和关注主题可以作为推荐信号。',
   },
 ];
 
@@ -283,40 +259,3 @@ export const learningNotes = [
     tags: ['RAG', 'Agent'],
   },
 ];
-
-export const readingHistory = [
-  {
-    id: 'h1',
-    paperId: '2406.01234',
-    action: '继续阅读',
-    detail: '阅读 Methods 与 Evaluation，新增 1 条笔记',
-    time: '2026-07-08 21:10',
-  },
-  {
-    id: 'h2',
-    paperId: '2406.05678',
-    action: '添加评论',
-    detail: '评论了概念关系抽取的错误类型',
-    time: '2026-07-08 18:30',
-  },
-  {
-    id: 'h3',
-    paperId: '2405.11890',
-    action: '完成阅读',
-    detail: '标记为已读并设置 4 星评分',
-    time: '2026-07-05 22:05',
-  },
-  {
-    id: 'h4',
-    paperId: '2404.06543',
-    action: '加入推荐候选',
-    detail: '用于设计个性化订阅策略',
-    time: '2026-07-02 09:20',
-  },
-];
-
-export const statusMeta = {
-  todo: { text: '待读', color: 'default' },
-  reading: { text: '阅读中', color: 'processing' },
-  done: { text: '已读', color: 'success' },
-};

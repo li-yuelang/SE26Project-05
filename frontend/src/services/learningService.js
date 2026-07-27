@@ -2,8 +2,6 @@ import {
   followedTopics,
   learningNotes,
   learningPapers,
-  readingHistory,
-  statusMeta,
 } from '../data/learningData';
 import { cloneMockData, createEndpoint, request } from './apiClient';
 
@@ -39,12 +37,6 @@ function formatLocalDateTime(value, fallback = '') {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
-const httpStatusMeta = {
-  todo: { color: 'default', text: '待读' },
-  reading: { color: 'processing', text: '阅读中' },
-  done: { color: 'success', text: '已读' },
-};
-
 function normalizeNote(note) {
   return {
     ...note,
@@ -53,15 +45,6 @@ function normalizeNote(note) {
     tags: note.anchor?.tags || [],
     title: note.anchor?.title || '学习笔记',
     updatedAt: formatLocalDateTime(note.updated_at),
-  };
-}
-
-function normalizeHistory(item) {
-  return {
-    action: item.progress >= 100 ? '完成阅读' : '更新阅读进度',
-    detail: `阅读进度 ${item.progress}%`,
-    paperId: item.paper_id,
-    time: formatLocalDateTime(item.last_read_at),
   };
 }
 
@@ -77,11 +60,9 @@ function normalizeTopic(topic) {
   };
 }
 
-function normalizePaper(paper, bookmarks, histories, notes) {
+function normalizePaper(paper, bookmarks, notes) {
   const bookmark = bookmarks.get(paper.id);
-  const history = histories.get(paper.id);
   const paperNotes = notes.get(paper.id) || [];
-  const progress = history?.progress || 0;
   const normalized = {
     ...paper,
     arxivUrl: paper.arxiv_url,
@@ -94,7 +75,6 @@ function normalizePaper(paper, bookmarks, histories, notes) {
     experiment: '',
     favorite: Boolean(bookmark),
     isRead: paper.parsed_status === 'completed',
-    lastReadAt: formatLocalDateTime(history?.last_read_at, '尚未阅读'),
     limitations: '',
     methods: [],
     noteId: paperNotes[0]?.id || null,
@@ -102,12 +82,9 @@ function normalizePaper(paper, bookmarks, histories, notes) {
     parsedStatus: paper.parsed_status || 'pending',
     pdfUrl: paper.pdf_url,
     priority: bookmark ? '高' : '中',
-    progress,
     publishedAt: paper.published_at?.slice(0, 10) || '',
     rating: 0,
-    readMinutes: 0,
     researchQuestion: '',
-    status: progress >= 100 ? 'done' : progress > 0 ? 'reading' : 'todo',
     summary: paper.abstract || '',
     tags: paper.categories || [],
     updatedAt: paper.updated_at_source?.slice(0, 10) || '',
@@ -135,18 +112,14 @@ async function getAllLearningItems(path) {
 }
 
 async function getHttpLearningCenter() {
-  const [paperResult, bookmarksResult, notesResult, historiesResult, topicResult] = await Promise.all([
+  const [paperResult, bookmarksResult, notesResult, topicResult] = await Promise.all([
     request('/papers', { query: { page: 1, page_size: PAPER_PAGE_SIZE } }),
     getAllLearningItems('/learning/bookmarks'),
     getAllLearningItems('/learning/notes'),
-    getAllLearningItems('/learning/history'),
     request('/learning/topics'),
   ]);
   const bookmarks = new Map(
     bookmarksResult.map((bookmark) => [bookmark.paper_id, bookmark]),
-  );
-  const histories = new Map(
-    historiesResult.map((history) => [history.paper_id, history]),
   );
   const notesByPaper = new Map();
   notesResult.forEach((note) => {
@@ -158,10 +131,8 @@ async function getHttpLearningCenter() {
   return {
     notes: notesResult.map(normalizeNote),
     papers: (paperResult.items || []).map((paper) => (
-      normalizePaper(paper, bookmarks, histories, notesByPaper)
+      normalizePaper(paper, bookmarks, notesByPaper)
     )),
-    readingHistory: historiesResult.map(normalizeHistory),
-    statusMeta: httpStatusMeta,
     topics,
   };
 }
@@ -170,8 +141,6 @@ export const getLearningCenter = createEndpoint({
   mock: () => ({
     notes: noteStore,
     papers: paperStore,
-    readingHistory,
-    statusMeta,
     topics: topicStore,
   }),
   http: getHttpLearningCenter,
@@ -266,23 +235,12 @@ export const updateLearningPaper = createEndpoint({
   },
   http: async (paperId, changes) => {
     const current = httpPaperStore.get(paperId);
-    let progressResult = null;
     let nextNoteId = current?.noteId || null;
 
     if (changes.favorite !== undefined && changes.favorite !== current?.favorite) {
       await request(`/learning/bookmarks${changes.favorite ? '' : `/${paperId}`}`, {
         ...(changes.favorite ? { body: { folder: null, paper_id: paperId } } : {}),
         method: changes.favorite ? 'POST' : 'DELETE',
-      });
-    }
-
-    if (changes.progress !== undefined || changes.status === 'done') {
-      progressResult = await request('/learning/history', {
-        body: {
-          paper_id: paperId,
-          progress: changes.status === 'done' ? 100 : changes.progress,
-        },
-        method: 'POST',
       });
     }
 
@@ -305,16 +263,10 @@ export const updateLearningPaper = createEndpoint({
       }
     }
 
-    const progress = progressResult?.progress ?? changes.progress ?? current?.progress ?? 0;
     const updated = {
       ...current,
       ...changes,
-      lastReadAt: formatLocalDateTime(progressResult?.last_read_at)
-        || changes.lastReadAt
-        || current?.lastReadAt,
       noteId: nextNoteId,
-      progress,
-      status: progress >= 100 ? 'done' : progress > 0 ? 'reading' : 'todo',
     };
     httpPaperStore.set(paperId, updated);
     return updated;

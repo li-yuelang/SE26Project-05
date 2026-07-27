@@ -12,7 +12,7 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from app.models.chat import Conversation
-    from app.models.learning import Bookmark, Comment, FollowedTopic, Note, PaperComparison, ReadingHistory
+    from app.models.learning import Bookmark, Comment, FollowedTopic, Note, PaperComparison
     from app.models.concept import UserConcept
     from app.models.paper import UserPaper
     from app.models.task import FetchTask, Subscription
@@ -40,7 +40,6 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     bookmarks: Mapped[list[Bookmark]] = relationship(back_populates="user", cascade="all, delete-orphan")
     notes: Mapped[list[Note]] = relationship(back_populates="user", cascade="all, delete-orphan")
     comments: Mapped[list[Comment]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    reading_history: Mapped[list[ReadingHistory]] = relationship(back_populates="user", cascade="all, delete-orphan")
     followed_topics: Mapped[list[FollowedTopic]] = relationship(back_populates="user", cascade="all, delete-orphan")
     comparisons: Mapped[list[PaperComparison]] = relationship(back_populates="user", cascade="all, delete-orphan")
     fetch_tasks: Mapped[list[FetchTask]] = relationship(

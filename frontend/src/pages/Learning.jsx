@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Badge,
   Button,
   Card,
   Col,
@@ -15,25 +14,21 @@ import {
   Row,
   Segmented,
   Select,
-  Slider,
   Space,
   Statistic,
   Table,
   Tag,
-  Timeline,
   Typography,
   message,
 } from 'antd';
 import {
   BookOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   CommentOutlined,
   EditOutlined,
   EyeOutlined,
   FileSearchOutlined,
   FireOutlined,
-  HistoryOutlined,
   LinkOutlined,
   LoadingOutlined,
   ReadOutlined,
@@ -68,18 +63,14 @@ export default function Learning() {
   const [topics, setTopics] = useState([]);
   const [activeView, setActiveView] = useState('queue');
   const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [directionFilter, setDirectionFilter] = useState('all');
   const [selectedPaperIds, setSelectedPaperIds] = useState([]);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [activePaper, setActivePaper] = useState(null);
   const [draftNote, setDraftNote] = useState('');
-  const [draftProgress, setDraftProgress] = useState(0);
   const [draftRating, setDraftRating] = useState(0);
   const [analysingPaperIds, setAnalysingPaperIds] = useState(new Set());
   const learningNotes = resource.data?.notes || [];
-  const readingHistory = resource.data?.readingHistory || [];
-  const statusMeta = resource.data?.statusMeta || {};
 
   useEffect(() => {
     if (!resource.data) return;
@@ -93,14 +84,13 @@ export default function Learning() {
   );
 
   const stats = useMemo(() => {
-    const totalMinutes = papers.reduce((sum, paper) => sum + paper.readMinutes, 0);
-
     return {
       favorites: papers.filter((paper) => paper.favorite).length,
-      reading: papers.filter((paper) => paper.status === 'reading').length,
-      done: papers.filter((paper) => paper.status === 'done').length,
       notes: papers.reduce((sum, paper) => sum + paper.notesCount, 0),
-      hours: Math.round(totalMinutes / 6) / 10,
+      comments: papers.reduce((sum, paper) => sum + paper.commentsCount, 0),
+      parsed: papers.filter(
+        (paper) => (paper.parsedStatus || paper.parsed_status) === 'completed',
+      ).length,
     };
   }, [papers]);
 
@@ -108,10 +98,6 @@ export default function Learning() {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
     return papers.filter((paper) => {
-      const matchesStatus =
-        statusFilter === 'all' ||
-        paper.status === statusFilter ||
-        (statusFilter === 'favorite' && paper.favorite);
       const matchesDirection =
         directionFilter === 'all' || paper.direction === directionFilter;
       const searchableText = [
@@ -126,12 +112,11 @@ export default function Learning() {
         .toLowerCase();
 
       return (
-        matchesStatus &&
         matchesDirection &&
         searchableText.includes(normalizedKeyword)
       );
     });
-  }, [directionFilter, keyword, papers, statusFilter]);
+  }, [directionFilter, keyword, papers]);
 
   const visiblePapers = useMemo(
     () =>
@@ -149,7 +134,6 @@ export default function Learning() {
   const openNoteModal = (paper) => {
     setActivePaper(paper);
     setDraftNote(paper.userNote || '');
-    setDraftProgress(paper.progress);
     setDraftRating(paper.rating);
     setNoteModalOpen(true);
   };
@@ -160,14 +144,11 @@ export default function Learning() {
     try {
       const updatedPaper = await updateLearningPaper(activePaper.id, {
         userNote: draftNote,
-        progress: draftProgress,
         rating: draftRating,
         notesCount:
           draftNote && !activePaper.userNote
             ? activePaper.notesCount + 1
             : activePaper.notesCount,
-        status: draftProgress >= 100 ? 'done' : draftProgress > 0 ? 'reading' : 'todo',
-        lastReadAt: '刚刚',
       });
       setPapers((currentPapers) => currentPapers.map((paper) => (
         paper.id === updatedPaper.id ? updatedPaper : paper
@@ -191,22 +172,6 @@ export default function Learning() {
       )));
     } catch (error) {
       message.error(error.message || '收藏状态更新失败');
-    }
-  };
-
-  const markDone = async (paperId) => {
-    try {
-      const updatedPaper = await updateLearningPaper(paperId, {
-        status: 'done',
-        progress: 100,
-        lastReadAt: '刚刚',
-      });
-      setPapers((currentPapers) => currentPapers.map((paper) => (
-        paper.id === paperId ? updatedPaper : paper
-      )));
-      message.success('已标记为完成阅读');
-    } catch (error) {
-      message.error(error.message || '阅读状态更新失败');
     }
   };
 
@@ -252,25 +217,33 @@ export default function Learning() {
     {
       title: '论文',
       dataIndex: 'title',
+      width: 420,
       render: (_, paper) => (
-        <Space orientation="vertical" size={4} className="learning-paper-cell">
-          <Flex align="center" gap={8} wrap="wrap">
+        <div className="learning-paper-cell">
+          <Flex align="flex-start" gap={8}>
             <Button
               type="link"
               className="learning-paper-title"
+              title={paper.title}
               onClick={() => navigate(`/papers/${paper.id}`)}
             >
               {paper.title}
             </Button>
             {paper.favorite && <StarFilled className="learning-star" />}
           </Flex>
-          <Text type="secondary">{paper.authors.join(', ')}</Text>
+          <Text
+            type="secondary"
+            className="learning-paper-authors"
+            title={paper.authors.join(', ')}
+          >
+            {paper.authors.join(', ')}
+          </Text>
           <Space size={[6, 6]} wrap>
             {paper.tags.map((tag) => (
               <Tag key={tag}>{tag}</Tag>
             ))}
           </Space>
-        </Space>
+        </div>
       ),
     },
     {
@@ -278,14 +251,6 @@ export default function Learning() {
       dataIndex: 'direction',
       width: 110,
       render: (direction) => <Tag color="geekblue">{direction}</Tag>,
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 110,
-      render: (status) => (
-        <Badge status={statusMeta[status].color} text={statusMeta[status].text} />
-      ),
     },
     {
       title: '解析',
@@ -318,22 +283,13 @@ export default function Learning() {
       },
     },
     {
-      title: '进度',
-      dataIndex: 'progress',
-      width: 170,
-      render: (progress) => <Progress percent={progress} size="small" />,
-    },
-    {
       title: '学习记录',
       key: 'activity',
-      width: 180,
+      width: 160,
       render: (_, paper) => (
-        <Space orientation="vertical" size={2}>
-          <Text type="secondary">{paper.lastReadAt}</Text>
-          <Text type="secondary">
-            {paper.notesCount} 条笔记 · {paper.commentsCount} 条评论
-          </Text>
-        </Space>
+        <Text type="secondary">
+          {paper.notesCount} 条笔记 · {paper.commentsCount} 条评论
+        </Text>
       ),
     },
     {
@@ -371,13 +327,6 @@ export default function Learning() {
               解析结果
             </Button>
           )}
-          <Button
-            size="small"
-            icon={<CheckCircleOutlined />}
-            onClick={() => markDone(paper.id)}
-          >
-            完成
-          </Button>
         </Space>
       ),
     },
@@ -407,18 +356,6 @@ export default function Learning() {
             onSearch={setKeyword}
           />
           <Select
-            value={statusFilter}
-            className="learning-select"
-            onChange={setStatusFilter}
-            options={[
-              { label: '全部状态', value: 'all' },
-              { label: '待读', value: 'todo' },
-              { label: '阅读中', value: 'reading' },
-              { label: '已读', value: 'done' },
-              { label: '已收藏', value: 'favorite' },
-            ]}
-          />
-          <Select
             value={directionFilter}
             className="learning-select"
             onChange={setDirectionFilter}
@@ -433,7 +370,7 @@ export default function Learning() {
             disabled={selectedPaperIds.length < 2}
             onClick={startCompare}
           >
-            对比阅读
+            论文对比
           </Button>
         </Flex>
       </Card>
@@ -505,28 +442,6 @@ export default function Learning() {
     </Card>
   );
 
-  const renderHistory = () => (
-    <Card variant="borderless" title="阅读历史">
-      <Timeline
-        items={readingHistory.map((item) => {
-          const paper = papers.find((currentPaper) => currentPaper.id === item.paperId);
-
-          return {
-            color: item.action === '完成阅读' ? 'green' : 'blue',
-            content: (
-              <Space orientation="vertical" size={2}>
-                <Text strong>{item.action}</Text>
-                <Text>{paper?.title}</Text>
-                <Text type="secondary">{item.detail}</Text>
-                <Text type="secondary">{item.time}</Text>
-              </Space>
-            ),
-          };
-        })}
-      />
-    </Card>
-  );
-
   const renderTopics = () => (
     <Row gutter={[16, 16]}>
       {topics.map((topic) => (
@@ -587,13 +502,10 @@ export default function Learning() {
         <div>
           <Title level={2}>学习中心</Title>
           <Paragraph>
-            管理收藏、笔记、评论、阅读历史和关注主题，把论文阅读过程沉淀成可复用的学习资产。
+            管理收藏、笔记、评论和关注主题，把论文研究过程沉淀成可复用的学习资产。
           </Paragraph>
         </div>
         <Space wrap>
-          <Button icon={<HistoryOutlined />} onClick={() => setActiveView('history')}>
-            最近记录
-          </Button>
           <Button type="primary" icon={<FileSearchOutlined />} onClick={startCompare}>
             进入对比
           </Button>
@@ -608,17 +520,17 @@ export default function Learning() {
         </Col>
         <Col xs={12} md={6}>
           <Card variant="borderless">
-            <Statistic title="阅读中" value={stats.reading} suffix="篇" />
+            <Statistic title="学习笔记" value={stats.notes} suffix="条" />
           </Card>
         </Col>
         <Col xs={12} md={6}>
           <Card variant="borderless">
-            <Statistic title="已完成" value={stats.done} suffix="篇" />
+            <Statistic title="论文评论" value={stats.comments} suffix="条" />
           </Card>
         </Col>
         <Col xs={12} md={6}>
           <Card variant="borderless">
-            <Statistic title="学习时长" value={stats.hours} suffix="小时" />
+            <Statistic title="已解析" value={stats.parsed} suffix="篇" />
           </Card>
         </Col>
       </Row>
@@ -629,10 +541,9 @@ export default function Learning() {
             value={activeView}
             onChange={setActiveView}
             options={[
-              { label: '阅读队列', value: 'queue', icon: <ReadOutlined /> },
+              { label: '论文库', value: 'queue', icon: <ReadOutlined /> },
               { label: '收藏夹', value: 'favorites', icon: <StarOutlined /> },
               { label: '笔记评论', value: 'notes', icon: <CommentOutlined /> },
-              { label: '阅读历史', value: 'history', icon: <ClockCircleOutlined /> },
               { label: '关注主题', value: 'topics', icon: <TagsOutlined /> },
             ]}
           />
@@ -657,7 +568,6 @@ export default function Learning() {
 
       {(activeView === 'queue' || activeView === 'favorites') && renderPaperTable()}
       {activeView === 'notes' && renderNotes()}
-      {activeView === 'history' && renderHistory()}
       {activeView === 'topics' && renderTopics()}
 
       <Row gutter={[16, 16]}>
@@ -667,14 +577,13 @@ export default function Learning() {
             title={
               <Space>
                 <FireOutlined />
-                今日阅读建议
+                今日关注建议
               </Space>
             }
           >
             <List
-              dataSource={papers
-                .filter((paper) => paper.status !== 'done')
-                .sort((a, b) => b.progress - a.progress)
+              dataSource={[...papers]
+                .sort((a, b) => Number(b.favorite) - Number(a.favorite))
                 .slice(0, 3)}
               renderItem={(paper) => (
                 <List.Item
@@ -682,15 +591,11 @@ export default function Learning() {
                     <Button key="note" type="link" onClick={() => openNoteModal(paper)}>
                       记录
                     </Button>,
-                    <Button key="done" type="link" onClick={() => markDone(paper.id)}>
-                      完成
-                    </Button>,
                   ]}
                 >
                   <List.Item.Meta
-                    avatar={<Progress type="circle" percent={paper.progress} size={44} />}
                     title={paper.title}
-                    description={`${paper.direction} · ${paper.priority}优先级 · ${paper.lastReadAt}`}
+                    description={`${paper.direction} · ${paper.priority}优先级`}
                   />
                 </List.Item>
               )}
@@ -736,14 +641,6 @@ export default function Learning() {
       >
         <Space orientation="vertical" size={18} className="learning-note-modal">
           <div>
-            <Text strong>阅读进度</Text>
-            <Slider
-              value={draftProgress}
-              onChange={setDraftProgress}
-              marks={{ 0: '0%', 50: '50%', 100: '100%' }}
-            />
-          </div>
-          <div>
             <Text strong>评分</Text>
             <div>
               <Rate value={draftRating} onChange={setDraftRating} />
@@ -755,7 +652,7 @@ export default function Learning() {
               rows={6}
               value={draftNote}
               onChange={(event) => setDraftNote(event.target.value)}
-              placeholder="记录关键问题、方法差异、实验结论或后续待读点"
+              placeholder="记录关键问题、方法差异、实验结论或后续研究点"
             />
           </div>
           {activePaper && (

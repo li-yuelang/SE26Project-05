@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.services.pdf_parser import ParsedDocument, Section, _TOKEN_PATTERN
+from app.services.pdf_parser import (
+    ParsedDocument,
+    Section,
+    _TOKEN_PATTERN,
+    is_back_matter_heading,
+)
 
 
 @dataclass(slots=True)
@@ -64,6 +69,10 @@ class SemanticChunker:
         sections = document.sections if isinstance(document, ParsedDocument) else document
         chunks: list[PaperTextChunk] = []
         for section in sections:
+            # Keep the cost-saving boundary even for callers that provide
+            # pre-built sections rather than using PDFParser.
+            if is_back_matter_heading(section.title):
+                break
             paragraphs = _paragraphs(section)
             expanded: list[str] = []
             for paragraph in paragraphs:

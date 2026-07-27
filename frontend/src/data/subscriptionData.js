@@ -1,6 +1,6 @@
 export const dailyDigest = {
   date: '2026-07-09',
-  summary: '今日共追踪到你关注的 5 个主题中有 12 篇新增论文，其中 3 篇与你的阅读历史高度相关，建议优先阅读。',
+  summary: '今日共追踪到你关注的 5 个主题中有 12 篇新增论文，其中 3 篇与你的收藏主题高度相关，建议优先研究。',
   topics: [
     {
       topicId: 'rag', topicName: 'Retrieval-Augmented Generation', newCount: 5,
@@ -11,7 +11,7 @@ export const dailyDigest = {
     },
     { topicId: 'concept-graph', topicName: '论文概念图谱', newCount: 2, highlights: [{ id: '2501.02001', title: 'Iterative Concept Graph Refinement via Section-Aware Parsing', authors: ['David Liu', 'Emma Brown'], categories: ['cs.CL', 'cs.IR'], matchScore: 91, reason: '与你关注的章节解析和概念合并策略一致', abstract: '通过章节结构感知解析和迭代归并，构建高质量学术概念图谱，减少重复节点和错误关系。' }] },
     { topicId: 'paper-recommendation', topicName: '个性化论文推荐', newCount: 1, highlights: [{ id: '2501.03001', title: 'Collaborative Filtering Meets Semantic Search for ArXiv Papers', authors: ['Olivia Martin', 'Hao Chen'], categories: ['cs.IR'], matchScore: 79, reason: '与阅读行为建模研究相关', abstract: '结合协同过滤和语义搜索的混合推荐方法，在 ArXiv 数据集上取得优于纯协同或纯语义方法的效果。' }] },
-    { topicId: 'llm-finetuning', topicName: '大模型高效微调', newCount: 3, highlights: [{ id: '2501.04001', title: 'Dynamic LoRA Allocation with Importance Ranking', authors: ['Sarah Chen', 'Raj Patel'], categories: ['cs.LG', 'cs.CL'], matchScore: 86, reason: '与你已读的 Adaptive LoRA 论文延续性很强', abstract: '提出基于参数重要性排名的动态 LoRA 秩分配策略，在更少的可训练参数下实现更优的领域适配效果。' }] },
+    { topicId: 'llm-finetuning', topicName: '大模型高效微调', newCount: 3, highlights: [{ id: '2501.04001', title: 'Dynamic LoRA Allocation with Importance Ranking', authors: ['Sarah Chen', 'Raj Patel'], categories: ['cs.LG', 'cs.CL'], matchScore: 86, reason: '与你收藏的 Adaptive LoRA 论文延续性很强', abstract: '提出基于参数重要性排名的动态 LoRA 秩分配策略，在更少的可训练参数下实现更优的领域适配效果。' }] },
     { topicId: 'qa', topicName: '科学问答与引用定位', newCount: 1, highlights: [{ id: '2501.05001', title: 'Long-Range Citation Grounding for Multi-Paper QA', authors: ['Nora Kim', 'Ivan Petrov'], categories: ['cs.CL'], matchScore: 82, reason: '与 Long-Context Scientific QA 方法论互补', abstract: '面向多论文场景的长距离引用定位方法，在 Qasper 和 PaperQA 基准上显著提升答案可验证性。' }] },
   ],
 };
