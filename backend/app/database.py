@@ -46,6 +46,10 @@ CelerySessionLocal = async_sessionmaker(
 )
 
 
+# Backward-compatible alias for tests
+engine = _celery_engine
+
+
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:

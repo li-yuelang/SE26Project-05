@@ -308,7 +308,7 @@ async def main() -> None:
     print(f"  Concurrency:    {CONCURRENCY} distinct users")
     print(f"  Target:         p95 < {TARGET}s (excl. LLM)")
     if SKIP_EXTERNAL:
-        print(f"  External APIs:  SKIPPED (PAPERMATE_SKIP_EXTERNAL=1)")
+        print("  External APIs:  SKIPPED (PAPERMATE_SKIP_EXTERNAL=1)")
     print("=" * 70)
 
     limits = httpx.Limits(
@@ -343,7 +343,7 @@ async def main() -> None:
         print(f"  Sample papers:  {len(paper_ids)} available")
 
         if paper_ids:
-            print(f"  Adding papers to all user libraries ...")
+            print("  Adding papers to all user libraries ...")
             t0 = time.perf_counter()
             sem = asyncio.Semaphore(50)
 
@@ -356,7 +356,7 @@ async def main() -> None:
             print(f"  Libraries ready ({time.perf_counter() - t0:.1f}s)")
 
         # ---- warm-up ----
-        print(f"\n  Warming up endpoints ...")
+        print("\n  Warming up endpoints ...")
         t0 = time.perf_counter()
         warm_token = tokens[0]
         warmups = [
@@ -491,7 +491,7 @@ async def main() -> None:
             print(f"  [{status}] {r.name}: p95={p95:.3f}s")
 
         if ext_results:
-            print(f"\n  --- External-API dependent tests ---")
+            print("\n  --- External-API dependent tests ---")
             for r in ext_results:
                 p95 = r.percentile(95)
                 status = "PASS" if p95 < TARGET else "FAIL"
@@ -503,9 +503,9 @@ async def main() -> None:
         print(f"  Target:           p95 < {TARGET}s per request (excl. LLM)")
 
         if core_all_pass:
-            print(f"\n  >>> CORE TESTS: ALL PASSED <<<")
+            print("\n  >>> CORE TESTS: ALL PASSED <<<")
         else:
-            print(f"\n  >>> CORE TESTS: SOME FAILED <<<")
+            print("\n  >>> CORE TESTS: SOME FAILED <<<")
 
         print("=" * 70)
 
