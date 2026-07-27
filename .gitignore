@@ -40,6 +40,9 @@ backend/celerybeat-schedule*
 .vite/
 *.tsbuildinfo
 
+# Coverage
+frontend/coverage/
+
 # AI
 .codex/
 .claude/
