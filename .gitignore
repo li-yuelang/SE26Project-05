@@ -50,6 +50,9 @@ CLAUDE.md
 # celery
 celerybeat-schedule*
 
+# Test coverage
+coverage/
+
 # Test artifacts & utilities
 scripts/
 backend/scripts/
