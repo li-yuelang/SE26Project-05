@@ -31,7 +31,30 @@ _NUMBERED_HEADING = re.compile(r"^(?:\d+(?:\.\d+)*[.)]?|[IVX]+[.)])\s+\S+", re.I
 _KNOWN_HEADING = re.compile(
     r"^(abstract|introduction|background|related work|preliminaries|method(?:ology)?|"
     r"approach|model|experiments?|results?|discussion|conclusion|limitations?|"
-    r"future work|acknowledg(?:e)?ments?|references|appendix)\b",
+    r"future work|acknowledg(?:e)?ments?|references?|bibliography|works cited|"
+    r"literature cited|appendix|appendices|supplement(?:al|ary) materials?)\b",
+    re.I,
+)
+_LEADING_SECTION_NUMBER = re.compile(
+    r"^(?:(?:section|chapter)\s+)?(?:\d+(?:\.\d+)*|[ivxlcdm]+)[.)]?\s+",
+    re.I,
+)
+_REFERENCE_HEADING = re.compile(
+    r"^(?:references?|bibliography|works cited|literature cited)"
+    r"(?:\s+(?:and notes|cited))?$",
+    re.I,
+)
+_APPENDIX_HEADING = re.compile(
+    r"^(?:"
+    r"appendix(?:\s*[:—-]\s*.+|\s+(?:[A-Z]|\d+(?:\.\d+)*)"
+    r"(?:(?:[.:—-]\s*|\s+).+)?)?|"
+    r"appendices(?:\s*[:—-]\s*.+)?|"
+    r"supplement(?:al|ary) materials?(?:\s*[:—-]\s*.+)?"
+    r")$",
+    re.I,
+)
+_CHINESE_BACK_MATTER_HEADING = re.compile(
+    r"^(?:参考文献|参考资料|附录|补充材料)(?:[一二三四五六七八九十A-Z0-9]*)?(?:\s*[:：—-]\s*.+)?$",
     re.I,
 )
 _TOKEN_PATTERN = re.compile(r"[\u3400-\u9fff]|[A-Za-z0-9_]+|[^\s]", re.UNICODE)
@@ -95,10 +118,30 @@ def _normalise_for_repeat(value: str) -> str:
     return re.sub(r"[^\w\u3400-\u9fff]+", "", value.casefold())
 
 
+def is_back_matter_heading(value: str) -> bool:
+    """Return whether a section heading starts non-essential paper back matter.
+
+    Matching is intentionally stricter than general heading detection so a
+    sentence such as ``References are discussed below`` cannot truncate the
+    paper. Numbered forms such as ``7 References`` are supported.
+    """
+
+    heading = clean_block_text(value)
+    heading = _LEADING_SECTION_NUMBER.sub("", heading, count=1).strip()
+    heading = heading.rstrip(" .:：—-")
+    return bool(
+        _REFERENCE_HEADING.fullmatch(heading)
+        or _APPENDIX_HEADING.fullmatch(heading)
+        or _CHINESE_BACK_MATTER_HEADING.fullmatch(heading)
+    )
+
+
 def _is_heading(block: TextBlock, typical_font_size: float) -> bool:
     text = block.text.strip()
     if not text or len(text) > 220 or block.line_count > 3:
         return False
+    if is_back_matter_heading(text):
+        return True
     if text.endswith((".", "。", ":", "：", ";", "；")) and not _NUMBERED_HEADING.match(text):
         return False
     if _KNOWN_HEADING.match(text) or _NUMBERED_HEADING.match(text):
@@ -148,8 +191,14 @@ def identify_sections(blocks: list[TextBlock], page_count: int | None = None) ->
 
     sections: list[Section] = []
     current = Section(title="前言", level=1)
+    reached_back_matter = False
     for block in blocks:
         if _is_heading(block, typical_font_size):
+            if is_back_matter_heading(block.text):
+                if current.blocks or current.title != "前言":
+                    sections.append(current)
+                reached_back_matter = True
+                break
             if current.blocks or current.title != "前言":
                 sections.append(current)
             current = Section(
@@ -158,10 +207,10 @@ def identify_sections(blocks: list[TextBlock], page_count: int | None = None) ->
             )
         else:
             current.blocks.append(block)
-    if current.blocks or current.title != "前言":
+    if not reached_back_matter and (current.blocks or current.title != "前言"):
         sections.append(current)
 
-    if not sections:
+    if not sections and not reached_back_matter:
         return [Section(title="正文", level=1, blocks=blocks)]
     return sections
 
