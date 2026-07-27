@@ -6,9 +6,13 @@ AI-powered ArXiv paper reader with intelligent summaries, note-taking, and knowl
 
 ```text
 SE26Project-05/
-├── frontend/          React 前端（Vite + Ant Design）
-├── backend/           FastAPI 后端（Python）
-└── .github/           CI/CD 工作流
+├── frontend/               React 前端（Vite + Ant Design）
+├── backend/                FastAPI 后端（Python）
+├── deploy.sh               云端部署脚本（后端）
+├── deploy-frontend.sh      云端部署脚本（前端 + Nginx）
+├── stop.sh                 停止 API/Worker 容器
+├── nginx.conf              Nginx 反向代理配置
+└── .github/                CI/CD 工作流
 ```
 
 ## 本地启动
@@ -210,4 +214,155 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8080
 ```
 
-完整启动流程和两个 Celery worker 命令见上方“本地启动”。
+完整启动流程和两个 Celery worker 命令见上方"本地启动"。
+
+---
+
+## 云端部署（Docker 独立模式，无 docker-compose）
+
+本项目云端采用 **host 网络模式**，API / Worker 容器通过 `--network host` 直连宿主机已有的 PostgreSQL 和 Redis，前端通过 Nginx 统一对外提供服务。
+
+```text
+                    ┌──────────────────────────────────┐
+                    │        Nginx (port 80)            │
+                    │  /         → 前端静态文件          │
+                    │  /api/*    → proxy 127.0.0.1:8080 │
+                    └──────────────┬───────────────────┘
+                                   │
+    ┌──────────────────────────────┼──────────────────────────────┐
+    │                    宿主机 (Host Network)                      │
+    │                                                              │
+    │  ┌──────────────────────────────────────┐                    │
+    │  │   papermate-api              :8080   │  ← uvicorn (host) │
+    │  │   papermate-worker-analysis          │  ← Celery analysis│
+    │  │   papermate-worker-arxiv             │  ← Celery arxiv   │
+    │  │   papermate-beat                     │  ← Celery beat    │
+    │  └──────────────────────────────────────┘                    │
+    │           │                  │                               │
+    │           ▼                  ▼                               │
+    │  ┌──────────────┐   ┌──────────────┐                        │
+    │  │ PostgreSQL   │   │    Redis     │                        │
+    │  │ :5432 (host) │   │  :6379 (host)│                        │
+    │  └──────────────┘   └──────────────┘                        │
+    └──────────────────────────────────────────────────────────────┘
+```
+
+### 云端要求
+
+| 依赖 | 说明 |
+|------|------|
+| Docker | 已安装（不需要 docker-compose） |
+| PostgreSQL + pgvector | 已运行，容器名 `papermate-postgres`，监听 `127.0.0.1:5432` |
+| Redis | 已运行，容器名 `redis`，监听 `0.0.0.0:6379` |
+| Nginx | 已安装，用于反向代理和前端静态文件 |
+| 端口 | 80（Nginx）、8080（API，仅 localhost） |
+| 防火墙/安全组 | 放行 80（HTTP）和 443（HTTPS）端口 |
+
+### 部署步骤
+
+#### 1. 上传代码到云服务器
+
+```bash
+# 在本地执行
+scp -r ./SE26Project-05 root@<公网IP>:/opt/papermate
+```
+
+#### 2. 填写配置文件
+
+云端登录后，编辑以下两个文件中的 `<...>` 占位符：
+
+**`/opt/papermate/backend/.env.production`** — 共 6 处需要手动填写：
+
+```env
+DATABASE_URL=postgresql+asyncpg://papermate:<数据库密码>@127.0.0.1:5432/papermate
+JWT_SECRET_KEY=<运行 "openssl rand -hex 64" 生成>
+CORS_ORIGINS=http://<公网IP>,http://<域名>
+LLM_API_KEY=<你的 LLM API Key>
+EMBEDDING_API_KEY=<你的 Embedding API Key>
+ARXIV_CONTACT_EMAIL=<你的邮箱>
+```
+
+> 数据库密码可从云端的 `~/papermate-db.env` 文件中获取（如果存在）。
+
+**`/opt/papermate/nginx.conf`** — 1 处：
+
+```nginx
+server_name <公网IP或域名>;
+```
+
+#### 3. 运行部署脚本
+
+```bash
+cd /opt/papermate
+chmod +x deploy.sh deploy-frontend.sh stop.sh
+
+# 启动后端（构建镜像、运行迁移、启动 API + Celery workers）
+./deploy.sh
+
+# 部署前端（构建前端、复制到 Nginx 目录、配置 Nginx）
+./deploy-frontend.sh
+
+# 验证 Nginx 配置并重载
+sudo nginx -t && sudo nginx -s reload
+```
+
+#### 4. 验证部署
+
+```bash
+# 检查容器状态
+docker ps --filter "name=papermate-" --format "table {{.Names}}\t{{.Status}}"
+
+# API 健康检查
+curl http://127.0.0.1:8080/health
+
+# 外部访问测试（在本地浏览器或 curl）
+curl http://<公网IP>/health
+```
+
+### 访问方式
+
+| 地址 | 说明 |
+|------|------|
+| `http://<公网IP>` | 浏览器直接访问前端页面 |
+| `http://<域名>` | 绑定域名后访问 |
+| `http://<公网IP>:8080/health` | API 健康检查 |
+| `http://<公网IP>:8080/docs` | API 文档（开发调试用） |
+
+首次使用需在登录页面注册账户。
+
+### 使用域名
+
+1. 在域名服务商处添加 A 记录，将域名指向云服务器公网 IP
+2. 修改 `nginx.conf`：`server_name <你的域名>;`
+3. 修改 `backend/.env.production`：`CORS_ORIGINS=https://<你的域名>`
+4. 重载 Nginx：`sudo nginx -t && sudo nginx -s reload`
+
+#### 开启 HTTPS（推荐）
+
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d <你的域名>
+sudo systemctl enable certbot.timer
+```
+
+### 停止服务
+
+```bash
+cd /opt/papermate
+./stop.sh
+```
+
+> 停止脚本仅关闭 API 和 Celery worker 容器，不会影响 PostgreSQL 和 Redis。
+
+### 部署文件说明
+
+| 文件 | 用途 |
+|------|------|
+| `deploy.sh` | 启动全部后端服务（host 网络模式，依赖已有 PG/Redis） |
+| `deploy-frontend.sh` | 构建前端并配置 Nginx |
+| `stop.sh` | 停止 API 和 Worker 容器 |
+| `nginx.conf` | Nginx 反向代理配置模板 |
+| `backend/.env.production` | 后端生产环境变量（需填写 API Key 等敏感信息） |
+| `frontend/.env.production` | 前端构建时的环境变量（同源部署无需修改） |
+| `backend/Dockerfile` | 后端镜像构建（Python 3.12 + pip install + uvicorn） |
+| `frontend/Dockerfile` | 前端多阶段构建（Node 构建 + Nginx 运行时） |
