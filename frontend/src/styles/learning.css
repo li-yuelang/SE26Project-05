@@ -12,14 +12,34 @@
 }
 
 .learning-paper-cell {
-  max-width: 560px;
+  min-width: 0;
+  width: 100%;
 }
 
 .learning-paper-title {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
   height: auto;
+  overflow: hidden;
   padding: 0;
   text-align: left;
+  text-overflow: ellipsis;
   white-space: normal;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.learning-paper-authors {
+  display: -webkit-box;
+  margin: 4px 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .learning-star {

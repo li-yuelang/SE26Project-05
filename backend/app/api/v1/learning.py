@@ -1,4 +1,4 @@
-"""Learning management API endpoints – bookmarks, notes, comments, reading history, followed topics."""
+"""Learning management API endpoints – bookmarks, notes, comments, and followed topics."""
 from __future__ import annotations
 
 from uuid import UUID
@@ -10,7 +10,6 @@ from app.schemas.common import success
 from app.schemas.learning import (
     BookmarkBatchRequest, BookmarkCreate, CommentCreate, FollowedTopicCreate, LearningOverview,
     NoteCreate, NoteUpdate,
-    ReadingHistoryRecord,
 )
 from app.services.learning import learning_service
 
@@ -136,27 +135,6 @@ async def delete_comment(comment_id: UUID, user: CurrentUser, db: DbSession):
     try:
         await learning_service.delete_comment(db, user, comment_id)
         return success(None, "Comment deleted")
-    except ValueError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
-
-
-# ---------------------------------------------------------------------------
-# Reading history
-# ---------------------------------------------------------------------------
-@router.get("/history", response_model=dict)
-async def list_reading_history(
-    user: CurrentUser, db: DbSession,
-    page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
-):
-    items, total = await learning_service.list_reading_history(db, user, page, page_size)
-    return success({"items": items, "total": total, "page": page, "pageSize": page_size})
-
-
-@router.post("/history", response_model=dict)
-async def record_reading(body: ReadingHistoryRecord, user: CurrentUser, db: DbSession):
-    try:
-        result = await learning_service.record_reading(db, user, body.paper_id, body.progress)
-        return success(result, "Reading progress recorded")
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
 

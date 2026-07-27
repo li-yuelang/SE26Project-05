@@ -1,14 +1,13 @@
-"""Business logic for learning management -- bookmarks, notes, comments, reading history, followed topics."""
+"""Business logic for learning management -- bookmarks, notes, comments, and followed topics."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.learning import Bookmark, Comment, FollowedTopic, Note, ReadingHistory
+from app.models.learning import Bookmark, Comment, FollowedTopic, Note
 from app.models.paper import Paper, UserPaper
 from app.models.user import User
 
@@ -29,7 +28,7 @@ class LearningService:
     # ------------------------------------------------------------------
     async def get_overview(self, db: AsyncSession, user: User) -> dict:
         """Dashboard overview — single count query + data queries."""
-        # Batch all 5 counts into one round-trip
+        # Batch all counts into one round-trip.
         uid = user.id
         counts_row = (
             await db.execute(
@@ -37,14 +36,12 @@ class LearningService:
                     func.count(func.distinct(Bookmark.id)).label("bk"),
                     func.count(func.distinct(Note.id)).label("nt"),
                     func.count(func.distinct(Comment.id)).label("cm"),
-                    func.count(func.distinct(ReadingHistory.id)).label("rh"),
                     func.count(func.distinct(FollowedTopic.id)).label("ft"),
                 )
                 .select_from(User)
                 .outerjoin(Bookmark, Bookmark.user_id == User.id)
                 .outerjoin(Note, Note.user_id == User.id)
                 .outerjoin(Comment, Comment.user_id == User.id)
-                .outerjoin(ReadingHistory, ReadingHistory.user_id == User.id)
                 .outerjoin(FollowedTopic, FollowedTopic.user_id == User.id)
                 .where(User.id == uid)
             )
@@ -53,10 +50,8 @@ class LearningService:
         bookmark_count = counts["bk"] or 0
         note_count = counts["nt"] or 0
         comment_count = counts["cm"] or 0
-        history_count = counts["rh"] or 0
         topic_count = counts["ft"] or 0
 
-        recent_reading = await self._query_reading_history(db, user.id, limit=5)
         recent_notes = await self._query_notes(db, user.id, limit=5)
         followed_topics = await self._query_followed_topics(db, user.id)
 
@@ -64,9 +59,7 @@ class LearningService:
             "bookmark_count": bookmark_count,
             "note_count": note_count,
             "comment_count": comment_count,
-            "reading_history_count": history_count,
             "followed_topic_count": topic_count,
-            "recent_reading": recent_reading,
             "recent_notes": recent_notes,
             "followed_topics": followed_topics,
         }
@@ -238,42 +231,6 @@ class LearningService:
         return await self._paginate(db, stmt, page, page_size, self._serialise_comment)
 
     # ------------------------------------------------------------------
-    # Reading history
-    # ------------------------------------------------------------------
-    async def record_reading(
-        self, db: AsyncSession, user: User, paper_id: UUID, progress: int,
-    ) -> dict:
-        paper = await self._get_owned_paper(db, user.id, paper_id)
-        if paper is None:
-            raise ValueError("Paper not found")
-
-        history = await db.scalar(
-            select(ReadingHistory).where(
-                ReadingHistory.user_id == user.id, ReadingHistory.paper_id == paper_id
-            )
-        )
-        now = datetime.now(timezone.utc)
-        if history:
-            history.progress = max(history.progress, progress)
-            history.last_read_at = now
-        else:
-            history = ReadingHistory(user_id=user.id, paper_id=paper_id, progress=progress, last_read_at=now)
-            db.add(history)
-        await db.commit()
-        await db.refresh(history)
-        return self._serialise_reading_history(history, paper)
-
-    async def list_reading_history(
-        self, db: AsyncSession, user: User, page: int = 1, page_size: int = 20,
-    ) -> tuple[list[dict], int]:
-        stmt = (
-            select(ReadingHistory)
-            .where(ReadingHistory.user_id == user.id)
-            .order_by(ReadingHistory.last_read_at.desc())
-        )
-        return await self._paginate(db, stmt, page, page_size, self._serialise_reading_history)
-
-    # ------------------------------------------------------------------
     # Followed topics
     # ------------------------------------------------------------------
     async def follow_topic(self, db: AsyncSession, user: User, topic: str, keywords: list[str]) -> dict:
@@ -352,20 +309,6 @@ class LearningService:
         }
 
     @staticmethod
-    def _serialise_reading_history(rh: ReadingHistory, paper: Paper | None = None) -> dict:
-        if paper is None and rh.paper_id:
-            paper = getattr(rh, "paper", None)
-        return {
-            "id": str(rh.id),
-            "paper_id": str(rh.paper_id),
-            "progress": rh.progress,
-            "last_read_at": rh.last_read_at,
-            "paper_title": paper.title if paper else None,
-            "paper_authors": paper.authors if paper else None,
-            "paper_primary_category": paper.primary_category if paper else None,
-        }
-
-    @staticmethod
     def _serialise_followed_topic(ft: FollowedTopic) -> dict:
         return {
             "id": str(ft.id),
@@ -373,17 +316,6 @@ class LearningService:
             "keywords": ft.keywords or [],
             "created_at": ft.created_at,
         }
-
-    async def _query_reading_history(self, db: AsyncSession, user_id: UUID, limit: int = 5) -> list[dict]:
-        stmt = (
-            select(ReadingHistory)
-            .where(ReadingHistory.user_id == user_id)
-            .options(selectinload(ReadingHistory.paper))
-            .order_by(ReadingHistory.last_read_at.desc())
-            .limit(limit)
-        )
-        rows = (await db.scalars(stmt)).all()
-        return [self._serialise_reading_history(r, r.paper) for r in rows]
 
     async def _query_notes(self, db: AsyncSession, user_id: UUID, limit: int = 5) -> list[dict]:
         stmt = (

@@ -71,6 +71,5 @@ class RecommendationItem(BaseModel):
 
 
 class RecommendationFeed(BaseModel):
-    history_based: list[RecommendationItem] = []
     content_based: list[RecommendationItem] = []
     collaborative: list[RecommendationItem] = []

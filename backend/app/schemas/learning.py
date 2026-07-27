@@ -85,26 +85,6 @@ class CommentOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Reading History
-# ---------------------------------------------------------------------------
-class ReadingHistoryRecord(BaseModel):
-    paper_id: UUID
-    progress: int = Field(default=0, ge=0, le=100)
-
-
-class ReadingHistoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    paper_id: UUID
-    progress: int = 0
-    last_read_at: datetime
-    paper_title: str | None = None
-    paper_authors: list[str] | None = None
-    paper_primary_category: str | None = None
-
-
-# ---------------------------------------------------------------------------
 # Followed Topic
 # ---------------------------------------------------------------------------
 class FollowedTopicCreate(BaseModel):
@@ -128,8 +108,6 @@ class LearningOverview(BaseModel):
     bookmark_count: int = 0
     note_count: int = 0
     comment_count: int = 0
-    reading_history_count: int = 0
     followed_topic_count: int = 0
-    recent_reading: list[ReadingHistoryOut] = Field(default_factory=list)
     recent_notes: list[NoteOut] = Field(default_factory=list)
     followed_topics: list[FollowedTopicOut] = Field(default_factory=list)

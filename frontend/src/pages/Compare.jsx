@@ -283,16 +283,9 @@ export default function Compare() {
         <Col xs={12} md={6}>
           <Card variant="borderless">
             <Statistic
-              title="平均进度"
-              value={
-                selectedPapers.length
-                  ? Math.round(
-                      selectedPapers.reduce((sum, paper) => sum + (paper.progress || 0), 0) /
-                        selectedPapers.length,
-                    )
-                  : 0
-              }
-              suffix="%"
+              title="学习笔记"
+              value={selectedPapers.reduce((sum, paper) => sum + paper.notesCount, 0)}
+              suffix="条"
             />
           </Card>
         </Col>
