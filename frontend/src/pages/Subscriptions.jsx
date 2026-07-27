@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Badge,
   Button,
@@ -18,18 +17,15 @@ import {
   Statistic,
   Switch,
   Tag,
-  Timeline,
   Typography,
   message,
 } from 'antd';
 import {
   BellOutlined,
   BookOutlined,
-  ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   FireOutlined,
-  HistoryOutlined,
   MailOutlined,
   PushpinOutlined,
   PlusOutlined,
@@ -40,7 +36,6 @@ import {
 } from '@ant-design/icons';
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
-import { getLearningCenter } from '../services/learningService';
 import { addPaperToLibrary } from '../services/paperService';
 import {
   createSubscription,
@@ -54,16 +49,12 @@ import {
 const { Paragraph, Text, Title } = Typography;
 
 export default function Subscriptions() {
-  const navigate = useNavigate();
-  const resource = useAsyncResource(getLearningCenter, []);
   const feedResource = useAsyncResource(getSubscriptionFeed, []);
   const subscriptionsResource = useAsyncResource(listSubscriptions, []);
   const [subscriptionForm] = Form.useForm();
   const managementRef = useRef(null);
   const dailyDigest = feedResource.data?.dailyDigest;
-  const historyBasedRecommendations = feedResource.data?.historyBasedRecommendations || [];
-  const learningPapers = resource.data?.papers || [];
-  const readingHistory = resource.data?.readingHistory || [];
+  const recommendations = feedResource.data?.recommendations || [];
   const [activeTab, setActiveTab] = useState('digest');
   const [subscriptions, setSubscriptions] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -528,29 +519,28 @@ export default function Subscriptions() {
     </div>
   );
 
-  // ---- 基于阅读历史的推荐 ----
-  const renderHistoryRecommendations = () => (
+  const renderRecommendations = () => (
     <div className="subscriptions-section">
       <Card
         variant="borderless"
         title={
           <Space>
-            <HistoryOutlined />
-            <span>基于阅读历史的论文推荐</span>
+            <FireOutlined />
+            <span>个性化论文推荐</span>
           </Space>
         }
         extra={
           <Text type="secondary">
-            共 {historyBasedRecommendations.length} 篇推荐，来源自你的阅读记录
+            共 {recommendations.length} 篇推荐，基于收藏与研究主题
           </Text>
         }
       >
         <List
-          className="subscriptions-history-list"
-          dataSource={historyBasedRecommendations}
+          className="subscriptions-personalized-list"
+          dataSource={recommendations}
           renderItem={(paper) => (
             <List.Item
-              className="subscriptions-history-item"
+              className="subscriptions-personalized-item"
               actions={[
                 <Button
                   key="read"
@@ -619,22 +609,6 @@ export default function Subscriptions() {
                     <Text type="secondary">
                       {paper.authors.join(', ')} · {paper.categories.join(', ')}
                     </Text>
-                    <div className="subscriptions-source-paper">
-                      <BookOutlined />
-                      <Text type="secondary">
-                        来源阅读：
-                        <Button
-                          type="link"
-                          size="small"
-                          className="subscriptions-source-link"
-                          onClick={() =>
-                            navigate(`/papers/${paper.sourcePaperId}`)
-                          }
-                        >
-                          {paper.sourcePaperTitle}
-                        </Button>
-                      </Text>
-                    </div>
                     <Text className="subscriptions-reason-text">
                       <PushpinOutlined /> {paper.reason}
                     </Text>
@@ -648,56 +622,16 @@ export default function Subscriptions() {
     </div>
   );
 
-  // ---- 阅读历史时间线 ----
-  const renderReadingTimeline = () => (
-    <div className="subscriptions-section">
-      <Card
-        variant="borderless"
-        title={
-          <Space>
-            <ClockCircleOutlined />
-            <span>最近阅读动态</span>
-          </Space>
-        }
-      >
-        <Timeline
-          items={readingHistory.map((item) => {
-            const paper = learningPapers.find((p) => p.id === item.paperId);
-            return {
-              color: item.action === '完成阅读' ? 'green' : 'blue',
-              children: (
-                <Space orientation="vertical" size={2}>
-                  <Flex align="center" gap={8}>
-                    <Tag
-                      color={item.action === '完成阅读' ? 'success' : 'processing'}
-                    >
-                      {item.action}
-                    </Tag>
-                    <Text strong>{paper?.title || item.paperId}</Text>
-                  </Flex>
-                  <Text type="secondary">{item.detail}</Text>
-                  <Text type="secondary">{item.time}</Text>
-                </Space>
-              ),
-            };
-          })}
-        />
-      </Card>
-    </div>
-  );
-
   if (
-    resource.loading || resource.error
-    || feedResource.loading || feedResource.error
+    feedResource.loading || feedResource.error
     || subscriptionsResource.loading || subscriptionsResource.error
   ) {
     return (
       <main className="page-stack subscriptions-page">
         <AsyncPageState
-          loading={resource.loading || feedResource.loading || subscriptionsResource.loading}
-          error={resource.error || feedResource.error || subscriptionsResource.error}
+          loading={feedResource.loading || subscriptionsResource.loading}
+          error={feedResource.error || subscriptionsResource.error}
           onRetry={() => {
-            resource.reload();
             feedResource.reload();
             subscriptionsResource.reload();
           }}
@@ -719,7 +653,7 @@ export default function Subscriptions() {
         <div>
           <Title level={2}>推荐与订阅</Title>
           <Paragraph>
-            按研究主题订阅，每日推送新增论文摘要。基于你的关注主题和阅读历史，智能推荐最相关的论文。
+            按研究主题订阅，每日推送新增论文摘要，并结合收藏与关注主题推荐相关论文。
           </Paragraph>
         </div>
         <Space wrap>
@@ -763,7 +697,7 @@ export default function Subscriptions() {
           <Card variant="borderless">
             <Statistic
               title="推荐论文"
-              value={historyBasedRecommendations.length + dailyDigest.topics.reduce((s, t) => s + t.highlights.length, 0)}
+              value={recommendations.length + dailyDigest.topics.reduce((s, t) => s + t.highlights.length, 0)}
               suffix="篇"
               prefix={<TrophyOutlined />}
             />
@@ -794,8 +728,7 @@ export default function Subscriptions() {
             { label: '每日摘要', value: 'digest', icon: <BellOutlined /> },
             { label: '主题推荐', value: 'recommend', icon: <FireOutlined /> },
             { label: '订阅管理', value: 'topics', icon: <TagsOutlined /> },
-            { label: '历史推荐', value: 'history', icon: <HistoryOutlined /> },
-            { label: '阅读动态', value: 'timeline', icon: <ClockCircleOutlined /> },
+            { label: '个性推荐', value: 'personalized', icon: <FireOutlined /> },
           ]}
         />
       </Card>
@@ -804,8 +737,7 @@ export default function Subscriptions() {
       {activeTab === 'digest' && renderDailyDigest()}
       {activeTab === 'recommend' && renderTopicRecommendations()}
       {activeTab === 'topics' && renderTopicManagement()}
-      {activeTab === 'history' && renderHistoryRecommendations()}
-      {activeTab === 'timeline' && renderReadingTimeline()}
+      {activeTab === 'personalized' && renderRecommendations()}
 
       <Modal
         title={editingSubscription ? '编辑订阅' : '新增订阅'}

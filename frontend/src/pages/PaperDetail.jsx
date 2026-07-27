@@ -16,7 +16,6 @@ import {
 import AsyncPageState from '../components/AsyncPageState';
 import useAsyncResource from '../hooks/useAsyncResource';
 
-import { updateLearningPaper } from '../services/learningService';
 import {
   deletePaper,
   getPaperBookmarkStatus,
@@ -47,15 +46,9 @@ export default function PaperDetail() {
   const [starred, setStarred] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
   const [note, setNote] = useState('');
-  const [readingProgress, setReadingProgress] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [bookmarkUpdating, setBookmarkUpdating] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
-
-  useEffect(() => {
-    if (!paper) return;
-    setReadingProgress(paper.progress || 0);
-  }, [paper]);
 
   useEffect(() => {
     if (!noteResource.loading) {
@@ -345,41 +338,6 @@ export default function PaperDetail() {
           </Card>
         </Col>
       </Row>
-
-      {/* ===== 阅读进度 ===== */}
-      <Card title="阅读进度" size="small" style={{ marginBottom: 24 }}>
-        <Space orientation="vertical" style={{ width: '100%' }}>
-          <Text>已读进度：{readingProgress}%</Text>
-          {/* Antd v6 Progress 用法 */}
-          <div
-            style={{
-              height: 8,
-              width: '100%',
-              background: '#f0f0f0',
-              borderRadius: 4,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${readingProgress}%`,
-                background: '#1677ff',
-                borderRadius: 4,
-                transition: 'width 0.3s',
-              }}
-            />
-          </div>
-          <Space>
-            <Button size="small" onClick={() => setReadingProgress(Math.min(100, readingProgress + 10))}>
-              进度 +10%
-            </Button>
-            <Button size="small" onClick={() => setReadingProgress(0)}>
-              重置
-            </Button>
-          </Space>
-        </Space>
-      </Card>
 
       {/* ===== 笔记弹窗 ===== */}
       {/* 用 antd 的 Modal */}

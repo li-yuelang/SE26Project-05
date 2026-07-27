@@ -41,13 +41,6 @@ def _make_comment(user_id, paper_id, content="good"):
     )
 
 
-def _make_reading_history(user_id, paper_id, progress=50):
-    return SimpleNamespace(
-        id=uuid4(), user_id=user_id, paper_id=paper_id, progress=progress,
-        last_read_at=datetime.now(timezone.utc),
-    )
-
-
 def _make_followed_topic(user_id, topic="RAG", keywords=None):
     return SimpleNamespace(
         id=uuid4(), user_id=user_id, topic=topic, keywords=keywords or [],
@@ -156,15 +149,6 @@ class TestCommentSerialisation:
         user = SimpleNamespace(display_name="Reviewer", username="rev")
         result = LearningService._serialise_comment(comment, paper, user)
         assert result["user_display_name"] == "Reviewer"
-        assert result["paper_title"] == "Test Paper"
-
-
-class TestReadingHistorySerialisation:
-    def test_serialise(self):
-        rh = _make_reading_history(uuid4(), uuid4(), 80)
-        paper = _make_paper(rh.paper_id)
-        result = LearningService._serialise_reading_history(rh, paper)
-        assert result["progress"] == 80
         assert result["paper_title"] == "Test Paper"
 
 
@@ -307,26 +291,6 @@ class TestCommentCRUD:
         import asyncio
         with pytest.raises(ValueError, match="Comment not found"):
             asyncio.run(service.delete_comment(db, SimpleNamespace(id=uuid4()), uuid4()))
-
-
-class TestReadingHistory:
-    def test_record_reading_new(self):
-        service = LearningService()
-        user = SimpleNamespace(id=uuid4())
-        paper_id = uuid4()
-        paper = _make_paper(paper_id)
-        db = FakeDBSession(get_result=paper, scalar_result=None)
-        import asyncio
-        result = asyncio.run(service.record_reading(db, user, paper_id, 30))
-        assert result["progress"] == 30
-        assert len(db.added) == 1
-
-    def test_record_reading_paper_not_found(self):
-        service = LearningService()
-        db = FakeDBSession(get_result=None)
-        import asyncio
-        with pytest.raises(ValueError, match="Paper not found"):
-            asyncio.run(service.record_reading(db, SimpleNamespace(id=uuid4()), uuid4(), 10))
 
 
 class TestFollowedTopics:

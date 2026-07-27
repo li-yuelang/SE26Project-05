@@ -64,7 +64,7 @@ export const getSubscriptionFeed = createEndpoint({
       summary: 'Mock 模式不展示真实论文推送，请连接后端获取数据库中的论文。',
       topics: [],
     },
-    historyBasedRecommendations: [],
+    recommendations: [],
   }),
   http: async () => {
     const [digest, recommendations] = await Promise.all([
@@ -78,7 +78,6 @@ export const getSubscriptionFeed = createEndpoint({
       topicName: group.topic,
     }));
     const recommendationItems = [
-      ...(recommendations.history_based || []),
       ...(recommendations.content_based || []),
       ...(recommendations.collaborative || []),
     ].map(normalizePaper);
@@ -89,7 +88,7 @@ export const getSubscriptionFeed = createEndpoint({
         summary: `今日订阅主题共匹配到 ${paperCount} 篇论文。`,
         topics,
       },
-      historyBasedRecommendations: recommendationItems,
+      recommendations: recommendationItems,
     };
   },
 });

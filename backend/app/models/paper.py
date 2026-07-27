@@ -61,7 +61,7 @@ ACTIVE_ANALYSIS_RUN_STATUSES = (
 
 if TYPE_CHECKING:
     from app.models.concept import ConceptRelationEvidence, PaperConcept
-    from app.models.learning import Bookmark, Comment, Note, ReadingHistory
+    from app.models.learning import Bookmark, Comment, Note
     from app.models.user import User
 
 
@@ -199,9 +199,6 @@ class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
     )
     comments: Mapped[list[Comment]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
-    )
-    readers: Mapped[list[ReadingHistory]] = relationship(
         back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
     )
     relation_evidence: Mapped[list[ConceptRelationEvidence]] = relationship(

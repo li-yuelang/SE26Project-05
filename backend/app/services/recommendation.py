@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.learning import Bookmark, ReadingHistory
+from app.models.learning import Bookmark
 from app.models.concept import PaperConcept
 from app.models.paper import Paper, UserPaper
 from app.models.user import User
@@ -15,11 +15,9 @@ class RecommendationService:
     """Stateless service for content-based and collaborative recommendations."""
 
     async def get_recommendations(self, db: AsyncSession, user: User) -> dict:
-        history_based = await self._recommend_by_history(db, user)
         content_based = await self._recommend_by_content(db, user)
         collaborative = await self._recommend_collaborative(db, user)
         result = {
-            "history_based": history_based,
             "content_based": content_based,
             "collaborative": collaborative,
         }
@@ -35,45 +33,6 @@ class RecommendationService:
             for item in items:
                 item["in_library"] = item["paper_id"] in library_ids
         return result
-
-    async def _recommend_by_history(self, db: AsyncSession, user: User) -> list[dict]:
-        """Recommend papers based on user's reading history (recently viewed categories)."""
-        # Get recently read paper IDs
-        recent = (await db.scalars(
-            select(ReadingHistory.paper_id)
-            .where(ReadingHistory.user_id == user.id)
-            .order_by(ReadingHistory.last_read_at.desc())
-            .limit(20)
-        )).all()
-
-        if not recent:
-            return []
-
-        # Find categories of recently read papers
-        categories = (await db.execute(
-            select(Paper.primary_category)
-            .where(Paper.id.in_(recent))
-        )).all()
-        cat_set = {c[0] for c in categories if c[0]}
-
-        if not cat_set:
-            return []
-
-        # Get recent papers in same categories not yet read
-        stmt = (
-            select(Paper)
-            .where(
-                Paper.primary_category.in_(cat_set),
-                Paper.id.not_in(recent),
-            )
-            .order_by(Paper.published_at.desc())
-            .limit(10)
-        )
-        papers = (await db.scalars(stmt)).all()
-        return [
-            self._serialise_recommendation(p, 0.8, f"与你最近阅读的「{p.primary_category}」领域相关")
-            for p in papers
-        ]
 
     async def _recommend_by_content(self, db: AsyncSession, user: User) -> list[dict]:
         """Content-based recommendation using bookmarked paper concepts."""

@@ -22,9 +22,9 @@ def compute_global_recommendations() -> None:
 
 @celery_app.task(name="recommendation.refresh_user_embeddings")
 def refresh_user_embeddings() -> None:
-    """Periodically refresh user interest embeddings based on reading history.
+    """Periodically refresh user interest embeddings based on saved research interests.
 
-    Combines concept vectors of papers the user has interacted with into
+    Combines concept vectors of papers the user has bookmarked into
     a weighted user profile vector for faster content-based recommendations.
     """
     pass
