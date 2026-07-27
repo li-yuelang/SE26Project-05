@@ -13,6 +13,7 @@ frontend/.env.production
 
 # Python backend
 backend/.env
+backend/.env.production
 backend/.venv/
 backend/__pycache__/
 backend/**/*.pyc

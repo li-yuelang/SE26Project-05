@@ -2,7 +2,7 @@
 
 from sqlalchemy.pool import NullPool
 
-from app.database import engine
+from app.database import _celery_engine as engine
 
 
 def test_async_engine_does_not_reuse_connections_across_event_loops() -> None:
