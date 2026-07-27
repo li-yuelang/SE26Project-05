@@ -14,7 +14,13 @@ from app.services.analysis_persistence import (
     normalize_title,
 )
 from app.services.chunking import SemanticChunker
-from app.services.pdf_parser import ParsedDocument, Section, TextBlock, identify_sections
+from app.services.pdf_parser import (
+    ParsedDocument,
+    Section,
+    TextBlock,
+    identify_sections,
+    is_back_matter_heading,
+)
 from app.services.paper_analysis import PDFDownloadError, download_pdf
 from app.tasks.paper_tasks import _run_async
 
@@ -40,6 +46,60 @@ def test_heading_detection_and_margin_filtering() -> None:
     assert "Paper title" not in " ".join(section.text for section in sections)
 
 
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "References",
+        "References:",
+        "7. REFERENCES",
+        "IX. References.",
+        "Bibliography",
+        "Works Cited",
+        "Appendix A: Additional Results",
+        "Supplementary Material",
+        "参考文献",
+        "附录A：证明",
+    ],
+)
+def test_back_matter_heading_variants(heading: str) -> None:
+    assert is_back_matter_heading(heading)
+
+
+def test_section_detection_stops_before_references_and_appendices() -> None:
+    blocks = [
+        TextBlock("1 Introduction", 1, font_size=14, is_bold=True),
+        TextBlock("The paper introduces a useful method.", 1, font_size=10),
+        TextBlock("2 Results", 2, font_size=14, is_bold=True),
+        TextBlock("The method improves the baseline.", 2, font_size=10),
+        TextBlock("3 References", 3, font_size=14, is_bold=True),
+        TextBlock("[1] A very long bibliography entry.", 3, font_size=10),
+        TextBlock("Appendix A: Extra tables", 4, font_size=14, is_bold=True),
+        TextBlock("Expensive back-matter content.", 4, font_size=10),
+    ]
+
+    sections = identify_sections(blocks, page_count=4)
+
+    assert [section.title for section in sections] == ["1 Introduction", "2 Results"]
+    assert "bibliography" not in " ".join(section.text for section in sections)
+    assert "Expensive" not in " ".join(section.text for section in sections)
+
+
+def test_document_containing_only_back_matter_produces_no_sections() -> None:
+    sections = identify_sections(
+        [
+            TextBlock("References", 1, font_size=14, is_bold=True),
+            TextBlock("[1] Citation only.", 1, font_size=10),
+        ]
+    )
+
+    assert sections == []
+
+
+def test_back_matter_matching_does_not_treat_a_sentence_as_the_cutoff() -> None:
+    assert not is_back_matter_heading("References are discussed in the related-work section")
+    assert not is_back_matter_heading("Appendix describes how sequences are concatenated")
+
+
 def test_chunker_keeps_section_boundaries_and_indexes() -> None:
     sections = [
         Section(
@@ -58,6 +118,19 @@ def test_chunker_keeps_section_boundaries_and_indexes() -> None:
     assert [chunk.chunk_index for chunk in chunks] == list(range(len(chunks)))
     assert {chunk.section_title for chunk in chunks} == {"Introduction", "Method"}
     assert all(chunk.token_count <= 25 for chunk in chunks)
+
+
+def test_chunker_skips_back_matter_from_prebuilt_sections() -> None:
+    sections = [
+        Section("Introduction", blocks=[TextBlock("Useful body text.", 1)]),
+        Section("References", blocks=[TextBlock("[1] Costly citation text.", 2)]),
+        Section("Appendix A", blocks=[TextBlock("Costly appendix text.", 3)]),
+    ]
+
+    chunks = SemanticChunker(target_tokens=20, max_tokens=25, overlap_tokens=0).chunk(sections)
+
+    assert [chunk.section_title for chunk in chunks] == ["Introduction"]
+    assert chunks[0].content == "Useful body text."
 
 
 def test_markdown_rendering_has_required_nonempty_fields() -> None:
