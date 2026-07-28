@@ -95,7 +95,7 @@ async def bootstrap(db: AsyncSession, user: User) -> dict:
     return {
         "conversations": [_conversation_view(item) for item in conversations],
         "messages": {
-            str(item.id): [_message_view(message, papers) for message in item.messages]
+            str(item.id): [_message_view(message, papers) for message in sorted(item.messages, key=lambda m: m.created_at)]
             for item in conversations
         },
         "suggestions": SUGGESTIONS,
