@@ -32,6 +32,10 @@
 }
 
 /* Tables use rules and spacing instead of an inner container. */
+.main-content .ant-table-wrapper {
+  overflow-x: auto;
+}
+
 .main-content .ant-table-wrapper .ant-table,
 .main-content .ant-table-wrapper .ant-table-container {
   border-radius: 0;

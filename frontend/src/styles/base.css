@@ -42,7 +42,7 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 93.75%; /* 15px / 16px = 93.75%，尊重浏览器默认字体设置 */
   min-width: 320px;
   background: var(--color-bg);
 }
