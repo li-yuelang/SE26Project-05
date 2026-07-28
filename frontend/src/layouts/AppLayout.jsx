@@ -7,6 +7,7 @@ import {
   DownOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  MenuOutlined,
   MessageOutlined,
   ReadOutlined,
   SettingOutlined,
@@ -14,6 +15,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Dropdown, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -50,6 +52,11 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -82,12 +89,34 @@ export default function AppLayout() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <header className="mobile-topbar">
+        <button
+          type="button"
+          className="mobile-menu-trigger"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="打开主导航"
+          aria-expanded={mobileNavOpen}
+        >
+          <MenuOutlined />
+        </button>
+        <span className="mobile-brand">
+          <span className="sidebar-logo-mark" aria-hidden="true">P</span>
+          <strong>PaperMate</strong>
+        </span>
+        <Avatar size={30} icon={<UserOutlined />} />
+      </header>
+      <button
+        type="button"
+        className={`sidebar-backdrop${mobileNavOpen ? ' visible' : ''}`}
+        onClick={() => setMobileNavOpen(false)}
+        aria-label="关闭主导航"
+      />
+      <aside className={`sidebar${mobileNavOpen ? ' mobile-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo-mark" aria-hidden="true">P</span>
           <span className="sidebar-brand-copy">
             <h1>PaperMate</h1>
-            <span className="sidebar-subtitle">Research workspace</span>
+            <span className="sidebar-subtitle">Research OS</span>
           </span>
         </div>
         <nav className="sidebar-nav" aria-label="主导航">

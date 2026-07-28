@@ -5,6 +5,7 @@ import AppLayout from './layouts/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProductLanding = lazy(() => import('./pages/ProductLanding'));
 const PaperList = lazy(() => import('./pages/PaperList'));
 const PaperDetail = lazy(() => import('./pages/PaperDetail'));
 const AnalysisResult = lazy(() => import('./pages/AnalysisResult'));
@@ -33,12 +34,10 @@ export default function App() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
+        <Route index element={<ProductLanding />} />
         <Route path="login" element={<Login />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            {/* 默认跳转到首页 */}
-            <Route index element={<Navigate to="/dashboard" replace />} />
-
             {/* 首页 */}
             <Route path="dashboard" element={<Dashboard />} />
 

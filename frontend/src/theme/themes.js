@@ -195,7 +195,7 @@ export function getThemeDefinition(themeName) {
         colorBgContainer: palette.card,
         colorBgElevated: palette.elevated,
         colorBgLayout: palette.bg,
-        colorBgSpotlight: palette.elevated,
+        colorBgSpotlight: isLight ? palette.text : palette.elevated,
         colorBorder: palette.border,
         colorBorderSecondary: palette.border,
         colorText: palette.text,

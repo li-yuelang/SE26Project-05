@@ -8,7 +8,6 @@ import {
   Empty,
   Input,
   Modal,
-  Progress,
   Row,
   Select,
   Space,
@@ -47,14 +46,6 @@ import {
 
 const { Search } = Input;
 const { Text } = Typography;
-
-function progressForTask(task) {
-  if (task.status === 'completed' || task.status === 'scheduled') return 100;
-  if (task.status === 'failed' || task.status === 'succeeded_with_warnings') return 70;
-  if (task.status === 'queued') return 12;
-  if (task.status === 'running') return 48;
-  return 0;
-}
 
 export default function TaskList() {
   const navigate = useNavigate();
@@ -196,19 +187,6 @@ export default function TaskList() {
         const metaItem = taskStatusMeta[status] || { color: 'default', label: status };
         return <Badge status={metaItem.color} text={metaItem.label} />;
       },
-    },
-    {
-      title: '进度',
-      key: 'progress',
-      width: 150,
-      render: (_, record) => (
-        <Progress
-          percent={progressForTask(record)}
-          size="small"
-          status={record.status === 'failed' ? 'exception' : undefined}
-          showInfo={false}
-        />
-      ),
     },
     {
       title: '最近新增',

@@ -12,11 +12,12 @@
   overflow-y: auto;
   z-index: 100;
   border-right: 1px solid var(--color-border);
+  transition: transform var(--transition);
 }
 
 .sidebar-brand {
-  min-height: 82px;
-  padding: 20px 16px;
+  min-height: 76px;
+  padding: 18px;
   border-bottom: 0;
   display: flex;
   align-items: center;
@@ -24,15 +25,15 @@
 }
 
 .sidebar-logo-mark {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 9px;
-  background: transparent;
-  color: var(--color-primary-hover);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 0.88rem;
   font-weight: 650;
   letter-spacing: -0.04em;
@@ -43,7 +44,7 @@
 }
 
 .sidebar-brand h1 {
-  font-size: 0.94rem;
+  font-size: 0.9rem;
   font-weight: 620;
   letter-spacing: -0.025em;
   color: var(--color-text);
@@ -55,12 +56,13 @@
   font-size: 0.64rem;
   color: var(--color-text-muted);
   margin-top: 2px;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 10px 10px 20px;
+  padding: 8px 12px 20px;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -73,25 +75,26 @@
 }
 
 .nav-group-label {
-  padding: 0 10px 7px;
+  padding: 0 8px 7px;
   color: var(--color-text-muted);
   font-size: 0.66rem;
   font-weight: 560;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 38px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 7px 9px;
   color: var(--color-text-light);
   text-decoration: none;
   font-size: 0.84rem;
   font-weight: 470;
   transition: background var(--transition), color var(--transition);
-  border-radius: 9px;
+  border-radius: 7px;
   border-left: none;
 }
 
@@ -110,7 +113,7 @@
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: -10px;
+  left: -12px;
   width: 2px;
   height: 18px;
   border-radius: 2px;
@@ -147,7 +150,7 @@
   min-height: 46px;
   padding: 7px 8px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: var(--color-text);
   cursor: pointer;
@@ -190,4 +193,9 @@
   flex: 0 0 auto;
   color: var(--color-text-muted);
   font-size: 0.65rem;
+}
+
+.mobile-topbar,
+.sidebar-backdrop {
+  display: none;
 }

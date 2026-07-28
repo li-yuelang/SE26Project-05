@@ -9,7 +9,6 @@ import {
   Descriptions,
   Empty,
   Modal,
-  Progress,
   Row,
   Select,
   Space,
@@ -268,21 +267,14 @@ export default function TaskDetail() {
       </div>
 
       <Card className="task-detail-hero">
-        <Row gutter={[24, 16]} align="middle">
-          <Col xs={24} lg={17}>
-            <Space wrap className="task-detail-tags">
-              {statusTag(task.status, statusMeta)}
-              <Tag>{typeMeta[task.taskType] || task.taskType}</Tag>
-              {(task.categories || []).map((category) => <Tag key={category} color="geekblue">{category}</Tag>)}
-            </Space>
-            <Title level={3}>{task.name}</Title>
-            <Paragraph>{task.description || '暂无任务说明。'}</Paragraph>
-            <Text code>{task.query || (task.keywords || []).join(' OR ') || (task.categories || []).join(', ')}</Text>
-          </Col>
-          <Col xs={24} lg={7}>
-            <Progress type="circle" percent={task.status === 'failed' ? 70 : ['queued', 'running'].includes(task.status) ? 48 : 100} status={task.status === 'failed' ? 'exception' : undefined} />
-          </Col>
-        </Row>
+        <Space wrap className="task-detail-tags">
+          {statusTag(task.status, statusMeta)}
+          <Tag>{typeMeta[task.taskType] || task.taskType}</Tag>
+          {(task.categories || []).map((category) => <Tag key={category} color="geekblue">{category}</Tag>)}
+        </Space>
+        <Title level={3}>{task.name}</Title>
+        <Paragraph>{task.description || '暂无任务说明。'}</Paragraph>
+        <Text code>{task.query || (task.keywords || []).join(' OR ') || (task.categories || []).join(', ')}</Text>
       </Card>
 
       {run?.status === 'failed' && (
