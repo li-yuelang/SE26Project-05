@@ -6,7 +6,7 @@ export const saveProfile = createEndpoint({
 });
 
 export const getNotificationPreferences = createEndpoint({
-  mock: () => ({ email_digest: true, push_new_paper: true, push_recommendation: false }),
+  mock: () => ({ email_digest: true, push_new_paper: true, push_recommendation: false, push_time: '09:00' }),
   http: () => request('/settings/notifications'),
 });
 

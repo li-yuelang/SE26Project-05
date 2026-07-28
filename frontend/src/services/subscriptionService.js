@@ -152,7 +152,13 @@ export const saveSubscriptionPreferences = createEndpoint({
       frequency: preferences.digestEnabled === false ? 'none' : 'daily',
       push_new_paper: false,
       push_recommendation: true,
+      push_time: preferences.pushTime ?? '09:00',
     },
     method: 'PUT',
   }),
+});
+
+export const pushNow = createEndpoint({
+  mock: () => ({}),
+  http: () => request('/subscriptions/push-now', { method: 'POST' }),
 });

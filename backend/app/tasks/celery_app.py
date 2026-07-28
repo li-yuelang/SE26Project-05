@@ -31,6 +31,7 @@ celery_app.conf.update(
         "app.tasks.run_fetch_task": {"queue": "arxiv"},
         "app.tasks.dispatch_due_fetch_runs": {"queue": "arxiv"},
         "app.tasks.sync_subscription_arxiv": {"queue": "arxiv"},
+        "digest.send_notifications": {"queue": "arxiv"},
     },
     beat_schedule={
         "dispatch-analysis-outbox-every-10-seconds": {
@@ -54,6 +55,11 @@ celery_app.conf.update(
                 hour=settings.digest_arxiv_sync_hour,
                 minute=settings.digest_arxiv_sync_minute,
             ),
+            "options": {"queue": "arxiv"},
+        },
+        "send-digest-notifications-every-5-minutes": {
+            "task": "digest.send_notifications",
+            "schedule": crontab(minute="*/5"),
             "options": {"queue": "arxiv"},
         },
     },

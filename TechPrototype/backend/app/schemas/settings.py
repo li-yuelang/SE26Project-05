@@ -16,6 +16,7 @@ class NotificationSettings(BaseModel):
     push_new_paper: bool = False
     push_recommendation: bool = True
     frequency: str = "daily"  # daily, weekly, none
+    push_time: str = "09:00"  # HH:MM format in Asia/Shanghai
 
 
 class SystemSettings(BaseModel):
