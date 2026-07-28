@@ -11,8 +11,9 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
 from app.models.learning import Bookmark
+from app.models.concept import PaperConcept
 from app.models.paper import Paper, PaperChunk, UserPaper
-from app.schemas.paper import PaperDetail, PaperFilterParams, PaperListItem, PaperUpdateRequest
+from app.schemas.paper import ConceptRef, PaperDetail, PaperFilterParams, PaperListItem, PaperRef, PaperUpdateRequest
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +80,10 @@ async def list_papers(
 
 
 async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID) -> PaperDetail:
-    """获取论文详情（含结构化内容和元数据）。"""
+    """获取论文详情（含结构化内容、元数据、关联概念和引用论文）。"""
     paper = await db.scalar(
         select(Paper)
-        .options(selectinload(Paper.concepts))
+        .options(selectinload(Paper.concepts).selectinload(PaperConcept.concept))
         .join(UserPaper, UserPaper.paper_id == Paper.id)
         .where(Paper.id == paper_id, UserPaper.user_id == user_id)
     )
@@ -94,6 +95,37 @@ async def get_paper_detail(db: AsyncSession, paper_id: UUID, user_id: UUID) -> P
         select(Bookmark).where(Bookmark.user_id == user_id, Bookmark.paper_id == paper_id)
     )
     detail.is_favorite = bookmark is not None
+
+    # 关联概念：从 paper_concepts 表查询，按相关度排序
+    active_run_id = paper.active_analysis_run_id
+    concept_links = [
+        link for link in paper.concepts
+        if active_run_id is None or link.analysis_run_id == active_run_id
+    ]
+    concept_links.sort(key=lambda link: link.relevance, reverse=True)
+    detail.related_concepts = [
+        ConceptRef(
+            id=link.concept.id,
+            name=link.concept.name,
+            description=link.concept.description,
+            relevance=link.relevance,
+        )
+        for link in concept_links[:10]
+    ]
+
+    # 引用与关联论文：从 structured_content.references 提取 arXiv 链接
+    refs = (paper.structured_content or {}).get("references", [])
+    detail.related_papers = [
+        PaperRef(
+            id=ref.get("arxiv_id", ""),
+            arxiv_id=ref.get("arxiv_id", ""),
+            title=ref.get("title", ""),
+            authors=ref.get("authors", []),
+        )
+        for ref in refs[:20]
+        if ref.get("arxiv_id")
+    ]
+
     return detail
 
 
