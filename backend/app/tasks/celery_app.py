@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 
 from app.config import settings
 
@@ -22,13 +23,14 @@ celery_app.conf.update(
     result_expires=settings.analysis_result_expires_seconds,
     task_always_eager=settings.celery_task_always_eager,
     task_eager_propagates=settings.celery_task_eager_propagates,
-    include=["app.tasks.paper_tasks", "app.tasks.arxiv_fetch_task"],
+    include=["app.tasks.paper_tasks", "app.tasks.arxiv_fetch_task", "app.tasks.digest"],
     task_routes={
         "app.tasks.process_paper": {"queue": settings.analysis_queue},
         "app.tasks.dispatch_analysis_outbox": {"queue": settings.analysis_queue},
         "app.tasks.reconcile_analysis_runs": {"queue": settings.analysis_queue},
         "app.tasks.run_fetch_task": {"queue": "arxiv"},
         "app.tasks.dispatch_due_fetch_runs": {"queue": "arxiv"},
+        "app.tasks.sync_subscription_arxiv": {"queue": "arxiv"},
     },
     beat_schedule={
         "dispatch-analysis-outbox-every-10-seconds": {
@@ -44,6 +46,14 @@ celery_app.conf.update(
         "dispatch-due-fetch-runs-every-minute": {
             "task": "app.tasks.dispatch_due_fetch_runs",
             "schedule": 60.0,
+            "options": {"queue": "arxiv"},
+        },
+        "sync-subscription-arxiv-daily": {
+            "task": "app.tasks.sync_subscription_arxiv",
+            "schedule": crontab(
+                hour=settings.digest_arxiv_sync_hour,
+                minute=settings.digest_arxiv_sync_minute,
+            ),
             "options": {"queue": "arxiv"},
         },
     },

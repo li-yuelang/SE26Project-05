@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +61,10 @@ class Settings(BaseSettings):
     arxiv_request_interval_seconds: float = 3.0
     arxiv_max_retries: int = 3
     arxiv_redis_lock_timeout_seconds: int = 120
+    digest_arxiv_sync_hour: int = Field(default=7, ge=0, le=23)
+    digest_arxiv_sync_minute: int = Field(default=0, ge=0, le=59)
+    digest_arxiv_lookback_hours: int = Field(default=24, ge=1, le=168)
+    digest_arxiv_max_results_per_subscription: int = Field(default=50, ge=1, le=100)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

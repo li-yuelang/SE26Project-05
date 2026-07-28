@@ -247,10 +247,22 @@ class PaperHybridRetriever:
         if query_embedding is None:
             return {}
 
-        distance = PaperChunk.embedding.cosine_distance(query_embedding)
-        best_distance = func.min(distance).label("best_distance")
-        statement = (
-            select(PaperChunk.paper_id, best_distance)
+        abstract_distance = Paper.abstract_embedding.cosine_distance(query_embedding)
+        abstract_statement = select(
+            Paper.id,
+            abstract_distance.label("best_distance"),
+        ).where(Paper.abstract_embedding.is_not(None))
+        if since:
+            abstract_statement = abstract_statement.where(Paper.published_at >= since)
+        if exclude_ids:
+            abstract_statement = abstract_statement.where(Paper.id.not_in(exclude_ids))
+        abstract_statement = abstract_statement.order_by(abstract_distance).limit(limit)
+        abstract_rows = (await db.execute(abstract_statement)).all()
+
+        chunk_distance = PaperChunk.embedding.cosine_distance(query_embedding)
+        best_chunk_distance = func.min(chunk_distance).label("best_distance")
+        chunk_statement = (
+            select(PaperChunk.paper_id, best_chunk_distance)
             .join(Paper, Paper.id == PaperChunk.paper_id)
             .where(
                 PaperChunk.embedding.is_not(None),
@@ -260,18 +272,26 @@ class PaperHybridRetriever:
                 ),
             )
             .group_by(PaperChunk.paper_id)
-            .order_by(best_distance)
+            .order_by(best_chunk_distance)
             .limit(limit)
         )
         if since:
-            statement = statement.where(Paper.published_at >= since)
+            chunk_statement = chunk_statement.where(Paper.published_at >= since)
         if exclude_ids:
-            statement = statement.where(PaperChunk.paper_id.not_in(exclude_ids))
-        rows = (await db.execute(statement)).all()
-        return {
+            chunk_statement = chunk_statement.where(PaperChunk.paper_id.not_in(exclude_ids))
+        chunk_rows = (await db.execute(chunk_statement)).all()
+
+        distances = {
             paper_id: float(candidate_distance)
-            for paper_id, candidate_distance in rows
+            for paper_id, candidate_distance in abstract_rows
         }
+        for paper_id, candidate_distance in chunk_rows:
+            numeric_distance = float(candidate_distance)
+            distances[paper_id] = min(
+                distances.get(paper_id, numeric_distance),
+                numeric_distance,
+            )
+        return distances
 
     @staticmethod
     def _build_reason(

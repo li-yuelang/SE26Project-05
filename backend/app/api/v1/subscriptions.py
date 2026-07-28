@@ -117,9 +117,12 @@ async def delete_subscription(subscription_id: UUID, user: CurrentUser, db: DbSe
 # ---------------------------------------------------------------------------
 @router.get("/digest", response_model=dict)
 async def get_daily_digest(user: CurrentUser, db: DbSession):
-    """Get today's papers using batched semantic and lexical subscription retrieval."""
+    """Read today's pre-synchronised arXiv papers from the local database."""
     subs = (await db.scalars(
-        select(Subscription).where(Subscription.user_id == user.id, Subscription.enabled == True)
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.enabled.is_(True),
+        )
     )).all()
     library_ids = set(
         (await db.scalars(select(UserPaper.paper_id).where(UserPaper.user_id == user.id))).all()
