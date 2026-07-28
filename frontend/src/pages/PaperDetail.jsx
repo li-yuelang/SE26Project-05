@@ -169,14 +169,14 @@ export default function PaperDetail() {
 
   // ===================== 论文引用信息 =====================
   const citationColumns = [
-    { title: '标题', dataIndex: 'title', key: 'title', ellipsis: true },
+    { title: '标题', dataIndex: 'title', key: 'title', ellipsis: true, flex: 1 },
     {
       title: '操作',
       key: 'action',
       width: 100,
       render: (_, record) => (
         <Button type="link" size="small" icon={<LinkOutlined />}
-          onClick={() => message.info('跳转到论文: ' + record.title)}>
+          href={`https://arxiv.org/abs/${record.id}`} target="_blank" rel="noreferrer">
           查看
         </Button>
       ),
@@ -185,19 +185,18 @@ export default function PaperDetail() {
 
   // ===================== 概念关联 =====================
   const conceptColumns = [
-    { title: '概念名称', dataIndex: 'name', key: 'name', width: 160 },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
-    {
-      title: '操作',
-      key: 'action',
-      width: 100,
-      render: (_, record) => (
-        <Button type="link" size="small"
-          onClick={() => message.info('跳转到概念: ' + record.name)}>
-          详情
+    { title: '概念名称', dataIndex: 'name', key: 'name', width: 160,
+      render: (name, record) => (
+        <Button type="link" style={{ padding: 0, whiteSpace: 'normal', textAlign: 'left' }}
+          onClick={() => navigate(`/wiki/concepts/${record.id}`)}>
+          {name}
         </Button>
       ),
     },
+    { title: '描述', dataIndex: 'description', key: 'description',
+      render: (text) => text || '-' },
+    { title: '相关度', dataIndex: 'relevance', key: 'relevance', width: 80,
+      render: (value) => `${Math.round(value * 100)}%` },
   ];
 
   return (
@@ -302,42 +301,35 @@ export default function PaperDetail() {
 
       <Divider />
 
-      {/* ===== 关联信息：网格布局 ===== */}
-      <Row gutter={24}>
-        {/* 引用/关联论文 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={<span><BranchesOutlined /> 引用与关联论文</span>}
-            size="small"
-            style={{ marginBottom: 24 }}
-          >
-            <Table
-              columns={citationColumns}
-              dataSource={paper.relatedPapers}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </Col>
+      {/* ===== 引用与关联论文 ===== */}
+      <Card
+        title={<span><BranchesOutlined /> 引用与关联论文</span>}
+        size="small"
+        style={{ marginBottom: 24 }}
+      >
+        <Table
+          columns={citationColumns}
+          dataSource={paper.relatedPapers}
+          rowKey="id"
+          pagination={false}
+          size="small"
+        />
+      </Card>
 
-        {/* 关联概念 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={<span><TagsOutlined /> 关联概念</span>}
-            size="small"
-            style={{ marginBottom: 24 }}
-          >
-            <Table
-              columns={conceptColumns}
-              dataSource={paper.relatedConcepts}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* ===== 关联概念 ===== */}
+      <Card
+        title={<span><TagsOutlined /> 关联概念</span>}
+        size="small"
+        style={{ marginBottom: 24 }}
+      >
+        <Table
+          columns={conceptColumns}
+          dataSource={paper.relatedConcepts}
+          rowKey="id"
+          pagination={false}
+          size="small"
+        />
+      </Card>
 
       {/* ===== 笔记弹窗 ===== */}
       {/* 用 antd 的 Modal */}

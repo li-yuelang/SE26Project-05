@@ -26,6 +26,7 @@ function toPaperDetail(paper) {
       id: concept.id,
       name: concept.name,
       description: concept.description,
+      relevance: 0.85,
     })),
     relatedPapers: learningPapers
       .filter((item) => item.id !== paper.id)
@@ -64,8 +65,8 @@ function fromHttpPaperDetail(paper) {
     keywords: paper.metadata_extra?.keywords || paper.categories || [],
     published: normalized.publishedDate,
     updated: normalized.updatedDate || paper.updated_at?.slice(0, 10) || '',
-    relatedConcepts: paper.relatedConcepts || [],
-    relatedPapers: paper.relatedPapers || [],
+    relatedConcepts: paper.related_concepts || [],
+    relatedPapers: paper.related_papers || [],
     structuredContent: {
       summary: structured.summary || paper.abstract,
       concept: structured.concept || structured.concepts || '暂无结构化概念内容',

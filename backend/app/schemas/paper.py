@@ -51,6 +51,20 @@ class PaperBatchRequest(BaseModel):
 
 # ── 详情 ─────────────────────────────────────────────────────
 
+class ConceptRef(BaseModel):
+    id: UUID
+    name: str
+    description: str | None = None
+    relevance: float = 0
+
+
+class PaperRef(BaseModel):
+    id: str
+    arxiv_id: str
+    title: str
+    authors: list[str] = []
+
+
 class PaperDetail(PaperListItem):
     model_config = ConfigDict(from_attributes=True)
 
@@ -60,6 +74,8 @@ class PaperDetail(PaperListItem):
     created_at: datetime
     updated_at: datetime
     is_favorite: bool = False
+    related_concepts: list[ConceptRef] = []
+    related_papers: list[PaperRef] = []
 
 
 # ── 更新 ─────────────────────────────────────────────────────
