@@ -78,19 +78,16 @@
   color: var(--color-text-muted);
 }
 
-/* -- Recommend List -- */
-.subscriptions-recommend-list .ant-list-item,
+/* -- Personalized Recommendation List -- */
 .subscriptions-personalized-list .ant-list-item {
   padding: 16px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
-.subscriptions-recommend-item .ant-list-item-meta,
 .subscriptions-personalized-item .ant-list-item-meta {
   align-items: flex-start;
 }
 
-.subscriptions-recommend-item .ant-progress,
 .subscriptions-personalized-item .ant-progress {
   margin-top: 4px;
 }

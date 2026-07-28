@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-import threading
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from uuid import UUID
 
@@ -32,46 +30,9 @@ from app.services.task_service import (
     utc_now,
 )
 from app.tasks.celery_app import celery_app
+from app.tasks.async_utils import run_async
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Persistent event loop for Celery async tasks
-# ---------------------------------------------------------------------------
-_LOOP_LOCK = threading.Lock()
-_LOOP: asyncio.AbstractEventLoop | None = None
-_LOOP_THREAD: threading.Thread | None = None
-
-
-def _get_or_start_loop() -> asyncio.AbstractEventLoop:
-    global _LOOP, _LOOP_THREAD
-    if _LOOP is None or _LOOP.is_closed():
-        with _LOOP_LOCK:
-            if _LOOP is None or _LOOP.is_closed():
-                if sys.platform == "win32":
-                    _LOOP = asyncio.SelectorEventLoop()
-                else:
-                    _LOOP = asyncio.new_event_loop()
-                asyncio.set_event_loop(_LOOP)
-                _LOOP_THREAD = threading.Thread(
-                    target=_LOOP.run_forever, daemon=True, name="celery-async-loop",
-                )
-                _LOOP_THREAD.start()
-    return _LOOP
-
-
-def _run_async(coroutine: Any) -> Any:
-    """Run async worker code in normal Celery and eager/test execution."""
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        loop = _get_or_start_loop()
-        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
-        return future.result(timeout=600)
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(asyncio.run, coroutine).result()
-
 
 def _append_log(run: FetchTaskRun, level: str, content: str) -> None:
     run.execution_log = [
@@ -385,16 +346,16 @@ def run_fetch_task(self: Any, run_id: str) -> dict[str, Any]:
 
     run_uuid = UUID(run_id)
     try:
-        return _run_async(_execute_run(run_uuid))
+        return run_async(_execute_run(run_uuid))
     except ArxivFetchError as exc:
         retry_number = int(getattr(self.request, "retries", 0)) + 1
         if exc.retryable and retry_number <= self.max_retries:
-            _run_async(_set_run_retry_pending(run_uuid, str(exc)))
+            run_async(_set_run_retry_pending(run_uuid, str(exc)))
             raise self.retry(exc=exc, countdown=min(900, 30 * (2 ** (retry_number - 1))))
-        _run_async(_set_run_failed(run_uuid, str(exc)))
+        run_async(_set_run_failed(run_uuid, str(exc)))
         raise
     except Exception as exc:
-        _run_async(_set_run_failed(run_uuid, str(exc)))
+        run_async(_set_run_failed(run_uuid, str(exc)))
         raise
 
 
@@ -467,7 +428,7 @@ async def _dispatch_due_runs() -> int:
 
 @celery_app.task(name="app.tasks.dispatch_due_fetch_runs", queue="arxiv")
 def dispatch_due_fetch_runs() -> int:
-    return _run_async(_dispatch_due_runs())
+    return run_async(_dispatch_due_runs())
 
 
 __all__ = ["dispatch_due_fetch_runs", "run_fetch_task"]

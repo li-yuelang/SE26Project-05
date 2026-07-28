@@ -142,6 +142,7 @@ class Paper(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(1000), index=True)
     authors: Mapped[list[str]] = mapped_column(JSONB, default=list)
     abstract: Mapped[str] = mapped_column(Text)
+    abstract_embedding: Mapped[list[float] | None] = mapped_column(Vector(1536))
     categories: Mapped[list[str]] = mapped_column(JSONB, default=list)
     primary_category: Mapped[str | None] = mapped_column(String(100), index=True)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

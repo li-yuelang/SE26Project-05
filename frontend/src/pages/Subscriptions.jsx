@@ -321,115 +321,6 @@ export default function Subscriptions() {
     </div>
   );
 
-  // ---- 主题推荐 ----
-  const renderTopicRecommendations = () => {
-    const allHighlightPapers = dailyDigest.topics
-      .flatMap((tg) =>
-        tg.highlights.map((p) => ({
-          ...p,
-          topicName: tg.topicName,
-        })),
-      )
-      .sort((a, b) => b.matchScore - a.matchScore);
-
-    return (
-      <div className="subscriptions-section">
-        <Card
-          variant="borderless"
-          title={
-            <Space>
-              <FireOutlined />
-              <span>基于关注主题的论文推荐</span>
-            </Space>
-          }
-          extra={
-            <Text type="secondary">
-              共 {allHighlightPapers.length} 篇推荐论文，按匹配度排序
-            </Text>
-          }
-        >
-          {allHighlightPapers.length === 0 ? (
-            <Empty description="暂无关註主题的推荐论文，请先关注感兴趣的研究主题" />
-          ) : (
-            <List
-              className="subscriptions-recommend-list"
-              dataSource={allHighlightPapers}
-              renderItem={(paper) => (
-                <List.Item
-                  className="subscriptions-recommend-item"
-                  actions={[
-                    <Button
-                      key="read"
-                      type="primary"
-                      size="small"
-                      icon={<ReadOutlined />}
-                      href={paper.arxivUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      disabled={!paper.arxivUrl}
-                    >
-                      阅读
-                    </Button>,
-                    <Button
-                      key="add"
-                      size="small"
-                      icon={<BookOutlined />}
-                      loading={addingPaperIds.has(paper.id)}
-                      disabled={isPaperInLibrary(paper)}
-                      onClick={() => handleAddPaperToLibrary(paper)}
-                    >
-                      {isPaperInLibrary(paper) ? '已在论文列表' : '加入论文列表'}
-                    </Button>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Progress
-                        type="circle"
-                        percent={paper.matchScore}
-                        size={52}
-                        strokeColor={
-                          paper.matchScore >= 90
-                            ? '#52c41a'
-                            : paper.matchScore >= 80
-                              ? '#4f6ef7'
-                              : '#faad14'
-                        }
-                        format={(percent) => `${percent}%`}
-                      />
-                    }
-                    title={
-                      <Flex align="center" gap={8} wrap="wrap">
-                        <Text
-                          strong
-                          className="subscriptions-paper-link"
-                          onClick={() => paper.arxivUrl && window.open(paper.arxivUrl, '_blank', 'noopener,noreferrer')}
-                        >
-                          {paper.title}
-                        </Text>
-                        <Tag color="geekblue">{paper.topicName}</Tag>
-                      </Flex>
-                    }
-                    description={
-                      <Space orientation="vertical" size={4}>
-                        <Text type="secondary">
-                          {paper.authors.join(', ')} · {paper.categories.join(', ')}
-                        </Text>
-                        <Text className="subscriptions-reason-text">
-                          <PushpinOutlined /> {paper.reason}
-                        </Text>
-                      </Space>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          )}
-        </Card>
-      </div>
-    );
-  };
-
   // ---- 订阅管理 ----
   const renderTopicManagement = () => (
     <div className="subscriptions-section" ref={managementRef}>
@@ -726,7 +617,6 @@ export default function Subscriptions() {
           block
           options={[
             { label: '每日摘要', value: 'digest', icon: <BellOutlined /> },
-            { label: '主题推荐', value: 'recommend', icon: <FireOutlined /> },
             { label: '订阅管理', value: 'topics', icon: <TagsOutlined /> },
             { label: '个性推荐', value: 'personalized', icon: <FireOutlined /> },
           ]}
@@ -735,7 +625,6 @@ export default function Subscriptions() {
 
       {/* ---- 内容区 ---- */}
       {activeTab === 'digest' && renderDailyDigest()}
-      {activeTab === 'recommend' && renderTopicRecommendations()}
       {activeTab === 'topics' && renderTopicManagement()}
       {activeTab === 'personalized' && renderRecommendations()}
 
