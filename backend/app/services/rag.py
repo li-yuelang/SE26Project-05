@@ -154,6 +154,41 @@ async def retrieve(
                     chunk=synthetic, paper=paper, score=score
                 )
 
+    # Title-based abstract fallback: when no paper_ids specified,
+    # match question keywords against paper titles in user's library.
+    # Fetch all matching papers, score them, and take top result_limit.
+    if paper_ids is None and keywords:
+        title_filters = [Paper.title.ilike(f"%{term}%") for term in keywords]
+        fallback_papers = (
+            await db.scalars(
+                select(Paper)
+                .join(UserPaper, UserPaper.paper_id == Paper.id)
+                .where(UserPaper.user_id == user_id, or_(*title_filters))
+            )
+        ).all()
+        existing_ids = {c.paper_id for c in candidates.values() if hasattr(c, 'paper_id')}
+        import uuid as _uuid
+        scored_abstracts = []
+        for paper in fallback_papers:
+            if not paper.abstract or paper.id in existing_ids:
+                continue
+            score = lexical_score(question, paper.abstract[:1500], paper.title) * 0.65
+            scored_abstracts.append((score, paper))
+        scored_abstracts.sort(key=lambda x: x[0], reverse=True)
+        for score, paper in scored_abstracts[:result_limit]:
+            synthetic = PaperChunk(
+                paper_id=paper.id,
+                chunk_index=-1,
+                section_title="论文摘要",
+                content=paper.abstract[:1500],
+                analysis_run_id=None,
+            )
+            synthetic.paper = paper
+            synthetic.id = _uuid.uuid4()
+            candidates[id(synthetic)] = RetrievedChunk(
+                chunk=synthetic, paper=paper, score=score
+            )
+
     ranked = []
     for candidate in candidates.values():
         if isinstance(candidate, RetrievedChunk):

@@ -171,7 +171,7 @@ async def send_message(
             MessageCitation(
                 message_id=assistant.id,
                 paper_id=item.paper.id,
-                chunk_id=item.chunk.id,
+                chunk_id=None if item.chunk.chunk_index == -1 else item.chunk.id,
                 chunk_index=item.chunk.chunk_index,
                 excerpt=item.chunk.content[:500],
             )
