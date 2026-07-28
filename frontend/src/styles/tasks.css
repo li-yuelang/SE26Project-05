@@ -47,11 +47,6 @@
   color: var(--color-text-light);
 }
 
-.task-detail-hero .ant-progress {
-  display: flex;
-  justify-content: center;
-}
-
 .task-detail-tags {
   margin-bottom: 8px;
 }
