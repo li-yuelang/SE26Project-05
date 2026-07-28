@@ -47,9 +47,11 @@ import {
   deleteSubscription,
   getSubscriptionFeed,
   listSubscriptions,
+  pushNow,
   saveSubscriptionPreferences,
   updateSubscription,
 } from '../services/subscriptionService';
+import { getNotificationPreferences } from '../services/settingsService';
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -75,10 +77,18 @@ export default function Subscriptions() {
   const [digestEnabled, setDigestEnabled] = useState(true);
   const [pushTime, setPushTime] = useState('09:00');
   const [digestConfirmed, setDigestConfirmed] = useState(true);
+  const [pushing, setPushing] = useState(false);
 
   useEffect(() => {
     if (subscriptionsResource.data) setSubscriptions(subscriptionsResource.data);
   }, [subscriptionsResource.data]);
+
+  useEffect(() => {
+    getNotificationPreferences().then((prefs) => {
+      if (prefs.push_time) setPushTime(prefs.push_time);
+      if (prefs.email_digest !== undefined) setDigestEnabled(prefs.email_digest);
+    }).catch(() => {});
+  }, []);
 
   const followedCount = useMemo(
     () => subscriptions.filter((subscription) => subscription.enabled).length,
@@ -201,6 +211,19 @@ export default function Subscriptions() {
     setDigestEnabled(checked);
     await saveSubscriptionPreferences({ digestEnabled: checked });
     message.success(checked ? '每日摘要推送已开启' : '每日摘要推送已关闭');
+  };
+
+  const handlePushNow = async () => {
+    setPushing(true);
+    try {
+      await pushNow();
+      await feedResource.reload();
+      message.success('推送完成，论文数据已刷新');
+    } catch (error) {
+      message.error(error.message || '推送失败，请稍后重试');
+    } finally {
+      setPushing(false);
+    }
   };
 
   // ---- 每日摘要 ----
@@ -726,7 +749,8 @@ export default function Subscriptions() {
           <Button
             type="primary"
             icon={<MailOutlined />}
-            onClick={() => message.success('测试推送已发送')}
+            loading={pushing}
+            onClick={handlePushNow}
           >
             立即推送
           </Button>

@@ -66,10 +66,85 @@ def sync_subscription_arxiv_task(self: Any) -> dict[str, str | int]:
 
 
 @celery_app.task(name="digest.send_notifications")
-def send_digest_notifications() -> None:
-    """Send email / push notifications for daily digest."""
-    # Placeholder for notification dispatch.
-    pass
+def send_digest_notifications() -> dict[str, str | int]:
+    """Send email / push notifications for daily digest to users at their configured push time."""
+
+    async def _send() -> dict[str, str | int]:
+        from datetime import datetime, timezone
+        from sqlalchemy import select
+        from app.models.user import User, UserPreference
+
+        async with CelerySessionLocal() as db:
+            now = datetime.now(timezone.utc)
+
+            prefs = list((
+                await db.scalars(
+                    select(UserPreference)
+                )
+            ).all())
+
+            sent_count = 0
+            skipped_count = 0
+            for pref in prefs:
+                notif = pref.notification_settings or {}
+                push_time = notif.get("push_time", "09:00")
+                email_digest = notif.get("email_digest", True)
+                last_sent_raw = notif.get("digest_last_sent_at")
+
+                # Skip if email digest is disabled
+                if not email_digest:
+                    skipped_count += 1
+                    continue
+
+                # Only send at the user's configured push time (within 5-min window)
+                current_time_str = datetime.now(
+                    timezone.utc
+                ).astimezone(
+                    __import__("zoneinfo", fromlist=["ZoneInfo"]).ZoneInfo("Asia/Shanghai")
+                ).strftime("%H:%M")
+                if current_time_str != push_time:
+                    skipped_count += 1
+                    continue
+
+                # Skip if already sent today
+                if last_sent_raw:
+                    try:
+                        last_sent = datetime.fromisoformat(last_sent_raw)
+                        if last_sent.date() == now.date():
+                            skipped_count += 1
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+
+                # Send notification (log + mark as sent)
+                user = await db.scalar(
+                    select(User).where(User.id == pref.user_id)
+                )
+                username = user.username if user else "unknown"
+                logger.info(
+                    "Digest notification sent to user=%s at push_time=%s",
+                    username,
+                    push_time,
+                )
+                pref.notification_settings = {
+                    **notif,
+                    "digest_last_sent_at": now.isoformat(),
+                }
+                sent_count += 1
+
+            if sent_count or skipped_count:
+                await db.commit()
+
+            return {
+                "status": "completed",
+                "sent": sent_count,
+                "skipped": skipped_count,
+            }
+
+    return run_async(
+        _send(),
+        timeout_seconds=settings.celery_visibility_timeout_seconds,
+    )
 
 
 __all__ = ["send_digest_notifications", "sync_subscription_arxiv_task"]

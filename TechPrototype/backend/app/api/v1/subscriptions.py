@@ -1,6 +1,7 @@
 """Subscriptions & recommendations API endpoints."""
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -10,6 +11,7 @@ from app.schemas.common import success
 from app.schemas.subscription import SubscriptionCreate, SubscriptionUpdate
 from app.services.recommendation import recommendation_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
 
@@ -78,6 +80,14 @@ async def create_subscription(body: SubscriptionCreate, user: CurrentUser, db: D
     db.add(sub)
     await db.commit()
     await db.refresh(sub)
+
+    # Trigger background arXiv sync so new subscription has data immediately
+    try:
+        from app.tasks.digest import sync_subscription_arxiv_task
+        sync_subscription_arxiv_task.delay()
+    except Exception:
+        logger.warning("Failed to dispatch background arXiv sync for new subscription", exc_info=True)
+
     return success({
         "id": str(sub.id), "topic_keywords": sub.topic_keywords or [],
         "categories": sub.categories or [], "frequency": sub.frequency,
@@ -200,3 +210,68 @@ async def get_recommendations(user: CurrentUser, db: DbSession):
     """Get personalized paper recommendations."""
     result = await recommendation_service.get_recommendations(db, user)
     return success(result)
+
+
+@router.post("/push-now", response_model=dict)
+async def push_now(user: CurrentUser, db: DbSession):
+    """Immediately refresh digest for the user's subscriptions."""
+    from sqlalchemy import select
+    from app.models.paper import Paper, UserPaper
+    from app.models.task import Subscription
+    from datetime import datetime, timedelta, timezone
+
+    logger.info("Immediate push triggered by user %s", user.id)
+    subs = (await db.scalars(
+        select(Subscription).where(Subscription.user_id == user.id, Subscription.enabled == True)
+    )).all()
+    library_ids = set(
+        (await db.scalars(select(UserPaper.paper_id).where(UserPaper.user_id == user.id))).all()
+    )
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    topic_groups = []
+    for sub in subs:
+        keywords = [keyword.strip() for keyword in (sub.topic_keywords or []) if keyword.strip()]
+        categories = [category.strip() for category in (sub.categories or []) if category.strip()]
+        terms = [*keywords, *categories]
+        if not terms:
+            continue
+        conditions = []
+        for kw in keywords:
+            conditions.append(Paper.title.ilike(f"%{kw}%"))
+            conditions.append(Paper.abstract.ilike(f"%{kw}%"))
+        for category in categories:
+            conditions.append(Paper.primary_category == category)
+            conditions.append(Paper.categories.contains([category]))
+        from sqlalchemy import or_
+        candidates = (await db.scalars(
+            select(Paper).where(
+                or_(*conditions),
+                Paper.published_at >= datetime.now(timezone.utc) - timedelta(days=1),
+            ).order_by(Paper.published_at.desc()).limit(50)
+        )).all()
+        ranked_papers = []
+        for paper in candidates:
+            relevance_score, matched_terms = _calculate_digest_relevance(paper, terms)
+            ranked_papers.append((paper, relevance_score, matched_terms))
+        ranked_papers.sort(key=lambda item: item[1], reverse=True)
+
+        topic_groups.append({
+            "topic": terms[0],
+            "keywords": terms,
+            "papers": [
+                {
+                    "paper_id": str(p.id), "arxiv_id": p.arxiv_id,
+                    "title": p.title, "authors": p.authors or [],
+                    "abstract": p.abstract or "", "primary_category": p.primary_category or "",
+                    "published_at": p.published_at.isoformat() if p.published_at else None,
+                    "arxiv_url": p.arxiv_url,
+                    "in_library": p.id in library_ids,
+                    "relevance_score": relevance_score,
+                    "reason": f"命中订阅条件：{'、'.join(matched_terms[:3])}",
+                }
+                for p, relevance_score, matched_terms in ranked_papers[:5]
+            ],
+        })
+
+    return success({"date": today, "topic_groups": topic_groups}, "Immediate push completed")
