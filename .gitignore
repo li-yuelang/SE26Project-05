@@ -43,10 +43,6 @@ backend/celerybeat-schedule*
 # Coverage
 frontend/coverage/
 
-# Prototypes
-TechPrototype/
-**/UIPrototype/
-
 # AI
 .codex/
 .claude/
