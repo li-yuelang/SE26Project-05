@@ -1,1 +1,0 @@
-"""arxiv-PaperMate backend package."""

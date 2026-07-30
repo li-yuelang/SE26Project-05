@@ -90,6 +90,10 @@ export function ChatRoom({ initialConversationId } = {}) {
   const selectConversation = (id) => {
     setActiveId(id);
     navigate(`/chat/${id}`, { replace: true });
+    // 移动端选择对话后自动收起侧栏
+    if (window.innerWidth <= 900) {
+      setSidebarCollapsed(true);
+    }
   };
 
   const handleNewConversation = async () => {
@@ -352,12 +356,21 @@ export function ChatRoom({ initialConversationId } = {}) {
 
       {/* 右侧聊天区 */}
       <Content style={{ display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+        {/* 移动端侧栏展开时的遮罩层 */}
+        {!sidebarCollapsed && (
+          <div
+            className="chat-sider-backdrop"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+
         {/* 侧栏折叠时的展开按钮：始终显示 */}
         {sidebarCollapsed && (
           <Button
             type="text"
             icon={<MenuUnfoldOutlined />}
             onClick={() => setSidebarCollapsed(false)}
+            className="chat-sider-open-button"
             style={{
               position: 'absolute',
               top: 12,
