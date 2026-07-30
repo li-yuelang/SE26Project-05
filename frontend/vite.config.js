@@ -22,5 +22,31 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.js'],
+      clearMocks: true,
+      restoreMocks: true,
+      reporters: ['default', 'junit'],
+      outputFile: {
+        junit: 'test-reports/junit.xml',
+      },
+      coverage: {
+        provider: 'v8',
+        reportsDirectory: 'test-reports/coverage',
+        reporter: ['text', 'html', 'json-summary', 'cobertura'],
+        include: [
+          'src/services/apiClient.js',
+          'src/services/authService.js',
+          'src/utils/date.js',
+        ],
+        thresholds: {
+          statements: 91,
+          lines: 91,
+          functions: 91,
+          branches: 85,
+        },
+      },
+    },
   };
 });

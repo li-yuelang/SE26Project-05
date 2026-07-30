@@ -44,6 +44,26 @@ To launch all services in containers, run `docker compose up --build` from this 
 the configured OpenAI-compatible model. Without keys (or when a provider is unavailable),
 it falls back to keyword reranking and a citation-grounded extractive answer.
 
+## Unit tests and coverage report
+
+Install development dependencies and generate terminal, HTML, and XML coverage reports:
+
+```bash
+uv sync --dev
+./scripts/generate_test_report.sh
+```
+
+The command runs all backend tests and fails when statement coverage is below 90%.
+Open `test-reports/coverage-html/index.html` for the browsable line-by-line report.
+CI systems can consume `test-reports/coverage.xml` for coverage and
+`test-reports/pytest.xml` for test results.
+
+The enforced unit-test scope is declared in `pyproject.toml`: authentication security,
+Pydantic request/response contracts, digest synchronization, and settings services.
+These modules are deterministic and isolated with mocks. API integration, database
+orchestration, and Celery worker modules are intentionally outside this unit-coverage
+gate and should be tracked separately as integration-test coverage.
+
 ## Wiki, Chat, and RAG
 
 - `GET /api/wiki` returns concept statistics, category search results, relations, and activity.
