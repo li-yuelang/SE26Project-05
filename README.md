@@ -123,7 +123,17 @@ cd frontend
 npm install
 npm run dev          # 开发模式启动（默认端口 3000）
 npm run build        # 生产构建
+npm test             # 执行前端单元测试
+npm run test:coverage # 执行测试并生成覆盖率报告
 ```
+
+前端测试使用 Vitest、JSDOM 和 V8 Coverage。覆盖率门槛配置在
+`frontend/vite.config.js`，语句、函数和代码行覆盖率低于 91% 时测试失败。
+HTML 报告位于 `frontend/test-reports/coverage/index.html`，JUnit 测试结果位于
+`frontend/test-reports/junit.xml`，Cobertura XML 可供 CI 读取。
+
+当前强制覆盖范围是 API 客户端、认证服务和日期工具等确定性的前端基础单元层。
+React 页面和组件应在后续配置 Testing Library 后作为组件测试范围单独统计。
 
 ### 前端分层
 

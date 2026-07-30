@@ -55,6 +55,9 @@ celerybeat-schedule*
 # Test artifacts & utilities
 scripts/
 backend/scripts/
+!backend/scripts/
+backend/scripts/*
+!backend/scripts/generate_test_report.sh
 backend/*.pdf
 backend/*_output.txt
 backend/cancel_all_analysis.py

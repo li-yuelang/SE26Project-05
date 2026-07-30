@@ -31,12 +31,39 @@ include = ["app*"]
 exclude = ["alembic*", "tests*"]
 
 [dependency-groups]
-dev = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "ruff>=0.8.0"]
+dev = [
+    "coverage>=7.6.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = ["integration: tests that require real PostgreSQL and Redis services"]
+
+[tool.coverage.run]
+branch = false
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 90
+include = [
+    "app/core/security.py",
+    "app/schemas/*.py",
+    "app/services/digest_sync.py",
+    "app/services/settings.py",
+]
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "test-reports/coverage-html"
+title = "arxiv-PaperMate Backend Unit Test Coverage"
+
+[tool.coverage.xml]
+output = "test-reports/coverage.xml"
 
 [tool.ruff]
 line-length = 100
