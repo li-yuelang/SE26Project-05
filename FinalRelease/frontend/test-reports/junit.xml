@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="22" failures="0" errors="0" time="0.61">
+    <testsuite name="src/services/apiClient.test.js" timestamp="2026-07-30T05:22:56.723Z" hostname="MacBook-Air.local" tests="11" failures="0" errors="0" skipped="0" time="0.013650083">
+        <testcase classname="src/services/apiClient.test.js" name="API client storage and URL helpers &gt; stores and clears access tokens" time="0.00086525">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="API client storage and URL helpers &gt; stores a mock user scope only for non-empty values" time="0.000173834">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="API client storage and URL helpers &gt; builds a WebSocket URL from the configured API origin" time="0.000665875">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="API client storage and URL helpers &gt; constructs an ApiError with useful defaults and metadata" time="0.000803459">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="request &gt; sends authentication, JSON body, custom headers, and filtered query parameters" time="0.004221125">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="request &gt; returns raw JSON, text, and empty responses" time="0.001509958">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="request &gt; clears an existing token and dispatches an event after a 401 response" time="0.001428084">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="request &gt; uses detail and fallback messages for other HTTP errors" time="0.000615125">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="mock helpers and endpoint selection &gt; deep-clones mock data without sharing nested state" time="0.000289083">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="mock helpers and endpoint selection &gt; resolves static and computed mock responses after the requested delay" time="0.001447833">
+        </testcase>
+        <testcase classname="src/services/apiClient.test.js" name="mock helpers and endpoint selection &gt; uses the HTTP implementation in the configured test environment" time="0.000693833">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/services/authService.test.js" timestamp="2026-07-30T05:22:56.725Z" hostname="MacBook-Air.local" tests="3" failures="0" errors="0" skipped="0" time="0.003186541">
+        <testcase classname="src/services/authService.test.js" name="authentication service &gt; posts login credentials to the login endpoint" time="0.002173167">
+        </testcase>
+        <testcase classname="src/services/authService.test.js" name="authentication service &gt; posts a profile to the registration endpoint" time="0.000179667">
+        </testcase>
+        <testcase classname="src/services/authService.test.js" name="authentication service &gt; loads the currently authenticated user" time="0.000111417">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/date.test.js" timestamp="2026-07-30T05:22:56.725Z" hostname="MacBook-Air.local" tests="8" failures="0" errors="0" skipped="0" time="0.002900375">
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats a local date with zero-padded month and day" time="0.000897084">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; uses the current local date when no date is supplied" time="0.000801208">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; calculates dates in the past from local noon" time="0.000161167">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats conversation date null as &quot;&quot;" time="0.000091875">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats conversation date &quot;&quot; as &quot;&quot;" time="0.000052625">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats conversation date &quot;2026-07-09&quot; as &quot;2026-07-09&quot;" time="0.000073084">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats conversation date &quot;2026-07-09T23:00:00&quot; as &quot;2026-07-09&quot;" time="0.000073125">
+        </testcase>
+        <testcase classname="src/utils/date.test.js" name="date utilities &gt; formats conversation date &quot;not-a-date&quot; as &quot;not-a-date&quot;" time="0.00004575">
+        </testcase>
+    </testsuite>
+</testsuites>

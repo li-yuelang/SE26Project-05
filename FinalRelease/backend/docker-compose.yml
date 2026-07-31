@@ -1,0 +1,129 @@
+x-backend-common: &backend-common
+  env_file:
+    - ${PAPERMATE_ENV_FILE:-.env}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: papermate
+      POSTGRES_USER: papermate
+      POSTGRES_PASSWORD: papermate
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: postgres -c max_connections=500
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U papermate -d papermate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+
+  migrate:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
+
+  worker:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q analysis --concurrency=2
+
+  arxiv-worker:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info -Q arxiv --concurrency=1
+
+  beat:
+    <<: *backend-common
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://papermate:papermate@postgres:5432/papermate
+      REDIS_URL: redis://redis:6379/0
+      REDIS_BROKER_URL: redis://redis:6379/0
+      REDIS_RESULT_BACKEND_URL: redis://redis:6379/1
+      REDIS_COORDINATION_URL: redis://redis:6379/2
+      JWT_SECRET_KEY: change-this-to-a-long-random-secret-in-production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:
