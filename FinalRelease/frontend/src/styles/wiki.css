@@ -1,0 +1,236 @@
+/* ========== Wiki ========== */
+.concept-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.concept-hero h2 {
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.concept-hero p {
+  max-width: 760px;
+  color: var(--color-text-light);
+  margin-bottom: 0;
+}
+
+.wiki-page,
+.wiki-filter-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.wiki-search {
+  width: min(100%, 440px);
+}
+
+.wiki-featured-categories {
+  max-width: 100%;
+}
+
+.wiki-more-categories {
+  width: 160px;
+}
+
+.wiki-panel {
+  height: 100%;
+  border-radius: var(--radius);
+}
+
+.wiki-concept-list-card .ant-card-body {
+  max-height: 720px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.wiki-concept-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wiki-concept-item {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 12px;
+  text-align: left;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+
+.wiki-concept-item:hover {
+  background: var(--color-sidebar-hover);
+}
+
+.wiki-concept-item.active {
+  background: var(--color-primary-muted);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.wiki-concept-item-body {
+  width: 100%;
+}
+
+.wiki-concept-item p {
+  color: var(--color-text-muted);
+  margin-bottom: 0;
+}
+
+.wiki-concept-trend {
+  width: 86px;
+}
+
+.wiki-detail {
+  width: 100%;
+}
+
+.wiki-detail h3 {
+  margin: 0;
+}
+
+.wiki-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wiki-note-item {
+  display: flex;
+  align-items: flex-start;
+  padding-inline: 0;
+}
+
+.wiki-note-item::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex: 0 0 auto;
+  margin-top: 7px;
+}
+
+.wiki-paper-link {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.wiki-source-paper-list {
+  margin-top: 10px;
+}
+
+.wiki-source-paper-item {
+  display: block !important;
+  min-width: 0;
+  padding: 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius);
+  background: var(--color-surface-subtle);
+}
+
+.wiki-source-paper-item + .wiki-source-paper-item {
+  margin-top: 8px;
+}
+
+.wiki-source-paper-meta {
+  margin-top: 5px;
+  font-size: 0.76rem;
+}
+
+.wiki-source-paper-role {
+  margin: 8px 0 0 !important;
+  color: var(--color-text-light);
+  font-size: 0.82rem;
+}
+
+.wiki-side-stack {
+  width: 100%;
+}
+
+.wiki-network {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.wiki-network-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 12px;
+  border-radius: var(--radius);
+  color: var(--color-on-primary);
+  font-weight: 600;
+  text-align: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+}
+
+.wiki-relation-list {
+  width: 100%;
+}
+
+.wiki-relation-node {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.wiki-relation-node:hover {
+  border-color: var(--color-primary);
+  background: var(--color-card-hover);
+  box-shadow: var(--shadow);
+}
+
+.wiki-relation-node:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.wiki-relation-node:disabled:hover {
+  border-color: var(--color-border);
+  box-shadow: none;
+  background: var(--color-card);
+}
+
+.wiki-relation-node span {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.wiki-activity-time {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.concept-toolbar {
+  justify-content: flex-start;
+}
+
+.concept-empty {
+  margin-top: 80px;
+}
+
+.concept-note-list {
+  margin-top: 0;
+}

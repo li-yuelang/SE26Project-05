@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>BankAccount - Mock 单元测试报告</title>
+<style>
+body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 40px; color: #333; }
+h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+h2 { color: #2980b9; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+h3 { color: #16a085; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+th { background-color: #3498db; color: white; }
+tr:nth-child(even) { background-color: #f2f2f2; }
+.summary-box { background: #e8f8f5; border-left: 5px solid #27ae60; padding: 15px; margin: 15px 0; border-radius: 4px; }
+.pass { color: #27ae60; font-weight: bold; }
+.fail { color: #e74c3c; font-weight: bold; }
+.coverage-bar { height: 24px; background: #ecf0f1; border-radius: 12px; overflow: hidden; margin: 5px 0; }
+.coverage-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 12px; text-align: center; color: white; line-height: 24px; font-size: 13px; }
+pre.code { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Consolas', monospace; font-size: 13px; overflow-x: auto; }
+.note { background: #fff3cd; border-left: 5px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Mock 单元测试报告</h1>
+<p><strong>项目:</strong> arxiv-PaperMate Backend (FastAPI + Python)</p>
+<p><strong>测试框架:</strong> pytest + pytest-mock + unittest.mock</p>
+<p><strong>测试对象:</strong> <code>app.services.arxiv_fetch</code> — arXiv API 客户端</p>
+<p><strong>日期:</strong> 2026-07-27</p>
+
+<!-- ============ 1. 概述 ============ -->
+<h2>一、测试概述</h2>
+
+<div class="summary-box">
+    <table style="width: auto;">
+        <tr><td><strong>总测试数</strong></td><td>17（Mock: 10 + 纯函数: 7）</td></tr>
+        <tr><td><strong>通过</strong></td><td class="pass">17 / 17 (100%)</td></tr>
+        <tr><td><strong>失败</strong></td><td>0</td></tr>
+        <tr><td><strong>代码覆盖率</strong></td><td>72%（189 行中 137 行覆盖）</td></tr>
+        <tr><td><strong>总耗时</strong></td><td>1.24 s</td></tr>
+    </table>
+</div>
+
+<div class="note">
+    <strong>提示：</strong> 未覆盖的 52 行主要是 <code>_global_request_slot</code> 中 Redis 限流、HTTP 客户端创建、以及 <code>fetch_arxiv_window</code> 中异常路径等代码。Mock 测试专注于 <code>fetch_arxiv_papers</code> 的 HTTP 行为模拟。
+</div>
+
+<!-- ============ 2. Mock 测试详情 ============ -->
+<h2>二、Mock 测试详情</h2>
+
+<h3>2.1 正常流程</h3>
+<table>
+<tr><th>#</th><th>测试方法</th><th>描述</th><th>Mock 对象</th><th>结果</th></tr>
+<tr>
+    <td>1</td>
+    <td>test_returns_parsed_papers</td>
+    <td>模拟成功 HTTP 200 + Atom XML，验证解析结果</td>
+    <td>httpx.AsyncClient.get, _global_request_slot</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>2</td>
+    <td>test_mock_verify_http_was_called</td>
+    <td>验证 mock 记录了正确的 URL 调用参数</td>
+    <td>httpx.AsyncClient.get, _global_request_slot</td>
+    <td class="pass">PASS</td>
+</tr>
+</table>
+
+<h3>2.2 异常场景</h3>
+<table>
+<tr><th>#</th><th>测试方法</th><th>模拟场景</th><th>预期异常</th><th>结果</th></tr>
+<tr>
+    <td>3</td>
+    <td>test_429_raises_retryable_error</td>
+    <td>HTTP 429 (Too Many Requests)</td>
+    <td>ArxivFetchError(retryable=True, status_code=429)</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>4</td>
+    <td>test_4xx_raises_non_retryable_error</td>
+    <td>HTTP 404 (Not Found)</td>
+    <td>ArxivFetchError(retryable=False, status_code=404)</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>5</td>
+    <td>test_5xx_raises_retryable_error</td>
+    <td>HTTP 502 (Bad Gateway)</td>
+    <td>ArxivFetchError(retryable=True, status_code=502)</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>6</td>
+    <td>test_timeout_raises_retryable_error</td>
+    <td>httpx.TimeoutException 超时异常</td>
+    <td>ArxivFetchError(retryable=True)</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>7</td>
+    <td>test_bad_xml_raises_retryable_error</td>
+    <td>响应体不是合法 XML</td>
+    <td>ArxivFetchError(retryable=True)</td>
+    <td class="pass">PASS</td>
+</tr>
+</table>
+
+<h3>2.3 边界场景</h3>
+<table>
+<tr><th>#</th><th>测试方法</th><th>模拟场景</th><th>预期行为</th><th>结果</th></tr>
+<tr>
+    <td>8</td>
+    <td>test_empty_atom_feed</td>
+    <td>Atom feed 没有 &lt;entry&gt; 元素</td>
+    <td>返回空列表 []</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>9</td>
+    <td>test_missing_id_raises_error</td>
+    <td>entry 中 &lt;id&gt; 为空</td>
+    <td>ArxivFetchError(retryable=False)</td>
+    <td class="pass">PASS</td>
+</tr>
+<tr>
+    <td>10</td>
+    <td>test_mock_pagination_across_two_pages</td>
+    <td>模拟 arXiv 返回两页数据（100条 + 50条）</td>
+    <td>150条结果，page_count=2</td>
+    <td class="pass">PASS</td>
+</tr>
+</table>
+
+<!-- ============ 3. Mock 代码示例 ============ -->
+<h2>三、Mock 部分代码展示</h2>
+
+<h3>3.1 Mock HTTP 响应</h3>
+<pre class="code">mock_response = MagicMock(spec=httpx.Response)
+mock_response.status_code = 200
+mock_response.text = _SAMPLE_ATOM_XML
+
+mock_client = MagicMock(spec=httpx.AsyncClient)
+mock_client.get = AsyncMock(return_value=mock_response)
+mock_client.aclose = AsyncMock()
+
+with patch("app.services.arxiv_fetch.httpx.AsyncClient",
+           return_value=mock_client):
+    papers = asyncio.run(fetch_arxiv_papers("all:test", max_results=1))
+</pre>
+
+<h3>3.2 Mock 异常场景</h3>
+<pre class="code"># 模拟 HTTP 429
+mock_response.status_code = 429
+# → 预期 ArxivFetchError(retryable=True, status_code=429)
+
+# 模拟超时
+mock_client.get = AsyncMock(
+    side_effect=httpx.TimeoutException("timed out"))
+# → 预期 ArxivFetchError(retryable=True)
+
+# 模拟无效 XML
+mock_response.text = "not xml at all"
+# → 预期 ArxivFetchError(retryable=True)
+</pre>
+
+<h3>3.3 Mock 分页</h3>
+<pre class="code"># 用 side_effect 控制每次调用的返回值
+call_count = [0]
+async def mock_fetch(query, ..., client=None):
+    idx = call_count[0]
+    call_count[0] += 1
+    return page_responses[idx]  # 第1页100条, 第2页50条
+
+with patch("app.services.arxiv_fetch.fetch_arxiv_papers",
+           side_effect=mock_fetch):
+    results, page_count = asyncio.run(
+        fetch_arxiv_window("all:test", ..., max_results=150))
+
+assert len(results) == 150
+assert page_count == 2
+</pre>
+
+<h3>3.4 Mock 限流器</h3>
+<pre class="code">class _NoopSlot:
+    """替换 _global_request_slot 的无操作异步上下文管理器"""
+    async def __aenter__(self): return None
+    async def __aexit__(self, *args): pass
+
+@pytest.fixture(autouse=True)
+def _mock_rate_limit(self):
+    patcher = patch.object(
+        app.services.arxiv_fetch, "_global_request_slot",
+        return_value=_NoopSlot())
+    patcher.start()
+    yield
+    patcher.stop()
+</pre>
+
+<!-- ============ 4. 覆盖率报告 ============ -->
+<h2>四、覆盖率报告</h2>
+
+<div class="summary-box">
+    <table style="width: auto;">
+        <tr><td><strong>模块</strong></td><td>app.services.arxiv_fetch</td></tr>
+        <tr><td><strong>语句总数</strong></td><td>189</td></tr>
+        <tr><td><strong>覆盖数</strong></td><td>137</td></tr>
+        <tr><td><strong>覆盖率</strong></td><td><strong>72%</strong></td></tr>
+    </table>
+</div>
+
+<div class="coverage-bar">
+    <div class="coverage-fill" style="width: 72%;">72%</div>
+</div>
+
+<p style="color: #888; font-size: 13px;">
+覆盖率报告 HTML 文件位于:
+<code>D:\CSE\SE26Project-05\backend\coverage_html\index.html</code>
+</p>
+
+<!-- ============ 5. 测试总结 ============ -->
+<h2>五、测试总结</h2>
+
+<table>
+<tr><th>测试维度</th><th>说明</th></tr>
+<tr>
+    <td>Mock 方式</td>
+    <td>
+        • <code>unittest.mock.patch</code> — 替换 httpx.AsyncClient<br>
+        • <code>unittest.mock.patch.object</code> — 替换限流器<br>
+        • <code>AsyncMock</code> — 模拟异步方法调用<br>
+        • <code>MagicMock(spec=)</code> — 保留类型安全检查
+    </td>
+</tr>
+<tr>
+    <td>模拟的外部依赖</td>
+    <td>arXiv API (HTTP 调用)、Redis 限流器</td>
+</tr>
+<tr>
+    <td>覆盖的场景</td>
+    <td>HTTP 200/404/429/502、超时、无效 XML、空结果、空 ID、分页</td>
+</tr>
+<tr>
+    <td>测试效果</td>
+    <td>无需网络连接、毫秒级运行、结果确定性</td>
+</tr>
+</table>
+
+<div style="margin-top: 40px; padding: 15px; background: #f9f9f9; border-radius: 4px; text-align: center; color: #888; font-size: 13px;">
+    测试工具: pytest 9.1.1 + pytest-mock 3.15.1 + pytest-cov 7.1.0 &nbsp;|&nbsp; 报告生成日期: 2026-07-27
+</div>
+
+</body>
+</html>
