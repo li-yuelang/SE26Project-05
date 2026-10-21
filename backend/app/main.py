@@ -1,4 +1,6 @@
+import json
 from contextlib import asynccontextmanager
+from importlib.resources import files
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -40,3 +42,9 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 @app.get("/health", tags=["system"])
 async def health_check() -> dict:
     return success({"status": "ok", "environment": settings.environment})
+
+
+@app.get("/version", tags=["system"])
+async def version_info() -> dict:
+    content = files("app").joinpath("build_info.json").read_text(encoding="utf-8")
+    return success(json.loads(content))
