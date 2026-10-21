@@ -1,26 +1,70 @@
-name: Backend CI
+name: PaperMate CI
 
 on:
-  push:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend.yml"
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend.yml"
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  backend:
+    name: backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
         with:
-          version: latest
-      - run: uv sync --all-groups
-      - run: uv run ruff check .
-      - run: uv run pytest
+          python-version: '3.12.10'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.11.28'
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups --python 3.12.10
+
+      - name: Static checks
+        run: uv run --locked ruff check .
+
+      - name: Unit tests
+        run: uv run --locked pytest -m "not integration"
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests and coverage
+        run: npm run test:coverage
+
+      - name: Production build
+        run: npm run build
