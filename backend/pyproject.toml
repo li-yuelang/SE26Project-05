@@ -71,3 +71,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["F"]
+
+[tool.setuptools.package-data]
+app = ["build_info.json"]

@@ -65,3 +65,11 @@ backend/tests/test_extraction_standalone.py
 backend/tests/test_extraction_real_pdf.py
 backend/test_embedding.py
 backend/app/core/_debug_log.py
+
+!/scripts/
+/scripts/*
+!/scripts/write_build_info.py
+!/scripts/package_release.py
+!/scripts/trace.py
+!/scripts/RELEASE_README.md
+/backend/build/

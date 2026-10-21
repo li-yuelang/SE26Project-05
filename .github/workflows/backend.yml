@@ -36,7 +36,7 @@ jobs:
         run: uv sync --locked --all-groups --python 3.12.10
 
       - name: Static checks
-        run: uv run --locked ruff check .
+        run: uv run --locked ruff check . ../scripts
 
       - name: Unit tests
         run: uv run --locked pytest -m "not integration"
@@ -68,3 +68,78 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  package:
+    name: package
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12.10'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.11.28'
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Write build information
+        env:
+          PACKAGE_VERSION: ${{ github.event_name == 'push' && '0.0.0-main' || '0.0.0-pr' }}
+          BUILD_NO: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python scripts/write_build_info.py \
+            --version "$PACKAGE_VERSION" \
+            --build-no "$BUILD_NO" \
+            --commit "$COMMIT" \
+            --run-id "$RUN_ID" \
+            --run-url "$RUN_URL"
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          uv build --wheel --out-dir dist
+          uv export --locked --no-dev --no-emit-project \
+            --format requirements-txt --output-file dist/requirements.txt
+
+      - name: Package and verify checksum
+        run: |
+          python scripts/package_release.py
+          cd dist
+          sha256sum -c *.tar.gz.sha256
+
+      - name: Verify packaged metadata and Git ancestry
+        run: python scripts/trace.py dist/*.tar.gz --ref HEAD
+
+      - name: Upload main artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: papermate-${{ github.sha }}-${{ github.run_number }}
+          path: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+          retention-days: 14
+          if-no-files-found: error

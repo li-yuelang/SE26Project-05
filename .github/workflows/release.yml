@@ -1,0 +1,109 @@
+name: PaperMate release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Release gate
+        env:
+          TAG: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Invalid release tag' >&2
+            exit 1
+          fi
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$COMMIT" origin/main; then
+            echo 'Release rejected: tag commit is not in main history' >&2
+            exit 1
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12.10'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.11.28'
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --locked --all-groups --python 3.12.10
+
+      - name: Static checks
+        working-directory: backend
+        run: uv run --locked ruff check . ../scripts
+
+      - name: Backend tests
+        working-directory: backend
+        run: uv run --locked pytest -m "not integration"
+
+      - name: Frontend tests and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test:coverage
+          npm run build
+
+      - name: Write release information
+        env:
+          TAG: ${{ github.ref_name }}
+          BUILD_NO: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python scripts/write_build_info.py \
+            --version "${TAG#v}" \
+            --build-no "$BUILD_NO" \
+            --commit "$COMMIT" \
+            --run-id "$RUN_ID" \
+            --run-url "$RUN_URL"
+
+      - name: Build wheel and export locked dependencies
+        working-directory: backend
+        run: |
+          uv build --wheel --out-dir dist
+          uv export --locked --no-dev --no-emit-project \
+            --format requirements-txt --output-file dist/requirements.txt
+
+      - name: Package and verify
+        run: |
+          python scripts/package_release.py
+          python scripts/trace.py dist/*.tar.gz
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" --verify-tag --title "PaperMate $TAG" \
+            --generate-notes dist/*.tar.gz dist/*.tar.gz.sha256
