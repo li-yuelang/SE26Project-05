@@ -39,4 +39,4 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 @app.get("/health", tags=["system"])
 async def health_check() -> dict:
-    return success({"status": "broken", "environment": settings.environment})
+    return success({"status": "ok", "environment": settings.environment})
