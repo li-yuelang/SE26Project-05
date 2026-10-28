@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api"
     database_url: str = "postgresql+asyncpg://papermate:papermate@localhost:5432/papermate"
+    db_pool_size: int = Field(default=200, ge=1)
+    db_max_overflow: int = Field(default=100, ge=0)
+    db_pool_timeout: float = Field(default=30.0, gt=0)
     redis_url: str = "redis://localhost:6379/0"
     redis_broker_url: str | None = None
     redis_result_backend_url: str | None = None

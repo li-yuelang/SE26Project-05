@@ -73,3 +73,11 @@ backend/app/core/_debug_log.py
 !/scripts/trace.py
 !/scripts/RELEASE_README.md
 /backend/build/
+
+!backend/scripts/seed_o4.py
+!backend/scripts/o4_run.py
+!backend/scripts/o4_requery.py
+!backend/scripts/o4_go_run.py
+!backend/scripts/o4_predict.py
+
+/runs/o4/*.tar.gz

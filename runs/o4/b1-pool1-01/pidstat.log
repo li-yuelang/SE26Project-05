@@ -1,0 +1,289 @@
+Linux 6.8.0-136-generic (ops-lab1-main) 	2026-10-28 	_x86_64_	(4 CPU)
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:11        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     10.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:12        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:13        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:14        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:15        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     12.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:16        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:17        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:18        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:19        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:20        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:21        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     10.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:22        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:23        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:24        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:25        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:26        0   1908960    1.00    0.00    0.00    0.00    1.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:27        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:28        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:29        0   1908960    0.00    1.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:30        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:31        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:32        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:33        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:34        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:35        0   1908960    1.00    0.00    0.00    0.00    1.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:36        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:37        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:38        0   1908960    1.00    0.00    0.00    0.00    1.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:39        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:40        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:41        0   1908960    1.00    0.00    0.00    0.00    1.00     3      0.00      0.00  392920  140836   1.82     13.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:42        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:43        0   1908960    4.00    0.00    0.00    0.00    4.00     3     62.00      0.00  392920  140836   1.82    140.00      1.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:44        0   1908960    3.00    1.00    0.00    0.00    4.00     3     42.00      0.00  392920  140836   1.82     98.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:45        0   1908960    2.00    0.00    0.00    0.00    2.00     2     33.00      0.00  392920  140836   1.82     83.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:46        0   1908960    3.00    1.00    0.00    0.00    4.00     2     63.00      0.00  392920  140836   1.82    143.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:47        0   1908960    4.00    0.00    0.00    0.00    4.00     2     49.00      0.00  392920  140836   1.82    118.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:48        0   1908960    2.00    0.00    0.00    0.00    2.00     2     20.00      0.00  392920  140836   1.82     56.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:49        0   1908960    3.00    0.00    0.00    0.00    3.00     2     46.00      0.00  392920  140836   1.82    108.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:50        0   1908960    3.00    1.00    0.00    0.00    4.00     3     40.00      0.00  392920  140836   1.82    100.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:51        0   1908960    3.00    0.00    0.00    0.00    3.00     2     40.00      0.00  392920  140836   1.82    101.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:52        0   1908960    1.00    0.00    0.00    0.00    1.00     3     22.00      0.00  392920  140836   1.82     53.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:53        0   1908960    3.00    1.00    0.00    0.00    4.00     2     36.00      0.00  392920  140836   1.82     91.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:54        0   1908960    2.00    0.00    0.00    0.00    2.00     3     40.00      0.00  392920  140836   1.82    100.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:55        0   1908960    3.00    0.00    0.00    0.00    3.00     3     38.00      0.00  392920  140836   1.82     88.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:56        0   1908960    3.00    1.00    0.00    0.00    4.00     2     45.00      0.00  392936  140836   1.82    110.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:57        0   1908960    3.00    0.00    0.00    0.00    3.00     2     39.00      0.00  392920  140836   1.82    101.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:58        0   1908960    4.00    1.00    0.00    0.00    5.00     2     54.00      0.00  392920  140836   1.82    128.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:23:59        0   1908960    3.00    0.00    0.00    0.00    3.00     2     44.00      0.00  392920  140836   1.82    109.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:00        0   1908960    2.00    0.00    0.00    0.00    2.00     3     32.00      0.00  392920  140836   1.82     83.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:01        0   1908960    4.00    1.00    0.00    0.00    5.00     3     52.00      0.00  392920  140836   1.82    128.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:02        0   1908960    1.00    0.00    0.00    0.00    1.00     3     17.00      0.00  392920  140836   1.82     47.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:03        0   1908960    3.00    0.00    0.00    0.00    3.00     3     36.00      0.00  392920  140836   1.82     90.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:04        0   1908960    2.00    1.00    0.00    0.00    3.00     3     24.00      0.00  392920  140836   1.82     64.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:05        0   1908960    2.00    0.00    0.00    0.00    2.00     2     24.00      0.00  392920  140836   1.82     65.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:06        0   1908960    2.00    0.00    0.00    0.00    2.00     2     36.00      0.00  392920  140836   1.82     90.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:07        0   1908960    3.00    1.00    0.00    0.00    4.00     2     49.00      0.00  392920  140836   1.82    118.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:08        0   1908960    4.00    0.00    0.00    0.00    4.00     3     48.00      0.00  392920  140836   1.82    119.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:09        0   1908960    0.00    0.00    0.00    0.00    0.00     3      8.00      0.00  392920  140836   1.82     29.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:10        0   1908960    2.00    1.00    0.00    0.00    3.00     3     24.00      0.00  392920  140836   1.82     64.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:11        0   1908960    2.00    0.00    0.00    0.00    2.00     2     29.00      0.00  392920  140836   1.82     74.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:12        0   1908960    4.00    0.00    0.00    0.00    4.00     3     59.00      0.00  392920  140836   1.82    133.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:13        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  392920  140836   1.82     12.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:14        0   1908960    0.00    0.00    0.00    0.00    0.00     2      0.00      0.00  392920  140836   1.82     11.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:15        0   1908960    7.00    1.00    0.00    0.00    8.00     2    124.00      0.00  393052  140964   1.82    258.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:16        0   1908960    6.00    1.00    0.00    0.00    7.00     3     92.00      0.00  393052  140964   1.82    201.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:17        0   1908960    5.00    1.00    0.00    0.00    6.00     3     91.00      0.00  393052  140964   1.82    201.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:18        0   1908960    9.00    0.00    0.00    0.00    9.00     3    143.00      0.00  393052  140964   1.82    316.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:19        0   1908960   11.00    1.00    0.00    0.00   12.00     3    173.00      0.00  393052  141092   1.82    373.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:20        0   1908960    5.00    0.00    0.00    0.00    5.00     2     89.00      0.00  393052  141092   1.82    207.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:21        0   1908960    9.00    1.00    0.00    0.00   10.00     2    141.00      0.00  393052  141092   1.82    309.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:22        0   1908960    8.00    1.00    0.00    0.00    9.00     2    153.00      0.00  393052  141092   1.82    321.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:23        0   1908960    7.00    1.00    0.00    0.00    8.00     3    122.00      0.00  393052  141092   1.82    268.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:24        0   1908960    5.00    1.00    0.00    0.00    6.00     3    101.00      0.00  393068  141092   1.82    226.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:25        0   1908960    8.00    1.00    0.00    0.00    9.00     2    136.00      0.00  393052  141092   1.82    291.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:26        0   1908960    8.00    1.00    0.00    0.00    9.00     3    152.00      0.00  393052  141092   1.82    337.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:27        0   1908960    7.00    1.00    0.00    0.00    8.00     2    111.00      0.00  393052  141092   1.82    243.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:28        0   1908960    7.00    1.00    0.00    0.00    8.00     3    131.00      0.00  393052  141092   1.82    290.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:29        0   1908960    5.00    1.00    0.00    0.00    6.00     3     98.00      0.00  393052  141220   1.82    219.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:30        0   1908960    7.00    1.00    0.00    0.00    8.00     2    115.00      0.00  393052  141220   1.82    258.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:31        0   1908960    6.00    0.00    0.00    0.00    6.00     3    103.00      0.00  393052  141220   1.82    233.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:32        0   1908960    6.00    1.00    0.00    0.00    7.00     3     83.00      0.00  393068  141220   1.82    195.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:33        0   1908960    8.00    1.00    0.00    0.00    9.00     2    126.00      0.00  393052  141220   1.82    280.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:34        0   1908960    5.00    0.00    0.00    0.00    5.00     2     86.00      0.00  393052  141220   1.82    198.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:35        0   1908960    9.00    2.00    0.00    0.00   11.00     3    146.00      0.00  393052  141220   1.82    322.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:36        0   1908960    7.00    1.00    0.00    0.00    8.00     2    107.00      0.00  393052  141220   1.82    241.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:37        0   1908960    6.00    1.00    0.00    0.00    7.00     2    111.00      0.00  393052  141220   1.82    251.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:38        0   1908960    5.00    0.00    0.00    0.00    5.00     2     85.00      0.00  393052  141348   1.83    194.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:39        0   1908960    8.00    1.00    0.00    0.00    9.00     3    118.00      0.00  393068  141348   1.83    266.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:40        0   1908960    7.00    1.00    0.00    0.00    8.00     3    130.00      0.00  393068  141348   1.83    288.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:41        0   1908960   10.00    1.00    0.00    0.00   11.00     3    154.00      0.00  393052  141348   1.83    328.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:42        0   1908960    8.00    1.00    0.00    0.00    9.00     3    129.00      0.00  393052  141348   1.83    285.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:43        0   1908960    6.00    1.00    0.00    0.00    7.00     2    102.00      0.00  393068  141348   1.83    239.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:44        0   1908960    9.00    1.00    0.00    0.00   10.00     3    172.00      0.00  393068  141348   1.83    377.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:45        0   1908960    1.00    0.00    0.00    0.00    1.00     3      7.00      0.00  393052  141348   1.83     25.00      0.00  uvicorn
+
+# Time        UID       PID    %usr %system  %guest   %wait    %CPU   CPU  minflt/s  majflt/s     VSZ     RSS   %MEM   cswch/s nvcswch/s  Command
+11:24:46        0   1908960    0.00    0.00    0.00    0.00    0.00     3      0.00      0.00  393052  141348   1.83     12.00      0.00  uvicorn

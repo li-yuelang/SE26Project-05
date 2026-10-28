@@ -1,0 +1,3 @@
+
+# Preserve original experiment bytes and SHA-256 digests.
+/runs/o4/** -text -whitespace
