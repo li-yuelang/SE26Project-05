@@ -2,7 +2,7 @@ import json
 from contextlib import asynccontextmanager
 from importlib.resources import files
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -15,7 +15,10 @@ from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
 )
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
 from app.core.logging import configure_logging
+from app.core.metrics import RedMetricsMiddleware
 from app.schemas.common import success
 
 
@@ -33,6 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RedMetricsMiddleware, api_prefix=settings.api_v1_prefix)
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -48,3 +52,8 @@ async def health_check() -> dict:
 async def version_info() -> dict:
     content = files("app").joinpath("build_info.json").read_text(encoding="utf-8")
     return success(json.loads(content))
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics() -> Response:
+    return Response(generate_latest(), headers={"Content-Type": CONTENT_TYPE_LATEST})

@@ -1,5 +1,7 @@
 from collections.abc import AsyncGenerator
 
+from fastapi import HTTPException
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -9,6 +11,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
+from app.core.db_metrics import ObservedAsyncPool, instrument_pool
 
 
 class Base(DeclarativeBase):
@@ -21,11 +24,14 @@ class Base(DeclarativeBase):
 # requests don't queue at the application layer.
 _engine = create_async_engine(
     settings.database_url,
-    pool_size=200,
-    max_overflow=100,
+    poolclass=ObservedAsyncPool,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
+    pool_timeout=settings.db_pool_timeout,
     pool_recycle=1800,
     pool_pre_ping=True,
 )
+instrument_pool(_engine, settings.db_pool_size + settings.db_max_overflow)
 AsyncSessionLocal = async_sessionmaker(
     _engine, expire_on_commit=False, class_=AsyncSession,
 )
@@ -54,6 +60,9 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except PoolTimeoutError:
+            await session.rollback()
+            raise HTTPException(503, "Database connection pool exhausted") from None
         except Exception:
             await session.rollback()
             raise

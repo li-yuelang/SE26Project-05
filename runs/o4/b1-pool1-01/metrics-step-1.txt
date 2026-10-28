@@ -1,0 +1,182 @@
+# HELP python_gc_objects_collected_total Objects collected during gc
+# TYPE python_gc_objects_collected_total counter
+python_gc_objects_collected_total{generation="0"} 3069.0
+python_gc_objects_collected_total{generation="1"} 305.0
+python_gc_objects_collected_total{generation="2"} 125.0
+# HELP python_gc_objects_uncollectable_total Uncollectable objects found during GC
+# TYPE python_gc_objects_uncollectable_total counter
+python_gc_objects_uncollectable_total{generation="0"} 0.0
+python_gc_objects_uncollectable_total{generation="1"} 0.0
+python_gc_objects_uncollectable_total{generation="2"} 0.0
+# HELP python_gc_collections_total Number of times this generation was collected
+# TYPE python_gc_collections_total counter
+python_gc_collections_total{generation="0"} 372.0
+python_gc_collections_total{generation="1"} 33.0
+python_gc_collections_total{generation="2"} 3.0
+# HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation="CPython",major="3",minor="12",patchlevel="3",version="3.12.3"} 1.0
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 4.0235008e+08
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 1.44216064e+08
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.79315778792e+09
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 2.37
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 20.0
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 1024.0
+# HELP papermate_db_pool_checked_out Connections currently borrowed from the API pool.
+# TYPE papermate_db_pool_checked_out gauge
+papermate_db_pool_checked_out 0.0
+# HELP papermate_db_pool_capacity Configured pool_size plus max_overflow, per API worker.
+# TYPE papermate_db_pool_capacity gauge
+papermate_db_pool_capacity 1.0
+# HELP papermate_db_pool_acquiring Calls currently acquiring a connection (not pure waiters).
+# TYPE papermate_db_pool_acquiring gauge
+papermate_db_pool_acquiring 0.0
+# HELP papermate_db_pool_acquire_seconds Pool.connect duration, including queueing, connection creation and pre-ping.
+# TYPE papermate_db_pool_acquire_seconds histogram
+papermate_db_pool_acquire_seconds_bucket{le="0.0001",outcome="success"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0002",outcome="success"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0005",outcome="success"} 69.0
+papermate_db_pool_acquire_seconds_bucket{le="0.001",outcome="success"} 278.0
+papermate_db_pool_acquire_seconds_bucket{le="0.002",outcome="success"} 283.0
+papermate_db_pool_acquire_seconds_bucket{le="0.005",outcome="success"} 292.0
+papermate_db_pool_acquire_seconds_bucket{le="0.01",outcome="success"} 292.0
+papermate_db_pool_acquire_seconds_bucket{le="0.02",outcome="success"} 292.0
+papermate_db_pool_acquire_seconds_bucket{le="0.05",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="0.1",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="0.2",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="0.5",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="1.0",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="2.0",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="5.0",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_bucket{le="+Inf",outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_count{outcome="success"} 293.0
+papermate_db_pool_acquire_seconds_sum{outcome="success"} 0.21998178295325488
+papermate_db_pool_acquire_seconds_bucket{le="0.0001",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0002",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0005",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.001",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.002",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.005",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.01",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.02",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.05",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.1",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.2",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.5",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="1.0",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="2.0",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="5.0",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="+Inf",outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_count{outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_sum{outcome="timeout"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0001",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0002",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.0005",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.001",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.002",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.005",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.01",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.02",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.05",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.1",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.2",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="0.5",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="1.0",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="2.0",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="5.0",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_bucket{le="+Inf",outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_count{outcome="error"} 0.0
+papermate_db_pool_acquire_seconds_sum{outcome="error"} 0.0
+# HELP papermate_db_pool_acquire_seconds_created Pool.connect duration, including queueing, connection creation and pre-ping.
+# TYPE papermate_db_pool_acquire_seconds_created gauge
+papermate_db_pool_acquire_seconds_created{outcome="success"} 1.7931577889375827e+09
+papermate_db_pool_acquire_seconds_created{outcome="timeout"} 1.7931577889376264e+09
+papermate_db_pool_acquire_seconds_created{outcome="error"} 1.7931577889376516e+09
+# HELP papermate_db_pool_hold_seconds Checkout-to-checkin duration, including SQL and application/transaction lifetime.
+# TYPE papermate_db_pool_hold_seconds histogram
+papermate_db_pool_hold_seconds_bucket{le="0.0001"} 0.0
+papermate_db_pool_hold_seconds_bucket{le="0.0002"} 0.0
+papermate_db_pool_hold_seconds_bucket{le="0.0005"} 0.0
+papermate_db_pool_hold_seconds_bucket{le="0.001"} 0.0
+papermate_db_pool_hold_seconds_bucket{le="0.002"} 0.0
+papermate_db_pool_hold_seconds_bucket{le="0.005"} 290.0
+papermate_db_pool_hold_seconds_bucket{le="0.01"} 291.0
+papermate_db_pool_hold_seconds_bucket{le="0.02"} 291.0
+papermate_db_pool_hold_seconds_bucket{le="0.05"} 291.0
+papermate_db_pool_hold_seconds_bucket{le="0.1"} 292.0
+papermate_db_pool_hold_seconds_bucket{le="0.2"} 293.0
+papermate_db_pool_hold_seconds_bucket{le="0.5"} 293.0
+papermate_db_pool_hold_seconds_bucket{le="1.0"} 293.0
+papermate_db_pool_hold_seconds_bucket{le="2.0"} 293.0
+papermate_db_pool_hold_seconds_bucket{le="5.0"} 293.0
+papermate_db_pool_hold_seconds_bucket{le="+Inf"} 293.0
+papermate_db_pool_hold_seconds_count 293.0
+papermate_db_pool_hold_seconds_sum 1.0958939467091113
+# HELP papermate_db_pool_hold_seconds_created Checkout-to-checkin duration, including SQL and application/transaction lifetime.
+# TYPE papermate_db_pool_hold_seconds_created gauge
+papermate_db_pool_hold_seconds_created 1.7931577889376764e+09
+# HELP papermate_db_pool_timeouts_total API connection pool acquisition timeouts.
+# TYPE papermate_db_pool_timeouts_total counter
+papermate_db_pool_timeouts_total 0.0
+# HELP papermate_db_pool_timeouts_created API connection pool acquisition timeouts.
+# TYPE papermate_db_pool_timeouts_created gauge
+papermate_db_pool_timeouts_created 1.793157788937802e+09
+# HELP papermate_http_requests_total Completed HTTP requests by response status.
+# TYPE papermate_http_requests_total counter
+papermate_http_requests_total{code="200",method="POST",route="/api/auth/login"} 1.0
+papermate_http_requests_total{code="200",method="GET",route="/api/papers/discover"} 292.0
+# HELP papermate_http_requests_created Completed HTTP requests by response status.
+# TYPE papermate_http_requests_created gauge
+papermate_http_requests_created{code="200",method="POST",route="/api/auth/login"} 1.7931577908137422e+09
+papermate_http_requests_created{code="200",method="GET",route="/api/papers/discover"} 1.793157790825918e+09
+# HELP papermate_http_request_duration_seconds Time from middleware entry to final response body or application exception.
+# TYPE papermate_http_request_duration_seconds histogram
+papermate_http_request_duration_seconds_bucket{code="200",le="0.001",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.002",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.005",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.01",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.02",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.05",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.1",method="POST",route="/api/auth/login"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.2",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.5",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_bucket{code="200",le="1.0",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_bucket{code="200",le="2.0",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_bucket{code="200",le="5.0",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_bucket{code="200",le="+Inf",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_count{code="200",method="POST",route="/api/auth/login"} 1.0
+papermate_http_request_duration_seconds_sum{code="200",method="POST",route="/api/auth/login"} 0.17204035399481654
+papermate_http_request_duration_seconds_bucket{code="200",le="0.001",method="GET",route="/api/papers/discover"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.002",method="GET",route="/api/papers/discover"} 0.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.005",method="GET",route="/api/papers/discover"} 280.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.01",method="GET",route="/api/papers/discover"} 290.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.02",method="GET",route="/api/papers/discover"} 291.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.05",method="GET",route="/api/papers/discover"} 291.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.1",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.2",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="0.5",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="1.0",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="2.0",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="5.0",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_bucket{code="200",le="+Inf",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_count{code="200",method="GET",route="/api/papers/discover"} 292.0
+papermate_http_request_duration_seconds_sum{code="200",method="GET",route="/api/papers/discover"} 1.1603188110748306
+# HELP papermate_http_request_duration_seconds_created Time from middleware entry to final response body or application exception.
+# TYPE papermate_http_request_duration_seconds_created gauge
+papermate_http_request_duration_seconds_created{code="200",method="POST",route="/api/auth/login"} 1.7931577908137674e+09
+papermate_http_request_duration_seconds_created{code="200",method="GET",route="/api/papers/discover"} 1.7931577908259377e+09
+# HELP papermate_http_inflight_requests Requests currently inside HTTP middleware.
+# TYPE papermate_http_inflight_requests gauge
+papermate_http_inflight_requests 0.0

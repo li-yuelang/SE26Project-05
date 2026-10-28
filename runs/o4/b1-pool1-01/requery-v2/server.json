@@ -1,0 +1,53 @@
+[
+  {
+    "step": 0,
+    "target_rps": 0.0,
+    "server_rps": 0.0,
+    "server_error_rate": null,
+    "server_mean_ms": null,
+    "server_p99_ms": null,
+    "cpu_ms_per_req": null,
+    "pool_in_use_avg": 0.0,
+    "pool_acquiring_avg": 0.0,
+    "hold_ms_per_req": null,
+    "hold_mean_ms": null,
+    "checkouts_per_req": null,
+    "acquire_p99_ms": null,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.0030434782608695582
+  },
+  {
+    "step": 1,
+    "target_rps": 10.0,
+    "server_rps": 8.826086956521738,
+    "server_error_rate": 0.0,
+    "server_mean_ms": 3.796485896690249,
+    "server_p99_ms": 8.308333333333318,
+    "cpu_ms_per_req": 3.3004926108374395,
+    "pool_in_use_avg": 0.041666666666666664,
+    "pool_acquiring_avg": 0.041666666666666664,
+    "hold_ms_per_req": 3.065346438538632,
+    "hold_mean_ms": 3.065346438538632,
+    "checkouts_per_req": 1.0,
+    "acquire_p99_ms": 3.4774999999999796,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.0291304347826087
+  },
+  {
+    "step": 2,
+    "target_rps": 30.0,
+    "server_rps": 29.17391304347826,
+    "server_error_rate": 0.0,
+    "server_mean_ms": 3.674537432692312,
+    "server_p99_ms": 9.219767441860462,
+    "cpu_ms_per_req": 2.7272727272727275,
+    "pool_in_use_avg": 0.125,
+    "pool_acquiring_avg": 0.08333333333333333,
+    "hold_ms_per_req": 2.87316073909896,
+    "hold_mean_ms": 2.87316073909896,
+    "checkouts_per_req": 1.0,
+    "acquire_p99_ms": 4.815227272727271,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.07956521739130434
+  }
+]

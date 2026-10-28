@@ -1,0 +1,5 @@
+# Each query is evaluated over the same 30-second window. Error rate is a fraction.
+server_rps sum(rate(papermate_http_requests_total{job="papermate-o4",method="GET",route="/api/papers/discover"}[30s]))
+server_error_rate (sum(rate(papermate_http_requests_total{job="papermate-o4",method="GET",route="/api/papers/discover",code=~"5.."}[30s])) or vector(0)) / sum(rate(papermate_http_requests_total{job="papermate-o4",method="GET",route="/api/papers/discover"}[30s]))
+server_p99_ms 1000 * histogram_quantile(0.99, sum by (le) (rate(papermate_http_request_duration_seconds_bucket{job="papermate-o4",method="GET",route="/api/papers/discover"}[30s])))
+server_mean_ms 1000 * sum(rate(papermate_http_request_duration_seconds_sum{job="papermate-o4",method="GET",route="/api/papers/discover"}[30s])) / sum(rate(papermate_http_request_duration_seconds_count{job="papermate-o4",method="GET",route="/api/papers/discover"}[30s]))

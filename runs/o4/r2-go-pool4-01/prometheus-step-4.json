@@ -1,0 +1,248 @@
+{
+  "server_rps": {
+    "query": "sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))/24",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "599.3913043478261"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "server_error_rate": {
+    "query": "(sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\",code=~\"5..\"}[24s])) or vector(0))/sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "0.46880893660235023"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "server_mean_ms": {
+    "query": "1000*sum(increase(papermate_http_request_duration_seconds_sum{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))/sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "466.06583414714413"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "server_p99_ms": {
+    "query": "1000*histogram_quantile(0.99,sum by(le)(rate(papermate_http_request_duration_seconds_bucket{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s])))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "993.1603492756499"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "cpu_ms_per_req": {
+    "query": "1000*sum(increase(process_cpu_seconds_total{job=\"papermate-o4\"}[24s]))/sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "1.6611054693166984"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "pool_in_use_avg": {
+    "query": "avg_over_time(papermate_db_pool_checked_out[24s])",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "instance": "127.0.0.1:18080",
+              "job": "papermate-o4"
+            },
+            "value": [
+              1793158714,
+              "3.9166666666666665"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "pool_acquiring_avg": {
+    "query": "avg_over_time(papermate_db_pool_acquiring[24s])",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "instance": "127.0.0.1:18080",
+              "job": "papermate-o4"
+            },
+            "value": [
+              1793158714,
+              "280.7916666666667"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "hold_ms_per_req": {
+    "query": "1000*sum(increase(papermate_db_pool_hold_seconds_sum[24s]))/sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "4.620936907494197"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "hold_mean_ms": {
+    "query": "1000*sum(increase(papermate_db_pool_hold_seconds_sum[24s]))/sum(increase(papermate_db_pool_hold_seconds_count[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "8.69919926351427"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "checkouts_per_req": {
+    "query": "sum(increase(papermate_db_pool_hold_seconds_count[24s]))/sum(increase(papermate_http_requests_total{job=\"papermate-o4\",method=\"GET\",route=\"/api/papers/discover\"}[24s]))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "0.5311910633976498"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "acquire_p99_ms": {
+    "query": "1000*histogram_quantile(0.99,sum by(le)(rate(papermate_db_pool_acquire_seconds_bucket{outcome=\"success\"}[24s])))",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1793158714,
+              "975.1526458616013"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "pool_timeouts": {
+    "query": "increase(papermate_db_pool_timeouts_total[24s])",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "instance": "127.0.0.1:18080",
+              "job": "papermate-o4"
+            },
+            "value": [
+              1793158714,
+              "6745.043478260869"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "api_cpu_cores": {
+    "query": "rate(process_cpu_seconds_total{job=\"papermate-o4\"}[24s])",
+    "response": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "instance": "127.0.0.1:18080",
+              "job": "papermate-o4"
+            },
+            "value": [
+              1793158714,
+              "0.9956521739130437"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

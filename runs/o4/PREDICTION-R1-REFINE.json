@@ -1,0 +1,13 @@
+{
+  "written_utc": "2026-10-28T03:41:50.460281+00:00",
+  "based_on": "r1-go-pool1-01: 247 passed SLO, 353 had 6.25% errors, observed peak success 335.1 rps",
+  "prediction": "Pool1 critical region around 300-340 rps; higher targets should increase queueing and violate the 200ms p99/99% success objective.",
+  "rates": [
+    300,
+    325,
+    340
+  ],
+  "pool_size": 1,
+  "overflow": 0,
+  "timeout_s": 0.5
+}

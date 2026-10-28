@@ -1,0 +1,8 @@
+loadgen：GET http://127.0.0.1:18080/api/papers/discover?page=1&page_size=20，2 个阶段 × 30s，到达过程 poisson，超时 2s，GOMAXPROCS=2
+阶段 1/2：目标 10 请求/秒，已发出 291，已成功 291，在途 0，压测机 CPU 0%
+阶段 2/2：目标 30 请求/秒，已发出 866，已成功 866，在途 0，压测机 CPU 1%
+等待在途的 0 个请求结束（最多 2s）…
+step  target_rps  sent    ok  error_rate  mean_ms  p50_ms  p99_ms  max_ms  slo_good  lag_p99_ms  gen_cpu_pct  
+   1          10   291   291      0.0000     4.74    4.66    6.83    8.47    1.0000        1.05            0  
+   2          30   866   866      0.0000     4.56    4.47    7.92   10.95    1.0000        1.06            1  
+ all              1157  1157      0.0000     4.61    4.53    7.81   10.95    1.0000        1.06            1  

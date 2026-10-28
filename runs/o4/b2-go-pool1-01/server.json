@@ -1,0 +1,36 @@
+[
+  {
+    "step": "1",
+    "target_rps": 10.0,
+    "server_rps": 9.565217391304348,
+    "server_error_rate": 0.0,
+    "server_mean_ms": 3.823571155821396,
+    "server_p99_ms": 6.333333333333329,
+    "cpu_ms_per_req": 3.31818181818182,
+    "pool_in_use_avg": 0.0,
+    "pool_acquiring_avg": 0.0,
+    "hold_ms_per_req": 2.845935866406018,
+    "hold_mean_ms": 2.845935866406018,
+    "checkouts_per_req": 1.0,
+    "acquire_p99_ms": 1.399999999999996,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.031739130434782624
+  },
+  {
+    "step": "2",
+    "target_rps": 30.0,
+    "server_rps": 29.434782608695652,
+    "server_error_rate": 0.0,
+    "server_mean_ms": 3.717926408245367,
+    "server_p99_ms": 9.194047619047623,
+    "cpu_ms_per_req": 2.8360413589364843,
+    "pool_in_use_avg": 0.16666666666666666,
+    "pool_acquiring_avg": 0.041666666666666664,
+    "hold_ms_per_req": 2.6927358270354538,
+    "hold_mean_ms": 2.6927358270354538,
+    "checkouts_per_req": 1.0,
+    "acquire_p99_ms": 4.57911764705883,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.08347826086956521
+  }
+]

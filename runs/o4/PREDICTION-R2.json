@@ -1,0 +1,35 @@
+{
+  "written_utc": "2026-10-28T03:36:33.270434+00:00",
+  "source": "r1-go-pool1-01/server.json, stage target 247",
+  "source_sha256": "90a8b7164bbfb8bf6d906aab902973d8bbf2c17d9c82c0d5090441cfef6db6dc",
+  "source_row": {
+    "step": "2",
+    "target_rps": 247.0,
+    "server_rps": 246.43478260869563,
+    "server_error_rate": 0.0,
+    "server_mean_ms": 6.728892762803992,
+    "server_p99_ms": 41.96073619631908,
+    "cpu_ms_per_req": 2.0871559633027523,
+    "pool_in_use_avg": 0.5833333333333334,
+    "pool_acquiring_avg": 0.9583333333333334,
+    "hold_ms_per_req": 2.345097345346355,
+    "hold_mean_ms": 2.345097345346355,
+    "checkouts_per_req": 1.0,
+    "acquire_p99_ms": 36.7817391304348,
+    "pool_timeouts": 0.0,
+    "api_cpu_cores": 0.5143478260869564
+  },
+  "new_pool_size": 4,
+  "overflow": 0,
+  "predicted_cpu_limit_rps": 479.1208791208791,
+  "predicted_pool_limit_rps": 1705.6861234087607,
+  "rates": [
+    247,
+    353,
+    458,
+    599,
+    800
+  ],
+  "prediction": "At 353 acquisition pressure/503 should decrease; CPU should be next limit near 479 rps, not fourfold throughput.",
+  "conditions": "Same code, dataset, affinity, pool timeout, client; only pool_size changes. Model ignores reserved pre-ping time and CPU/hold vary with load."
+}
