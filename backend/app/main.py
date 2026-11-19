@@ -1,12 +1,17 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from importlib.resources import files
 
-from fastapi import FastAPI, Response
+from asyncpg import PostgresError
+from fastapi import FastAPI, HTTPException, Response
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.deps import DbSession
 from app.api.router import api_router
 from app.config import settings
 from app.core.exceptions import (
@@ -19,6 +24,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.core.logging import configure_logging
 from app.core.metrics import RedMetricsMiddleware
+from app.models.paper import Paper
 from app.schemas.common import success
 
 
@@ -46,6 +52,16 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 @app.get("/health", tags=["system"])
 async def health_check() -> dict:
     return success({"status": "ok", "environment": settings.environment})
+
+
+@app.get("/readyz", tags=["system"], responses={503: {"description": "Paper store unavailable"}})
+async def readiness(db: DbSession) -> dict:
+    try:
+        async with asyncio.timeout(2):
+            await db.execute(select(Paper.id).limit(0))
+    except (TimeoutError, OSError, SQLAlchemyError, PostgresError):
+        raise HTTPException(503, "Paper store unavailable") from None
+    return success({"status": "ready"})
 
 
 @app.get("/version", tags=["system"])

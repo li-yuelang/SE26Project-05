@@ -52,6 +52,11 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8080/readyz', timeout=3).close()"]
+      interval: 10s
+      timeout: 4s
+      retries: 3
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080
 
   migrate:

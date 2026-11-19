@@ -6,7 +6,7 @@ from prometheus_client import Counter, Gauge, Histogram, REGISTRY
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 LATENCY_BUCKETS = (.001, .002, .005, .01, .02, .05, .1, .2, .5, 1, 2, 5)
-EXCLUDED_PATHS = {"/metrics", "/health", "/version", "/docs", "/redoc", "/openapi.json"}
+EXCLUDED_PATHS = {"/metrics", "/health", "/readyz", "/version", "/docs", "/redoc", "/openapi.json"}
 
 
 class HttpMetrics:
